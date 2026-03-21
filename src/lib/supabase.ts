@@ -1,0 +1,84 @@
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Copy .env.example to .env.local and fill in your credentials.')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// ── TypeScript types matching our DB schema ──
+export type Profession =
+  | 'singer' | 'musician' | 'photographer' | 'poet'
+  | 'visual-artist' | 'filmmaker' | 'dancer' | 'comedian'
+
+export type ContentType = 'text' | 'photo' | 'audio' | 'video' | 'poem' | 'document'
+
+export interface Profile {
+  id: string
+  username: string
+  full_name: string
+  bio: string
+  avatar_url: string
+  website: string
+  profession: Profession | null
+  is_pro: boolean
+  follower_count: number
+  following_count: number
+  post_count: number
+  created_at: string
+}
+
+export interface Post {
+  id: string
+  user_id: string
+  content_type: ContentType
+  caption: string
+  poem_text: string
+  media_url: string
+  media_path: string
+  tags: string[]
+  like_count: number
+  comment_count: number
+  share_count: number
+  pro_upvote_count: number
+  created_at: string
+  // Joined fields
+  profiles?: Profile
+  user_liked?: boolean
+  user_pro_upvoted?: boolean
+}
+
+export interface Comment {
+  id: string
+  post_id: string
+  user_id: string
+  body: string
+  created_at: string
+  profiles?: Profile
+}
+
+export interface Notification {
+  id: string
+  user_id: string
+  actor_id: string
+  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share'
+  post_id: string | null
+  is_read: boolean
+  created_at: string
+  actor?: Profile
+  post?: Post
+}
+
+export const PROFESSIONS: Record<Profession, { label: string; icon: string; pillClass: string }> = {
+  singer:          { label: 'Vocalist / Singer',    icon: '🎤', pillClass: 'pill-singer' },
+  musician:        { label: 'Musician',              icon: '🎸', pillClass: 'pill-musician' },
+  photographer:    { label: 'Photographer',          icon: '📸', pillClass: 'pill-photographer' },
+  poet:            { label: 'Poet & Writer',         icon: '✍️', pillClass: 'pill-poet' },
+  'visual-artist': { label: 'Visual Artist',         icon: '🎨', pillClass: 'pill-artist' },
+  filmmaker:       { label: 'Filmmaker',             icon: '🎬', pillClass: 'pill-filmmaker' },
+  dancer:          { label: 'Dancer',                icon: '💃', pillClass: 'pill-dancer' },
+  comedian:        { label: 'Comedian',              icon: '🎭', pillClass: 'pill-comedian' },
+}
