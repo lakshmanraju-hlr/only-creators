@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase, Profile, PROFESSIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
 
 export default function RightPanel() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const [suggested, setSuggested] = useState<Profile[]>([])
   const [following, setFollowing] = useState<Set<string>>(new Set())
 
@@ -84,7 +86,7 @@ export default function RightPanel() {
             const p = c.profession ? PROFESSIONS[c.profession] : null
             return (
               <div key={c.id} className="sug-user">
-                <div className="sug-av">
+                <div className="sug-av" style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${c.username}`)}>
                   {c.avatar_url ? <img src={c.avatar_url} alt="" /> : initials(c.full_name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>

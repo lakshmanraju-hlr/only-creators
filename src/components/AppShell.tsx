@@ -1,8 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
-import { PROFESSIONS } from '@/lib/supabase'
-import { supabase } from '@/lib/supabase'
+import { PROFESSIONS, supabase } from '@/lib/supabase'
 import FeedPage from '@/pages/FeedPage'
 import ExplorePage from '@/pages/ExplorePage'
 import ProfilePage from '@/pages/ProfilePage'
@@ -10,25 +9,27 @@ import NotificationsPage from '@/pages/NotificationsPage'
 import FriendsPage from '@/pages/FriendsPage'
 import RightPanel from '@/components/RightPanel'
 import UploadModal from '@/components/UploadModal'
+import SearchModal from '@/components/SearchModal'
 
 export default function AppShell() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [showUpload, setShowUpload] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
 
   const currentPath = location.pathname
 
-  // Load badge counts
+  // Load badge counts + real-time updates
   useEffect(() => {
     if (!profile) return
     async function loadCounts() {
       const [friendRes, notifRes] = await Promise.all([
-        supabase.from('friend_requests').select('id', { count: 'exact' })
+        supabase.from('friend_requests').select('id', { count: 'exact', head: true })
           .eq('receiver_id', profile!.id).eq('status', 'pending'),
-        supabase.from('notifications').select('id', { count: 'exact' })
+        supabase.from('notifications').select('id', { count: 'exact', head: true })
           .eq('user_id', profile!.id).eq('is_read', false),
       ])
       setPendingFriendCount(friendRes.count || 0)
@@ -36,7 +37,6 @@ export default function AppShell() {
     }
     loadCounts()
 
-    // Real-time badge updates
     const channel = supabase.channel('badge-counts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests',
         filter: `receiver_id=eq.${profile.id}` }, loadCounts)
@@ -45,6 +45,19 @@ export default function AppShell() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [profile?.id])
+
+  // Global keyboard shortcut: Cmd/Ctrl+K to open search
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch(true)
+      }
+      if (e.key === 'Escape') setShowSearch(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   function initials(name: string) {
     return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -55,7 +68,7 @@ export default function AppShell() {
   const navItems = [
     { path: '/',              icon: '⊞', label: 'Feed' },
     { path: '/explore',       icon: '◎', label: 'Explore' },
-    { path: '/friends',       icon: '✦', label: 'Friends', badge: pendingFriendCount },
+    { path: '/friends',       icon: '✦', label: 'Friends',       badge: pendingFriendCount },
     { path: '/notifications', icon: '🔔', label: 'Notifications', badge: unreadNotifCount },
     { path: '/profile',       icon: '◉', label: 'Profile' },
   ]
@@ -65,10 +78,23 @@ export default function AppShell() {
       {/* TOP BAR */}
       <div className="topbar">
         <div className="topbar-logo">only <em>creators</em></div>
-        <div className="search-wrap">
+
+        {/* Search bar — opens modal on click */}
+        <div className="search-wrap" onClick={() => setShowSearch(true)} style={{ cursor: 'text' }}>
           <span className="search-icon">⌕</span>
-          <input className="search-input" placeholder="Search creators, posts, tags…" />
+          <div style={{
+            flex: 1, fontSize: 13, color: 'var(--text-3)',
+            padding: '8px 14px 8px 0', userSelect: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span>Search creators…</span>
+            <span style={{
+              fontSize: 11, background: 'var(--surf-4)', border: '1px solid var(--border)',
+              borderRadius: 4, padding: '1px 6px', fontFamily: 'var(--font-mono)',
+            }}>⌘K</span>
+          </div>
         </div>
+
         <div className="topbar-right">
           <button className="icon-btn" onClick={() => setShowUpload(true)} title="New post" style={{ fontSize: 20, fontWeight: 300 }}>＋</button>
           <button className="icon-btn" onClick={() => navigate('/friends')} title="Friends" style={{ position: 'relative' }}>
@@ -103,14 +129,20 @@ export default function AppShell() {
               )}
             </button>
           ))}
+
+          {/* Search in sidebar too */}
+          <button className="nav-item" onClick={() => setShowSearch(true)}>
+            <span className="nav-icon">⌕</span>
+            Find creators
+          </button>
         </div>
 
         <div className="nav-divider" />
 
         <div className="nav-section">
           <div className="nav-label">Disciplines</div>
-          {['photographer', 'singer', 'poet', 'visual-artist'].map(key => {
-            const p = PROFESSIONS[key as keyof typeof PROFESSIONS]
+          {(['photographer', 'singer', 'poet', 'visual-artist'] as const).map(key => {
+            const p = PROFESSIONS[key]
             return (
               <button key={key} className="nav-item" onClick={() => navigate(`/explore?discipline=${key}`)}>
                 <span className="nav-icon">{p.icon}</span>
@@ -147,15 +179,15 @@ export default function AppShell() {
         </div>
       </div>
 
-      {/* MAIN */}
+      {/* MAIN CONTENT */}
       <div className="main-content">
         <Routes>
-          <Route path="/"                    element={<FeedPage onPost={() => setShowUpload(true)} />} />
-          <Route path="/explore"             element={<ExplorePage />} />
-          <Route path="/friends"             element={<FriendsPage />} />
-          <Route path="/notifications"       element={<NotificationsPage />} />
-          <Route path="/profile"             element={<ProfilePage />} />
-          <Route path="/profile/:username"   element={<ProfilePage />} />
+          <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
+          <Route path="/explore"           element={<ExplorePage />} />
+          <Route path="/friends"           element={<FriendsPage />} />
+          <Route path="/notifications"     element={<NotificationsPage />} />
+          <Route path="/profile"           element={<ProfilePage />} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
         </Routes>
       </div>
 
@@ -164,7 +196,9 @@ export default function AppShell() {
         <RightPanel />
       </div>
 
+      {/* MODALS */}
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} />}
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
     </div>
   )
 }

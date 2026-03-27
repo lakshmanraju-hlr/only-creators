@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
 import { supabase, Post, Comment, PROFESSIONS } from '@/lib/supabase'
@@ -11,6 +12,7 @@ interface Props {
 
 export default function PostCard({ post, onUpdated }: Props) {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const [liked, setLiked] = useState(post.user_liked || false)
   const [likeCount, setLikeCount] = useState(post.like_count)
   const [proUpvoted, setProUpvoted] = useState(post.user_pro_upvoted || false)
@@ -24,7 +26,6 @@ export default function PostCard({ post, onUpdated }: Props) {
   const author = post.profiles
   const profMeta = author?.profession ? PROFESSIONS[author.profession] : null
 
-  // Can current user pro-upvote?
   const canProUpvote = !!(
     profile?.profession &&
     author?.profession &&
@@ -36,6 +37,10 @@ export default function PostCard({ post, onUpdated }: Props) {
     return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
   }
 
+  function goToAuthor() {
+    if (author?.username) navigate(`/profile/${author.username}`)
+  }
+
   async function toggleLike() {
     if (!profile) return toast.error('Sign in to like posts')
     const wasLiked = liked
@@ -45,9 +50,10 @@ export default function PostCard({ post, onUpdated }: Props) {
       await supabase.from('likes').delete().match({ user_id: profile.id, post_id: post.id })
     } else {
       await supabase.from('likes').insert({ user_id: profile.id, post_id: post.id })
-      // Notify post owner
       if (post.user_id !== profile.id) {
-        await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'like', post_id: post.id })
+        await supabase.from('notifications').insert({
+          user_id: post.user_id, actor_id: profile.id, type: 'like', post_id: post.id
+        })
       }
     }
   }
@@ -60,21 +66,26 @@ export default function PostCard({ post, onUpdated }: Props) {
     if (was) {
       await supabase.from('pro_upvotes').delete().match({ user_id: profile.id, post_id: post.id })
     } else {
-      await supabase.from('pro_upvotes').insert({ user_id: profile.id, post_id: post.id, profession: profile.profession })
+      await supabase.from('pro_upvotes').insert({
+        user_id: profile.id, post_id: post.id, profession: profile.profession
+      })
       if (post.user_id !== profile.id) {
-        await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'pro_upvote', post_id: post.id })
+        await supabase.from('notifications').insert({
+          user_id: post.user_id, actor_id: profile.id, type: 'pro_upvote', post_id: post.id
+        })
       }
-      toast.success('◆ Pro Upvote given — your peer endorsement counts!')
+      toast.success('Pro Upvote given!')
     }
   }
 
   async function loadComments() {
-    if (comments.length > 0) { setShowComments(v => !v); return }
+    if (showComments) { setShowComments(false); return }
     setShowComments(true)
+    if (comments.length > 0) return
     setLoadingComments(true)
     const { data } = await supabase
       .from('comments')
-      .select('*, profiles(*)')
+      .select('*, profiles(id, username, full_name, avatar_url)')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
     setComments((data || []) as Comment[])
@@ -88,36 +99,48 @@ export default function PostCard({ post, onUpdated }: Props) {
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: post.id, user_id: profile.id, body: commentText.trim() })
-      .select('*, profiles(*)')
+      .select('*, profiles(id, username, full_name, avatar_url)')
       .single()
     if (!error && data) {
       setComments(c => [...c, data as Comment])
       setCommentText('')
       if (post.user_id !== profile.id) {
-        await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'comment', post_id: post.id })
+        await supabase.from('notifications').insert({
+          user_id: post.user_id, actor_id: profile.id, type: 'comment', post_id: post.id
+        })
       }
     }
     setSubmittingComment(false)
   }
 
   function handleShare() {
-    navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`)
-    toast.success('Link copied! 🔗')
+    navigator.clipboard.writeText(`${window.location.origin}/profile/${author?.username}`)
+    toast.success('Link copied!')
   }
 
   const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
 
   return (
     <div className="post-card">
-      {/* Header */}
+      {/* Header — avatar and name are clickable to go to profile */}
       <div className="post-header">
-        <div className="post-avatar">
+        <div
+          className="post-avatar"
+          style={{ cursor: 'pointer' }}
+          onClick={goToAuthor}
+          title={`View ${author?.full_name}'s profile`}
+        >
           {author?.avatar_url
             ? <img src={author.avatar_url} alt="" />
             : initials(author?.full_name || '?')}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="post-author">
+          <div
+            className="post-author"
+            style={{ cursor: 'pointer' }}
+            onClick={goToAuthor}
+            title={`View ${author?.full_name}'s profile`}
+          >
             <span>{author?.full_name}</span>
             {profMeta && (
               <span className={`pill pill-${profMeta.pillClass}`}>{profMeta.icon} {profMeta.label}</span>
@@ -125,19 +148,15 @@ export default function PostCard({ post, onUpdated }: Props) {
           </div>
           <div className="post-time">@{author?.username} · {timeAgo}</div>
         </div>
-        <div className="post-more">···</div>
+        <div className="post-more">...</div>
       </div>
 
       {/* Media */}
       {post.content_type === 'photo' && post.media_url && (
-        <div className="media-photo">
-          <img src={post.media_url} alt="post media" />
-        </div>
+        <div className="media-photo"><img src={post.media_url} alt="post" /></div>
       )}
       {post.content_type === 'video' && post.media_url && (
-        <div className="media-video">
-          <video controls src={post.media_url} />
-        </div>
+        <div className="media-video"><video controls src={post.media_url} /></div>
       )}
       {post.content_type === 'audio' && post.media_url && (
         <div className="media-audio">
@@ -156,13 +175,16 @@ export default function PostCard({ post, onUpdated }: Props) {
           <div className="doc-icon">📄</div>
           <div>
             <div className="doc-name">{post.caption || 'Document'}</div>
-            <a href={post.media_url} target="_blank" rel="noreferrer" style={{ color: 'var(--brand)', fontSize: 12 }}>Open document ↗</a>
+            <a href={post.media_url} target="_blank" rel="noreferrer"
+              style={{ color: 'var(--brand)', fontSize: 12 }}>
+              Open document
+            </a>
           </div>
         </div>
       )}
 
       {/* Caption */}
-      {post.caption && (
+      {post.caption && post.content_type !== 'audio' && (
         <div className="post-caption">
           {post.caption.split(' ').map((word, i) =>
             word.startsWith('#')
@@ -186,14 +208,12 @@ export default function PostCard({ post, onUpdated }: Props) {
           <span style={{ fontSize: 15 }}>↗</span>
           <span className="act-count">{post.share_count}</span>
         </button>
-
         <button
-          className={`pro-btn ${proUpvoted ? 'active' : ''} ${!canProUpvote && !proUpvoted ? 'locked' : ''}`}
+          className={`pro-btn ${proUpvoted ? 'active' : ''} ${!canProUpvote ? 'locked' : ''}`}
           onClick={canProUpvote ? toggleProUpvote : () => {
-            if (!profile?.profession) toast('Create a Pro account to give Pro Upvotes', { icon: '◆' })
-            else toast(`Only ${PROFESSIONS[profile.profession].label}s can upvote ${PROFESSIONS[profile.profession].label} content`, { icon: '◆' })
+            if (!profile?.profession) toast('Create a Pro account to give Pro Upvotes')
+            else toast(`Only ${PROFESSIONS[profile.profession].label}s can upvote this`)
           }}
-          title={canProUpvote ? 'Give a Pro Upvote' : 'Pro Upvotes are peer-to-peer within the same discipline'}
         >
           ◆ <span>{proCount}</span> Pro
         </button>
@@ -203,16 +223,26 @@ export default function PostCard({ post, onUpdated }: Props) {
       {showComments && (
         <div className="comments-wrap">
           {loadingComments
-            ? <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}><div className="spinner" /></div>
+            ? <div style={{ display: 'flex', justifyContent: 'center', padding: 12 }}><div className="spinner" /></div>
             : comments.map(c => (
               <div key={c.id} className="comment-item">
-                <div className="post-avatar" style={{ width: 30, height: 30, fontSize: 10, flexShrink: 0 }}>
+                <div
+                  className="post-avatar"
+                  style={{ width: 30, height: 30, fontSize: 10, flexShrink: 0, cursor: 'pointer' }}
+                  onClick={() => c.profiles?.username && navigate(`/profile/${c.profiles.username}`)}
+                >
                   {c.profiles?.avatar_url
                     ? <img src={c.profiles.avatar_url} alt="" />
                     : initials(c.profiles?.full_name || '?')}
                 </div>
                 <div className="comment-bubble">
-                  <div className="comment-author">@{c.profiles?.username}</div>
+                  <div
+                    className="comment-author"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => c.profiles?.username && navigate(`/profile/${c.profiles.username}`)}
+                  >
+                    @{c.profiles?.username}
+                  </div>
                   <div className="comment-text">{c.body}</div>
                 </div>
               </div>
@@ -221,13 +251,13 @@ export default function PostCard({ post, onUpdated }: Props) {
           <div className="comment-input-row" style={{ marginTop: 8 }}>
             <input
               className="comment-input"
-              placeholder="Add a comment…"
+              placeholder="Add a comment..."
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitComment()}
             />
             <button className="comment-submit" onClick={submitComment} disabled={submittingComment}>
-              {submittingComment ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '→'}
+              {submittingComment ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '->'}
             </button>
           </div>
         </div>
