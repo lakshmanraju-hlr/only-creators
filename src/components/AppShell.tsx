@@ -1,11 +1,13 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
 import { PROFESSIONS } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import FeedPage from '@/pages/FeedPage'
 import ExplorePage from '@/pages/ExplorePage'
 import ProfilePage from '@/pages/ProfilePage'
 import NotificationsPage from '@/pages/NotificationsPage'
+import FriendsPage from '@/pages/FriendsPage'
 import RightPanel from '@/components/RightPanel'
 import UploadModal from '@/components/UploadModal'
 
@@ -14,22 +16,49 @@ export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const [showUpload, setShowUpload] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [pendingFriendCount, setPendingFriendCount] = useState(0)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
 
   const currentPath = location.pathname
+
+  // Load badge counts
+  useEffect(() => {
+    if (!profile) return
+    async function loadCounts() {
+      const [friendRes, notifRes] = await Promise.all([
+        supabase.from('friend_requests').select('id', { count: 'exact' })
+          .eq('receiver_id', profile!.id).eq('status', 'pending'),
+        supabase.from('notifications').select('id', { count: 'exact' })
+          .eq('user_id', profile!.id).eq('is_read', false),
+      ])
+      setPendingFriendCount(friendRes.count || 0)
+      setUnreadNotifCount(notifRes.count || 0)
+    }
+    loadCounts()
+
+    // Real-time badge updates
+    const channel = supabase.channel('badge-counts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests',
+        filter: `receiver_id=eq.${profile.id}` }, loadCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${profile.id}` }, loadCounts)
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [profile?.id])
 
   function initials(name: string) {
     return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
   }
 
-  const navItems = [
-    { path: '/',               icon: '⊞', label: 'Feed' },
-    { path: '/explore',        icon: '◎', label: 'Explore' },
-    { path: '/notifications',  icon: '🔔', label: 'Notifications', badge: true },
-    { path: '/profile',        icon: '◉', label: 'Profile' },
-  ]
-
   const profMeta = profile?.profession ? PROFESSIONS[profile.profession] : null
+
+  const navItems = [
+    { path: '/',              icon: '⊞', label: 'Feed' },
+    { path: '/explore',       icon: '◎', label: 'Explore' },
+    { path: '/friends',       icon: '✦', label: 'Friends', badge: pendingFriendCount },
+    { path: '/notifications', icon: '🔔', label: 'Notifications', badge: unreadNotifCount },
+    { path: '/profile',       icon: '◉', label: 'Profile' },
+  ]
 
   return (
     <div className="app-shell">
@@ -38,18 +67,17 @@ export default function AppShell() {
         <div className="topbar-logo">only <em>creators</em></div>
         <div className="search-wrap">
           <span className="search-icon">⌕</span>
-          <input
-            className="search-input"
-            placeholder="Search creators, posts, tags…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
+          <input className="search-input" placeholder="Search creators, posts, tags…" />
         </div>
         <div className="topbar-right">
           <button className="icon-btn" onClick={() => setShowUpload(true)} title="New post" style={{ fontSize: 20, fontWeight: 300 }}>＋</button>
-          <button className="icon-btn" onClick={() => navigate('/notifications')} title="Notifications">
+          <button className="icon-btn" onClick={() => navigate('/friends')} title="Friends" style={{ position: 'relative' }}>
+            ✦
+            {pendingFriendCount > 0 && <div className="notif-dot" />}
+          </button>
+          <button className="icon-btn" onClick={() => navigate('/notifications')} title="Notifications" style={{ position: 'relative' }}>
             🔔
-            <div className="notif-dot" />
+            {unreadNotifCount > 0 && <div className="notif-dot" />}
           </button>
           <div className="topbar-avatar" onClick={() => navigate('/profile')}>
             {profile?.avatar_url
@@ -70,7 +98,9 @@ export default function AppShell() {
             >
               <span className="nav-icon">{item.icon}</span>
               {item.label}
-              {item.badge && <span className="nav-badge">3</span>}
+              {item.badge != null && item.badge > 0 && (
+                <span className="nav-badge">{item.badge}</span>
+              )}
             </button>
           ))}
         </div>
@@ -120,11 +150,12 @@ export default function AppShell() {
       {/* MAIN */}
       <div className="main-content">
         <Routes>
-          <Route path="/"               element={<FeedPage onPost={() => setShowUpload(true)} />} />
-          <Route path="/explore"        element={<ExplorePage />} />
-          <Route path="/notifications"  element={<NotificationsPage />} />
-          <Route path="/profile"        element={<ProfilePage />} />
-          <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route path="/"                    element={<FeedPage onPost={() => setShowUpload(true)} />} />
+          <Route path="/explore"             element={<ExplorePage />} />
+          <Route path="/friends"             element={<FriendsPage />} />
+          <Route path="/notifications"       element={<NotificationsPage />} />
+          <Route path="/profile"             element={<ProfilePage />} />
+          <Route path="/profile/:username"   element={<ProfilePage />} />
         </Routes>
       </div>
 
@@ -133,7 +164,6 @@ export default function AppShell() {
         <RightPanel />
       </div>
 
-      {/* UPLOAD MODAL */}
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} />}
     </div>
   )

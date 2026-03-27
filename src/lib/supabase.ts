@@ -9,12 +9,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// ── TypeScript types matching our DB schema ──
 export type Profession =
   | 'singer' | 'musician' | 'photographer' | 'poet'
   | 'visual-artist' | 'filmmaker' | 'dancer' | 'comedian'
 
 export type ContentType = 'text' | 'photo' | 'audio' | 'video' | 'poem' | 'document'
+
+export type FriendStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends'
 
 export interface Profile {
   id: string
@@ -27,6 +28,7 @@ export interface Profile {
   is_pro: boolean
   follower_count: number
   following_count: number
+  friend_count: number
   post_count: number
   created_at: string
 }
@@ -45,7 +47,6 @@ export interface Post {
   share_count: number
   pro_upvote_count: number
   created_at: string
-  // Joined fields
   profiles?: Profile
   user_liked?: boolean
   user_pro_upvoted?: boolean
@@ -60,11 +61,21 @@ export interface Comment {
   profiles?: Profile
 }
 
+export interface FriendRequest {
+  id: string
+  sender_id: string
+  receiver_id: string
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+  sender?: Profile
+  receiver?: Profile
+}
+
 export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share'
+  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted'
   post_id: string | null
   is_read: boolean
   created_at: string

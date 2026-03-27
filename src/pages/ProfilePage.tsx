@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase, Profile, Post, PROFESSIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
-import toast from 'react-hot-toast'
+import SocialButton from '@/components/SocialButton'
 
 export default function ProfilePage() {
   const { username } = useParams()
@@ -11,7 +11,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [isFollowing, setIsFollowing] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [gridView, setGridView] = useState(true)
 
@@ -43,37 +42,14 @@ export default function ProfilePage() {
       const enriched = (postsData || []).map((p: any) => ({ ...p, profiles: profileData })) as Post[]
       setPosts(enriched)
 
-      // Check follow status
-      if (myProfile && profileData.id !== myProfile.id) {
-        const { data: followData } = await supabase
-          .from('follows')
-          .select('follower_id')
-          .eq('follower_id', myProfile.id)
-          .eq('following_id', profileData.id)
-          .maybeSingle()
-        setIsFollowing(!!followData)
-      }
+
 
       setLoading(false)
     }
     load()
   }, [username, myProfile?.id])
 
-  async function toggleFollow() {
-    if (!myProfile || !profile) return
-    if (isFollowing) {
-      await supabase.from('follows').delete().match({ follower_id: myProfile.id, following_id: profile.id })
-      setIsFollowing(false)
-      setProfile(p => p ? { ...p, follower_count: Math.max(0, p.follower_count - 1) } : p)
-      toast('Unfollowed')
-    } else {
-      await supabase.from('follows').insert({ follower_id: myProfile.id, following_id: profile.id })
-      await supabase.from('notifications').insert({ user_id: profile.id, actor_id: myProfile.id, type: 'follow' })
-      setIsFollowing(true)
-      setProfile(p => p ? { ...p, follower_count: p.follower_count + 1 } : p)
-      toast.success(`Following ${profile.full_name}`)
-    }
-  }
+
 
   function initials(name: string) {
     return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -108,9 +84,7 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', gap: 8 }}>
             {isOwnProfile
               ? <button className="btn btn-ghost btn-sm" onClick={() => setShowEditModal(true)}>Edit profile</button>
-              : <button className={`btn btn-sm ${isFollowing ? 'btn-ghost' : 'btn-primary'}`} onClick={toggleFollow}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
+              : <SocialButton targetId={profile.id} targetName={profile.full_name} />
             }
           </div>
         </div>
@@ -124,6 +98,7 @@ export default function ProfilePage() {
           <div><div className="p-stat-num">{profile.post_count}</div><div className="p-stat-label">Posts</div></div>
           <div><div className="p-stat-num">{profile.follower_count}</div><div className="p-stat-label">Followers</div></div>
           <div><div className="p-stat-num">{profile.following_count}</div><div className="p-stat-label">Following</div></div>
+          <div><div className="p-stat-num">{profile.friend_count || 0}</div><div className="p-stat-label">Friends</div></div>
         </div>
       </div>
 

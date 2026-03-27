@@ -44,12 +44,14 @@ export default function NotificationsPage() {
     const actor = (n as any).actor
     const name = actor?.full_name || 'Someone'
     switch (n.type) {
-      case 'like':        return { text: `${name} liked your post`, icon: '♥' }
-      case 'pro_upvote':  return { text: `${name} gave your post a ◆ Pro Upvote`, icon: '◆' }
-      case 'comment':     return { text: `${name} commented on your post`, icon: '💬' }
-      case 'follow':      return { text: `${name} started following you`, icon: '◉' }
-      case 'share':       return { text: `${name} shared your post`, icon: '↗' }
-      default:            return { text: 'New notification', icon: '🔔' }
+      case 'like':            return { text: `${name} liked your post`, icon: '♥' }
+      case 'pro_upvote':      return { text: `${name} gave your post a ◆ Pro Upvote`, icon: '◆' }
+      case 'comment':         return { text: `${name} commented on your post`, icon: '💬' }
+      case 'follow':          return { text: `${name} started following you`, icon: '◉' }
+      case 'share':           return { text: `${name} shared your post`, icon: '↗' }
+      case 'friend_request':  return { text: `${name} sent you a friend request`, icon: '✦' }
+      case 'friend_accepted': return { text: `${name} accepted your friend request — you're now friends!`, icon: '✦' }
+      default:                return { text: 'New notification', icon: '🔔' }
     }
   }
 
