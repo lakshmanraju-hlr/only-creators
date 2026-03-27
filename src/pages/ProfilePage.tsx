@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase, Profile, Post, PROFESSIONS } from '@/lib/supabase'
