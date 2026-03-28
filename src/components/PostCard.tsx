@@ -231,7 +231,7 @@ export default function PostCard({ post, onUpdated }: Props) {
       )}
       {post.group && (
         <Link to={'/groups/' + post.group.slug} className="post-group-chip">
-          #{post.group.name}
+          {post.group.name}
         </Link>
       )}
 

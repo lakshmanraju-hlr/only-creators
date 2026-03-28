@@ -87,7 +87,7 @@ export default function CreateGroupModal({ discipline, onClose, onCreated }: Pro
           />
           {name && !exactMatch && !checking && (
             <div style={{ fontSize:11, color:'var(--color-text-3)', marginTop:4 }}>
-              slug: #{toSlug(name)}-{discipline}
+              url: /groups/{toSlug(name)}-{discipline}
             </div>
           )}
         </div>
@@ -102,7 +102,7 @@ export default function CreateGroupModal({ discipline, onClose, onCreated }: Pro
               style={{ marginTop:8 }}
               onClick={() => { onClose(); navigate('/groups/' + exactMatch.slug) }}
             >
-              Go to #{exactMatch.name}
+              Go to {exactMatch.name}
             </button>
           </div>
         )}
@@ -115,7 +115,7 @@ export default function CreateGroupModal({ discipline, onClose, onCreated }: Pro
               {similarButNotExact.map(g => (
                 <div key={g.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                   <div>
-                    <span style={{ fontWeight:600, fontSize:13, color:'var(--color-primary)' }}>#{g.name}</span>
+                    <span style={{ fontWeight:600, fontSize:13, color:'var(--color-primary)' }}>{g.name}</span>
                     {g.description && <span style={{ fontSize:12, color:'var(--color-text-3)', marginLeft:6 }}>{g.description}</span>}
                   </div>
                   <button

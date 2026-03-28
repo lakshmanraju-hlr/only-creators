@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { supabase, ContentType, Group } from '@/lib/supabase'
+import { supabase, ContentType, Group, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { suggestGroup } from '@/lib/groupCategorization'
@@ -31,7 +31,12 @@ export default function UploadModal({ onClose }: Props) {
   const [groupSuggestion, setGroupSuggestion] = useState<Group | null>(null)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionResults, setMentionResults] = useState<Profile[]>([])
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const [mentionStart, setMentionStart] = useState(-1)
   const fileRef = useRef<HTMLInputElement>(null)
+  const captionRef = useRef<HTMLTextAreaElement>(null)
 
   // Load groups for the user's discipline
   useEffect(() => {
@@ -48,6 +53,47 @@ export default function UploadModal({ onClose }: Props) {
     setGroupSuggestion(suggestion)
     if (suggestion && !selectedGroup) setSelectedGroup(suggestion)
   }, [caption, tags, availableGroups])
+
+  // @mention detection in caption
+  useEffect(() => {
+    if (!mentionQuery || mentionStart === -1) { setMentionResults([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from('profiles').select('id,username,full_name,avatar_url').ilike('username', mentionQuery + '%').limit(5)
+      setMentionResults((data || []) as Profile[])
+    }, 180)
+    return () => clearTimeout(t)
+  }, [mentionQuery, mentionStart])
+
+  function handleCaptionChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value
+    setCaption(val)
+    const cursor = e.target.selectionStart ?? val.length
+    const before = val.slice(0, cursor)
+    const atIdx = before.lastIndexOf('@')
+    if (atIdx !== -1) {
+      const afterAt = before.slice(atIdx + 1)
+      if (!afterAt.includes(' ') && afterAt.length <= 20) {
+        setMentionStart(atIdx); setMentionQuery(afterAt); setMentionIndex(0); return
+      }
+    }
+    setMentionStart(-1); setMentionQuery(''); setMentionResults([])
+  }
+
+  function handleCaptionKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionResults.length === 0) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => Math.min(i + 1, mentionResults.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMention(mentionResults[mentionIndex].username) }
+    else if (e.key === 'Escape') setMentionResults([])
+  }
+
+  function pickMention(username: string) {
+    const before = caption.slice(0, mentionStart)
+    const after = caption.slice(mentionStart + 1 + mentionQuery.length)
+    setCaption(before + '@' + username + ' ' + after)
+    setMentionStart(-1); setMentionQuery(''); setMentionResults([])
+    captionRef.current?.focus()
+  }
 
   const currentCT = CONTENT_TYPES.find(c => c.type === contentType)!
   const needsFile = ['photo','audio','video','document'].includes(contentType)
@@ -128,9 +174,22 @@ export default function UploadModal({ onClose }: Props) {
           <textarea className="poem-editor" placeholder={'Let the words flow…\n\nEach line, a brushstroke\nOn the canvas of silence'} value={poemText} onChange={e => setPoemText(e.target.value)} />
         )}
 
-        <div className="field">
+        <div className="field" style={{ position:'relative' }}>
           <label className="field-label">{contentType === 'text' ? 'Your post *' : 'Caption'}</label>
-          <textarea className="field-textarea" placeholder={contentType === 'text' ? 'Share something with the world…' : 'Add a caption…'} value={caption} onChange={e => setCaption(e.target.value)} style={{ minHeight: contentType === 'text' ? 90 : 64 }} />
+          {mentionResults.length > 0 && (
+            <div className="mention-dropdown">
+              {mentionResults.map((r, i) => (
+                <button key={r.id} className={'mention-option ' + (i === mentionIndex ? 'active' : '')} onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}>
+                  <div className="post-avatar" style={{ width:24, height:24, fontSize:8, flexShrink:0 }}>
+                    {r.avatar_url ? <img src={r.avatar_url} alt="" /> : r.full_name?.slice(0,2).toUpperCase()}
+                  </div>
+                  <span style={{ fontWeight:500, fontSize:13 }}>{r.full_name}</span>
+                  <span style={{ fontSize:12, color:'var(--color-text-3)' }}>@{r.username}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <textarea ref={captionRef} className="field-textarea" placeholder={contentType === 'text' ? 'Share something… use @ to tag creators' : 'Add a caption… use @ to tag creators'} value={caption} onChange={handleCaptionChange} onKeyDown={handleCaptionKey} style={{ minHeight: contentType === 'text' ? 90 : 64 }} />
         </div>
         <div className="field">
           <label className="field-label">Tags</label>
@@ -192,7 +251,7 @@ export default function UploadModal({ onClose }: Props) {
                   className={`upload-vis-btn ${selectedGroup?.id === g.id ? 'active' : ''}`}
                   onClick={() => setSelectedGroup(g)}
                 >
-                  #{g.name}
+                  {g.name}
                 </button>
               ))}
             </div>

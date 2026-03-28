@@ -120,7 +120,7 @@ export default function ExplorePage() {
               <div className="empty-state"><div className="empty-title">No groups yet</div></div>
             ) : groups.map(g => (
               <div key={g.id} className="group-card" onClick={() => navigate('/groups/' + g.slug)}>
-                <div className="group-card-name">#{g.name}</div>
+                <div className="group-card-name">{g.name}</div>
                 <div className="group-card-desc">{g.description}</div>
                 <div className="group-card-meta">{g.post_count} posts</div>
               </div>

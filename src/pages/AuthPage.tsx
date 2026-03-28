@@ -21,10 +21,30 @@ export default function AuthPage() {
   const [username, setUsername] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPass, setSignupPass] = useState('')
-  const [profession, setProfession] = useState<Profession | ''>('')
+  const [professions, setProfessions] = useState<Profession[]>([])
+  const [professionSearch, setProfessionSearch] = useState('')
 
   // Forgot
   const [forgotEmail, setForgotEmail] = useState('')
+
+  const ALL_PROFESSIONS = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
+
+  const filteredSuggestions = professionSearch
+    ? ALL_PROFESSIONS.filter(([key, val]) =>
+        !professions.includes(key) &&
+        (val.label.toLowerCase().includes(professionSearch.toLowerCase()) ||
+         key.toLowerCase().includes(professionSearch.toLowerCase()))
+      )
+    : ALL_PROFESSIONS.filter(([key]) => !professions.includes(key))
+
+  function addProfession(key: Profession) {
+    setProfessions(prev => prev.includes(key) ? prev : [...prev, key])
+    setProfessionSearch('')
+  }
+
+  function removeProfession(key: Profession) {
+    setProfessions(prev => prev.filter(p => p !== key))
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -46,9 +66,13 @@ export default function AuthPage() {
       options: { data: { full_name: `${firstName} ${lastName}`.trim(), username: cleanUser } }
     })
     if (error) { toast.error(error.message); setLoading(false); return }
-    if (profession) {
+    if (professions.length > 0) {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) await supabase.from('profiles').update({ profession, is_pro: true }).eq('id', user.id)
+      if (user) await supabase.from('profiles').update({
+        profession: professions[0],
+        professions,
+        is_pro: true,
+      }).eq('id', user.id)
     }
     toast.success('Welcome to Only Creators!')
     setLoading(false)
@@ -168,23 +192,60 @@ export default function AuthPage() {
                     {showPass ? <Icon.EyeOff /> : <Icon.Eye />}
                   </button>
                 </div>
+
+                {/* Multi-profession Pro selector */}
                 <div className="pro-callout">
                   <div className="pro-callout-title">
                     <span style={{ display:'flex', width:14, height:14 }}><Icon.Award /></span>
                     Professional Creator Verification
                     <span className="pro-chip" style={{ marginLeft:'auto', fontSize:9 }}>Optional</span>
                   </div>
-                  <p>Select your profession to unlock Pro Upvotes — peer endorsements from other verified creators in your discipline.</p>
-                  <div className="field" style={{ marginTop:10, marginBottom:0 }}>
-                    <label className="field-label">I am a professional</label>
-                    <select className="field-select" value={profession} onChange={e => setProfession(e.target.value as Profession | '')}>
-                      <option value="">— General account —</option>
-                      {Object.entries(PROFESSIONS).map(([key, val]) => (
-                        <option key={key} value={key}>{val.label}</option>
+                  <p>Select your disciplines to unlock Pro Upvotes — peer endorsements from verified creators in each field.</p>
+
+                  {/* Selected profession chips */}
+                  {professions.length > 0 && (
+                    <div className="prof-chips">
+                      {professions.map((key, i) => (
+                        <div key={key} className="prof-chip">
+                          <span>{PROFESSIONS[key].label}</span>
+                          {i === 0 && <span className="prof-chip-primary">primary</span>}
+                          <button type="button" className="prof-chip-remove" onClick={() => removeProfession(key)}>
+                            <Icon.X />
+                          </button>
+                        </div>
                       ))}
-                    </select>
+                    </div>
+                  )}
+
+                  {/* Search input */}
+                  <div className="field" style={{ marginTop:10, marginBottom:0, position:'relative' }}>
+                    <label className="field-label">
+                      {professions.length === 0 ? 'I am a professional…' : 'Add another discipline'}
+                    </label>
+                    <input
+                      className="field-input"
+                      placeholder="Type to search (e.g. photographer, singer…)"
+                      value={professionSearch}
+                      onChange={e => setProfessionSearch(e.target.value)}
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  {/* Suggestion pills */}
+                  <div className="prof-suggestions">
+                    {filteredSuggestions.map(([key, val]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className="prof-suggestion-pill"
+                        onClick={() => addProfession(key)}
+                      >
+                        {val.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
+
                 <button className="btn btn-primary btn-full" type="submit" disabled={loading} style={{ marginTop:16 }}>
                   {loading ? <span className="spinner" /> : <>Create account <span style={{ display:'flex', width:14, height:14 }}><Icon.ArrowRight /></span></>}
                 </button>

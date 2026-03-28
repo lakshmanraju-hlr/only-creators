@@ -69,7 +69,7 @@ export default function GroupPage() {
       <div className="group-header">
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
           <div style={{ flex:1, minWidth:0 }}>
-            <div className="group-header-name">#{group.name}</div>
+            <div className="group-header-name">{group.name}</div>
             {group.description && <div className="group-header-desc">{group.description}</div>}
             <div className="group-header-meta">{group.post_count} posts · {group.discipline}</div>
           </div>
