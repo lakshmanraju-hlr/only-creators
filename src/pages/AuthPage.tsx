@@ -93,7 +93,7 @@ export default function AuthPage() {
         .ilike('profession', `%${searchTrimmed}%`)
         .limit(10)
       if (!data) return
-      const predefinedKeys = new Set(ALL_PROFESSIONS.map(([k]) => k))
+      const predefinedKeys = new Set<string>(ALL_PROFESSIONS.map(([k]) => k))
       const customs = [...new Set((data as any[]).map(p => p.profession as string).filter(p => !predefinedKeys.has(p)))]
       setExistingCustom(customs)
     }, 300)
@@ -318,7 +318,9 @@ export default function AuthPage() {
                       {/* Exact custom match in DB — block and suggest */}
                       {hasExactCustomMatch && searchTrimmed.length >= 2 && (
                         <div className="group-duplicate-banner" style={{ marginTop:8 }}>
-                          <span style={{ display:'flex', width:13, height:13, flexShrink:0 }}><Icon.AlertCircle /></span>
+                          <span style={{ display:'flex', width:13, height:13, flexShrink:0, color:'var(--red-500)' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          </span>
                           <div style={{ flex:1 }}>
                             <strong>"{searchTrimmed}"</strong> already exists.
                             <button
