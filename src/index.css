@@ -1214,6 +1214,50 @@ img { display: block; max-width: 100%; }
 [data-theme="dark"] .prof-suggestion-pill { background: var(--gray-700); border-color: var(--gray-600); color: var(--gray-100); }
 [data-theme="dark"] .prof-suggestion-pill:hover { background: rgba(59,130,246,0.15); border-color: var(--blue-400); color: var(--blue-400); }
 
+/* Required field highlight */
+.field-input-required { border-color: var(--color-primary) !important; }
+.field-input-required:focus { box-shadow: 0 0 0 3px var(--color-primary-light) !important; }
+
+/* "Other" / custom profession section */
+.prof-other-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+}
+.prof-other-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: none;
+  border: 1.5px dashed var(--color-border);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+  font-family: inherit;
+}
+.prof-other-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* Similar predefined warning when adding custom */
+.prof-similar-warning {
+  padding: 10px 12px;
+  border-radius: var(--r-lg);
+  background: var(--amber-50);
+  border: 1px solid var(--amber-400);
+}
+.prof-similar-warning-title {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--amber-600);
+  margin-bottom: 2px;
+}
+[data-theme="dark"] .prof-similar-warning { background: rgba(245,158,11,0.1); border-color: var(--amber-500); }
+[data-theme="dark"] .prof-other-btn { border-color: var(--gray-600); color: var(--gray-400); }
+[data-theme="dark"] .prof-other-btn:hover { border-color: var(--blue-400); color: var(--blue-400); }
+
 /* Duplicate / similar group banners in CreateGroupModal */
 .group-duplicate-banner {
   padding: 12px 14px;

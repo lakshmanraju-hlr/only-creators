@@ -25,7 +25,7 @@ export interface Profile {
   avatar_url: string
   website: string
   profession: Profession | null
-  professions: Profession[]
+  professions: string[]
   is_pro: boolean
   personal_profile_public: boolean
   follower_count: number
