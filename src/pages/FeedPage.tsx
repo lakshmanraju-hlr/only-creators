@@ -48,7 +48,7 @@ export default function FeedPage({ onPost }: Props) {
       // Fetch posts
       let query = supabase
         .from('posts')
-        .select('id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,visibility,created_at')
+        .select('id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,visibility,group_id,group:group_id(id,name,slug),created_at')
         .order('created_at', { ascending: false })
         .limit(30)
 

@@ -12,6 +12,7 @@ import MessagesPage from '@/pages/MessagesPage'
 import RightPanel from '@/components/RightPanel'
 import UploadModal from '@/components/UploadModal'
 import SearchModal from '@/components/SearchModal'
+import GroupPage from '@/pages/GroupPage'
 
 export default function AppShell() {
   const { profile, signOut } = useAuth()
@@ -187,6 +188,7 @@ export default function AppShell() {
           <Route path="/notifications"     element={<NotificationsPage />} />
           <Route path="/profile"           element={<ProfilePage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route path="/groups/:slug"      element={<GroupPage />} />
         </Routes>
       </div>
 

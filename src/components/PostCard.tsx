@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
 import { supabase, Post, Comment, PROFESSIONS, Profile } from '@/lib/supabase'
@@ -228,6 +228,11 @@ export default function PostCard({ post, onUpdated }: Props) {
             <span key={i}>{word} </span>
           )}
         </div>
+      )}
+      {post.group && (
+        <Link to={'/groups/' + post.group.slug} className="post-group-chip">
+          #{post.group.name}
+        </Link>
       )}
 
       <div className="post-actions">

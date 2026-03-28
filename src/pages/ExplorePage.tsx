@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { supabase, Post, Profile, PROFESSIONS, Profession } from '@/lib/supabase'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { supabase, Post, Profile, Group, PROFESSIONS, Profession } from '@/lib/supabase'
+import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
+import CreateGroupModal from '@/components/CreateGroupModal'
 
 type DisciplineIcon = () => JSX.Element
 
@@ -18,12 +20,16 @@ const DISCIPLINES: { key: string; Icon: DisciplineIcon; name: string; count: str
 ]
 
 export default function ExplorePage() {
+  const { profile } = useAuth()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDiscipline = searchParams.get('discipline') as Profession | null
   const [posts, setPosts] = useState<Post[]>([])
   const [creators, setCreators] = useState<Profile[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(false)
-  const [view, setView] = useState<'posts' | 'creators'>('posts')
+  const [view, setView] = useState<'posts' | 'creators' | 'groups'>('posts')
+  const [showCreateGroup, setShowCreateGroup] = useState(false)
 
   useEffect(() => {
     if (!selectedDiscipline) return
@@ -33,11 +39,14 @@ export default function ExplorePage() {
         const { data: du } = await supabase.from('profiles').select('id').eq('profession', selectedDiscipline)
         const uids = (du || []).map((u: any) => u.id)
         if (uids.length === 0) { setPosts([]); setLoading(false); return }
-        const { data } = await supabase.from('posts').select('*, profiles(*)').in('user_id', uids).order('pro_upvote_count', { ascending: false }).limit(20)
+        const { data } = await supabase.from('posts').select('*, profiles(*), group:group_id(*)').in('user_id', uids).order('pro_upvote_count', { ascending: false }).limit(20)
         setPosts((data || []) as Post[])
-      } else {
+      } else if (view === 'creators') {
         const { data } = await supabase.from('profiles').select('*').eq('profession', selectedDiscipline).order('follower_count', { ascending: false }).limit(30)
         setCreators((data || []) as Profile[])
+      } else {
+        const { data } = await supabase.from('groups').select('*').eq('discipline', selectedDiscipline).order('post_count', { ascending: false })
+        setGroups((data || []) as Group[])
       }
       setLoading(false)
     }
@@ -66,6 +75,7 @@ export default function ExplorePage() {
         <div className="feed-tabs" style={{ marginBottom:18 }}>
           <div className={`feed-tab ${view === 'posts' ? 'active' : ''}`} onClick={() => setView('posts')}>Top posts</div>
           <div className={`feed-tab ${view === 'creators' ? 'active' : ''}`} onClick={() => setView('creators')}>Creators</div>
+          <div className={`feed-tab ${view === 'groups' ? 'active' : ''}`} onClick={() => setView('groups')}>Groups</div>
         </div>
         {loading ? (
           <div className="loading-center"><div className="spinner" /></div>
@@ -77,7 +87,7 @@ export default function ExplorePage() {
               <div className="empty-sub">Be the first verified {meta?.label} to post</div>
             </div>
           ) : posts.map(p => <PostCard key={p.id} post={p} />)
-        ) : (
+        ) : view === 'creators' ? (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {creators.length === 0 ? (
               <div className="empty-state"><div className="empty-title">No verified {meta?.label}s yet</div></div>
@@ -98,6 +108,31 @@ export default function ExplorePage() {
               </div>
             ))}
           </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {profile?.profession === selectedDiscipline && (
+              <button className="btn btn-primary btn-sm" style={{ alignSelf:'flex-end' }} onClick={() => setShowCreateGroup(true)}>
+                <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
+                New group
+              </button>
+            )}
+            {groups.length === 0 ? (
+              <div className="empty-state"><div className="empty-title">No groups yet</div></div>
+            ) : groups.map(g => (
+              <div key={g.id} className="group-card" onClick={() => navigate('/groups/' + g.slug)}>
+                <div className="group-card-name">#{g.name}</div>
+                <div className="group-card-desc">{g.description}</div>
+                <div className="group-card-meta">{g.post_count} posts</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {showCreateGroup && selectedDiscipline && (
+          <CreateGroupModal
+            discipline={selectedDiscipline}
+            onClose={() => setShowCreateGroup(false)}
+            onCreated={g => { setGroups(gs => [g, ...gs]); setShowCreateGroup(false) }}
+          />
         )}
       </div>
     )

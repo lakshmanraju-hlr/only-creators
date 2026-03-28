@@ -49,6 +49,8 @@ export interface Post {
   pro_upvote_count: number
   is_pro_post: boolean
   visibility: 'public' | 'friends'
+  group_id?: string | null
+  group?: Group
   created_at: string
   profiles?: Profile
   user_liked?: boolean
@@ -72,6 +74,19 @@ export interface FriendRequest {
   created_at: string
   sender?: Profile
   receiver?: Profile
+}
+
+export interface Group {
+  id: string
+  discipline: string
+  name: string
+  slug: string
+  description: string
+  is_seeded: boolean
+  created_by: string | null
+  member_count: number
+  post_count: number
+  created_at: string
 }
 
 export interface Notification {
