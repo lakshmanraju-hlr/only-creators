@@ -58,7 +58,7 @@ export default function MessagesPage() {
 
     const { data: msgs, error: msgsError } = await supabase
       .from('messages')
-      .select('*, sender:sender_id(id, username, full_name, avatar_url), post:post_id(id, caption, content_type, media_url, profiles(username, full_name))')
+      .select('*, sender:sender_id(id, username, full_name, avatar_url), post:post_id(id, caption, content_type, media_url, profiles!user_id(username, full_name))')
       .eq('conversation_id', convId)
       .order('created_at', { ascending: true })
 
