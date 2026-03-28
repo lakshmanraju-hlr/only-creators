@@ -1,26 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase, PROFESSIONS, Profession } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 
 type AuthMode = 'login' | 'signup' | 'forgot'
 
-const MAX_PROFESSIONS = 3
-
-// All predefined professions as [key, label] pairs
 const ALL_PROFESSIONS = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
 
-// Find predefined professions that are similar to a custom string
-function findSimilarPredefined(query: string, alreadySelected: string[]): [Profession, typeof PROFESSIONS[Profession]][] {
+function findSimilarPredefined(query: string): [Profession, typeof PROFESSIONS[Profession]][] {
   const q = query.toLowerCase().trim()
   if (!q) return []
   return ALL_PROFESSIONS.filter(([key, val]) =>
-    !alreadySelected.includes(key) && (
-      val.label.toLowerCase().includes(q) ||
-      q.includes(val.label.toLowerCase().split(' ')[0]) ||
-      key.replace(/-/g, ' ').includes(q) ||
-      q.includes(key.replace(/-/g, '').slice(0, 4))
-    )
+    val.label.toLowerCase().includes(q) ||
+    q.includes(val.label.toLowerCase().split(' ')[0]) ||
+    key.replace(/-/g, ' ').includes(q) ||
+    q.includes(key.replace(/-/g, '').slice(0, 4))
   )
 }
 
@@ -41,62 +35,92 @@ export default function AuthPage() {
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPass, setSignupPass] = useState('')
 
-  // Profession multi-select (string[] to support custom "other" entries)
-  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([])
+  // Single mandatory profession
+  const [selectedProfession, setSelectedProfession] = useState<string | null>(null)
   const [professionSearch, setProfessionSearch] = useState('')
-  // When adding a custom "other" profession, track if we showed the similar warning
   const [customConfirmed, setCustomConfirmed] = useState(false)
+
+  // Existing custom disciplines from DB (for duplicate detection)
+  const [existingCustom, setExistingCustom] = useState<string[]>([])
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Forgot
   const [forgotEmail, setForgotEmail] = useState('')
 
   const searchTrimmed = professionSearch.trim()
-  const atMax = selectedProfessions.length >= MAX_PROFESSIONS
 
-  // Predefined suggestions matching the current search
+  // Predefined suggestions filtered by search
   const predefinedSuggestions = ALL_PROFESSIONS.filter(([key, val]) =>
-    !selectedProfessions.includes(key) &&
+    key !== selectedProfession &&
     (searchTrimmed === '' ||
       val.label.toLowerCase().includes(searchTrimmed.toLowerCase()) ||
       key.toLowerCase().includes(searchTrimmed.toLowerCase()))
   )
 
-  // Whether to show the "Other: add as custom" option
   const hasExactPredefinedMatch = ALL_PROFESSIONS.some(([, val]) =>
     val.label.toLowerCase() === searchTrimmed.toLowerCase()
   )
+
+  // Existing custom disciplines matching the search (DB duplicates)
+  const matchingExistingCustom = existingCustom.filter(d =>
+    d.toLowerCase() !== selectedProfession?.toLowerCase() &&
+    d.toLowerCase().includes(searchTrimmed.toLowerCase()) &&
+    searchTrimmed.length >= 2
+  )
+
+  const hasExactCustomMatch = existingCustom.some(
+    d => d.toLowerCase() === searchTrimmed.toLowerCase()
+  )
+
   const showOtherOption =
-    !atMax &&
     searchTrimmed.length >= 2 &&
     !hasExactPredefinedMatch &&
-    !selectedProfessions.some(p => p.toLowerCase() === searchTrimmed.toLowerCase())
+    !hasExactCustomMatch &&
+    selectedProfession?.toLowerCase() !== searchTrimmed.toLowerCase()
 
-  // Similar predefined professions to warn about before adding a custom one
-  const similarToCustom = findSimilarPredefined(searchTrimmed, selectedProfessions)
-  const showSimilarWarning = showOtherOption && similarToCustom.length > 0 && !customConfirmed
+  const similarToPredefined = findSimilarPredefined(searchTrimmed)
+  const showSimilarWarning = showOtherOption && (similarToPredefined.length > 0 || matchingExistingCustom.length > 0) && !customConfirmed
 
-  function addPredefined(key: Profession) {
-    if (atMax) return
-    setSelectedProfessions(prev => prev.includes(key) ? prev : [...prev, key])
+  // Load existing custom disciplines from DB (debounced on search change)
+  useEffect(() => {
+    if (searchTrimmed.length < 2) return
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('profession')
+        .not('profession', 'is', null)
+        .ilike('profession', `%${searchTrimmed}%`)
+        .limit(10)
+      if (!data) return
+      const predefinedKeys = new Set(ALL_PROFESSIONS.map(([k]) => k))
+      const customs = [...new Set((data as any[]).map(p => p.profession as string).filter(p => !predefinedKeys.has(p)))]
+      setExistingCustom(customs)
+    }, 300)
+    return () => clearTimeout(debounceRef.current)
+  }, [searchTrimmed])
+
+  function selectPredefined(key: Profession) {
+    setSelectedProfession(key)
     setProfessionSearch('')
     setCustomConfirmed(false)
   }
 
-  function addCustom() {
-    if (!searchTrimmed || atMax) return
-    setSelectedProfessions(prev => [...prev, searchTrimmed])
+  function selectCustom(value: string) {
+    setSelectedProfession(value)
     setProfessionSearch('')
     setCustomConfirmed(false)
   }
 
-  function remove(p: string) {
-    setSelectedProfessions(prev => prev.filter(x => x !== p))
+  function clearSelection() {
+    setSelectedProfession(null)
+    setProfessionSearch('')
+    setCustomConfirmed(false)
   }
 
-  // Label to display for a profession (predefined label or raw custom string)
   function profLabel(p: string) {
     const found = ALL_PROFESSIONS.find(([key]) => key === p)
-    return found ? found[1].label : p
+    return found ? found[1].label : p.charAt(0).toUpperCase() + p.slice(1).replace(/-/g, ' ')
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -113,7 +137,7 @@ export default function AuthPage() {
     if (!firstName || !signupEmail || !signupPass || !username)
       return toast.error('Please fill in required fields')
     if (signupPass.length < 6) return toast.error('Password must be at least 6 characters')
-    if (selectedProfessions.length === 0) return toast.error('Please select at least one profession')
+    if (!selectedProfession) return toast.error('Please select your discipline')
     const cleanUser = username.replace('@', '').toLowerCase().replace(/[^a-z0-9_]/g, '')
     setLoading(true)
     const { error } = await supabase.auth.signUp({
@@ -121,15 +145,13 @@ export default function AuthPage() {
       options: { data: { full_name: `${firstName} ${lastName}`.trim(), username: cleanUser } },
     })
     if (error) { toast.error(error.message); setLoading(false); return }
-    // Primary profession = first predefined one selected, or null if all are custom
-    const primaryProfession = (selectedProfessions.find(p =>
-      ALL_PROFESSIONS.some(([key]) => key === p)
-    ) ?? null) as Profession | null
+    const isPredefined = ALL_PROFESSIONS.some(([key]) => key === selectedProfession)
+    const profession = isPredefined ? selectedProfession as Profession : selectedProfession
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       await supabase.from('profiles').update({
-        profession: primaryProfession,
-        professions: selectedProfessions,
+        profession,
+        professions: [selectedProfession],
         is_pro: true,
       }).eq('id', user.id)
     }
@@ -250,114 +272,116 @@ export default function AuthPage() {
                   </button>
                 </div>
 
-                {/* ── PROFESSION SELECTOR (mandatory) ── */}
+                {/* ── PROFESSION SELECTOR (mandatory, single) ── */}
                 <div className="pro-callout">
                   <div className="pro-callout-title">
                     <span style={{ display:'flex', width:14, height:14 }}><Icon.Award /></span>
                     What are you a creator of? *
-                    <span style={{ marginLeft:'auto', fontSize:10, color:'var(--color-text-3)', fontWeight:400 }}>
-                      {selectedProfessions.length}/{MAX_PROFESSIONS}
-                    </span>
                   </div>
-                  <p>Choose up to {MAX_PROFESSIONS} disciplines. The first will be your primary for Pro Upvotes.</p>
+                  <p>Choose your discipline. This determines who can give you Pro Upvotes.</p>
 
-                  {/* Selected chips */}
-                  {selectedProfessions.length > 0 && (
-                    <div className="prof-chips">
-                      {selectedProfessions.map((p, i) => (
-                        <div key={p} className="prof-chip">
-                          <span>{profLabel(p)}</span>
-                          {i === 0 && <span className="prof-chip-primary">primary</span>}
-                          <button type="button" className="prof-chip-remove" onClick={() => remove(p)}>
-                            <Icon.X />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Search input — hidden when at max */}
-                  {!atMax && (
-                    <div className="field" style={{ marginTop:10, marginBottom:0 }}>
-                      <label className="field-label">
-                        {selectedProfessions.length === 0 ? 'Select your discipline *' : 'Add another discipline'}
-                      </label>
-                      <input
-                        className={`field-input ${selectedProfessions.length === 0 ? 'field-input-required' : ''}`}
-                        placeholder="Type to search, or scroll below…"
-                        value={professionSearch}
-                        onChange={e => { setProfessionSearch(e.target.value); setCustomConfirmed(false) }}
-                        autoComplete="off"
-                      />
-                    </div>
-                  )}
-                  {atMax && (
-                    <div style={{ fontSize:12, color:'var(--color-text-3)', marginTop:8, textAlign:'center' }}>
-                      Maximum of {MAX_PROFESSIONS} disciplines reached
-                    </div>
-                  )}
-
-                  {/* Predefined suggestion pills */}
-                  {!atMax && predefinedSuggestions.length > 0 && (
-                    <div className="prof-suggestions">
-                      {predefinedSuggestions.map(([key, val]) => (
-                        <button key={key} type="button" className="prof-suggestion-pill" onClick={() => addPredefined(key)}>
-                          {val.label}
+                  {/* Selected chip — shown when one is chosen */}
+                  {selectedProfession ? (
+                    <div className="prof-chips" style={{ marginTop:10 }}>
+                      <div className="prof-chip">
+                        <span>{profLabel(selectedProfession)}</span>
+                        <button type="button" className="prof-chip-remove" onClick={clearSelection} title="Change discipline">
+                          <Icon.X />
                         </button>
-                      ))}
+                      </div>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {/* Search input */}
+                      <div className="field" style={{ marginTop:10, marginBottom:0 }}>
+                        <label className="field-label">Select your discipline *</label>
+                        <input
+                          className="field-input field-input-required"
+                          placeholder="Type to search, or pick below…"
+                          value={professionSearch}
+                          onChange={e => { setProfessionSearch(e.target.value); setCustomConfirmed(false) }}
+                          autoComplete="off"
+                        />
+                      </div>
 
-                  {/* "Other" option — shown when typed text has no predefined match */}
-                  {showOtherOption && (
-                    <div className="prof-other-section">
-                      {/* Similar predefined warning */}
-                      {showSimilarWarning ? (
-                        <div className="prof-similar-warning">
+                      {/* Predefined suggestion pills */}
+                      {predefinedSuggestions.length > 0 && (
+                        <div className="prof-suggestions">
+                          {predefinedSuggestions.map(([key, val]) => (
+                            <button key={key} type="button" className="prof-suggestion-pill" onClick={() => selectPredefined(key)}>
+                              {val.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Exact custom match in DB — block and suggest */}
+                      {hasExactCustomMatch && searchTrimmed.length >= 2 && (
+                        <div className="group-duplicate-banner" style={{ marginTop:8 }}>
+                          <span style={{ display:'flex', width:13, height:13, flexShrink:0 }}><Icon.AlertCircle /></span>
+                          <div style={{ flex:1 }}>
+                            <strong>"{searchTrimmed}"</strong> already exists.
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-ghost"
+                              style={{ marginLeft:8, padding:'2px 8px', fontSize:11 }}
+                              onClick={() => selectCustom(existingCustom.find(d => d.toLowerCase() === searchTrimmed.toLowerCase())!)}
+                            >
+                              Select it
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Similar warning — show existing options before allowing custom */}
+                      {showOtherOption && showSimilarWarning && (
+                        <div className="prof-similar-warning" style={{ marginTop:8 }}>
                           <div className="prof-similar-warning-title">Did you mean one of these?</div>
                           <div className="prof-suggestions" style={{ marginTop:6 }}>
-                            {similarToCustom.map(([key, val]) => (
-                              <button key={key} type="button" className="prof-suggestion-pill" onClick={() => addPredefined(key)}>
+                            {similarToPredefined.map(([key, val]) => (
+                              <button key={key} type="button" className="prof-suggestion-pill" onClick={() => selectPredefined(key)}>
                                 {val.label}
+                              </button>
+                            ))}
+                            {matchingExistingCustom.map(d => (
+                              <button key={d} type="button" className="prof-suggestion-pill" onClick={() => selectCustom(d)}>
+                                {d.charAt(0).toUpperCase() + d.slice(1).replace(/-/g, ' ')}
                               </button>
                             ))}
                           </div>
                           <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:8 }}>
                             <span style={{ fontSize:12, color:'var(--color-text-3)' }}>Not what you're looking for?</span>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-xs"
-                              onClick={() => setCustomConfirmed(true)}
-                            >
+                            <button type="button" className="btn btn-ghost btn-xs" onClick={() => setCustomConfirmed(true)}>
                               Add "{searchTrimmed}" anyway
                             </button>
                           </div>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="prof-other-btn"
-                          onClick={addCustom}
-                        >
-                          <span style={{ display:'flex', width:12, height:12 }}><Icon.Plus /></span>
-                          Add "{searchTrimmed}" as Other
-                        </button>
                       )}
-                    </div>
+
+                      {/* "Other" add button — shown after confirming no duplicates */}
+                      {showOtherOption && !showSimilarWarning && (
+                        <div className="prof-other-section">
+                          <button type="button" className="prof-other-btn" onClick={() => selectCustom(searchTrimmed)}>
+                            <span style={{ display:'flex', width:12, height:12 }}><Icon.Plus /></span>
+                            Add "{searchTrimmed}" as new discipline
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
                 <button
                   className="btn btn-primary btn-full"
                   type="submit"
-                  disabled={loading || selectedProfessions.length === 0}
+                  disabled={loading || !selectedProfession}
                   style={{ marginTop:16 }}
                 >
                   {loading ? <span className="spinner" /> : <>Create account <span style={{ display:'flex', width:14, height:14 }}><Icon.ArrowRight /></span></>}
                 </button>
-                {selectedProfessions.length === 0 && (
+                {!selectedProfession && (
                   <div style={{ fontSize:11, color:'var(--red-500)', textAlign:'center', marginTop:6 }}>
-                    Select at least one discipline to continue
+                    Select a discipline to continue
                   </div>
                 )}
               </form>
