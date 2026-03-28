@@ -22,7 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               fontSize: '13px',
               padding: '10px 18px',
             },
-            success: { iconTheme: { primary: '#c9a84c', secondary: '#09090b' } }
+            success: { iconTheme: { primary: '#a01535', secondary: '#ffffff' } }
           }}
         />
       </AuthProvider>
