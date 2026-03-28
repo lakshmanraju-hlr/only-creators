@@ -62,7 +62,7 @@ export default function MessagesPage() {
       .eq('conversation_id', convId)
       .order('created_at', { ascending: true })
 
-    if (msgsError) toast.error('Failed to load messages')
+    if (msgsError) toast.error('Failed to load messages: ' + msgsError.message)
     setMessages((msgs || []) as Message[])
     setLoading(false)
 

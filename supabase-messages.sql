@@ -48,8 +48,18 @@ create policy "cp_select" on public.conversation_participants for select using (
 create policy "cp_insert" on public.conversation_participants for insert with check (true);
 create policy "cp_update" on public.conversation_participants for update using (auth.uid() = user_id);
 
+-- Helper: check participation without triggering RLS on conversation_participants
+create or replace function public.is_participant(conv_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.conversation_participants
+    where conversation_id = conv_id and user_id = auth.uid()
+  );
+$$;
+grant execute on function public.is_participant to authenticated;
+
 create policy "msg_select" on public.messages for select
-  using (exists (select 1 from public.conversation_participants cp where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()));
+  using (public.is_participant(conversation_id));
 create policy "msg_insert" on public.messages for insert with check (auth.uid() = sender_id);
 
 grant select, insert on public.conversations to authenticated;
