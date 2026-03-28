@@ -1,27 +1,29 @@
 import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase, Profile, Post, PROFESSIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
 import SocialButton from '@/components/SocialButton'
+import { Icon } from '@/lib/icons'
 
 export default function ProfilePage() {
   const { username } = useParams()
+  const navigate = useNavigate()
   const { profile: myProfile, refreshProfile } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
   const [gridView, setGridView] = useState(true)
+  const [avatarLightbox, setAvatarLightbox] = useState(false)
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
 
   const isOwnProfile = !username || profile?.id === myProfile?.id
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-
-      // Load profile
       let profileData: Profile | null = null
       if (username) {
         const { data } = await supabase.from('profiles').select('*').eq('username', username).single()
@@ -32,36 +34,90 @@ export default function ProfilePage() {
       setProfile(profileData)
       if (!profileData) { setLoading(false); return }
 
-      // Load posts (no join)
       const { data: postsData } = await supabase
         .from('posts')
         .select('id, user_id, content_type, caption, poem_text, media_url, media_path, tags, like_count, comment_count, share_count, pro_upvote_count, created_at')
         .eq('user_id', profileData.id)
         .order('created_at', { ascending: false })
 
-      // Attach profile to each post
       const enriched = (postsData || []).map((p: any) => ({ ...p, profiles: profileData })) as Post[]
       setPosts(enriched)
-
-
-
       setLoading(false)
     }
     load()
   }, [username, myProfile?.id])
 
+  // Scroll to post if #post-id in URL
+  useEffect(() => {
+    if (!loading && posts.length > 0 && window.location.hash.startsWith('#post-')) {
+      const postId = window.location.hash.replace('#post-', '')
+      const post = posts.find(p => p.id === postId)
+      if (post) {
+        setGridView(false)
+        setTimeout(() => {
+          const el = document.getElementById('post-' + postId)
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 200)
+      }
+    }
+  }, [loading, posts])
 
-
-  function initials(name: string) {
-    return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
-  }
+  function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   const profMeta = profile?.profession ? PROFESSIONS[profile.profession as keyof typeof PROFESSIONS] : null
+
+  // Grid cell: render appropriate thumbnail for each content type
+  function GridCell({ post }: { post: Post }) {
+    const [hovered, setHovered] = useState(false)
+    return (
+      <div
+        className="grid-cell"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => { setSelectedPost(post); setGridView(false) }}
+      >
+        {post.content_type === 'photo' && post.media_url ? (
+          <img src={post.media_url} alt="" />
+        ) : post.content_type === 'video' && post.media_url ? (
+          <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
+            <video src={post.media_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
+              <span style={{ display: 'flex', width: 28, height: 28, color: 'white' }}><Icon.Video /></span>
+            </div>
+          </div>
+        ) : post.content_type === 'audio' ? (
+          <div className="grid-cell-placeholder" style={{ background: 'var(--color-primary-light)' }}>
+            <span style={{ display: 'flex', width: 28, height: 28, color: 'var(--color-primary)' }}><Icon.Music /></span>
+          </div>
+        ) : post.content_type === 'poem' ? (
+          <div className="grid-cell-placeholder" style={{ background: 'linear-gradient(135deg,#fffbeb,#fff)', flexDirection: 'column', gap: 4, padding: 8 }}>
+            <span style={{ fontSize: 20, color: 'var(--amber-400)' }}>"</span>
+            {post.poem_text && <div style={{ fontSize: 10, color: 'var(--color-text-2)', textAlign: 'center', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{post.poem_text}</div>}
+          </div>
+        ) : post.content_type === 'document' ? (
+          <div className="grid-cell-placeholder" style={{ background: 'var(--gray-50)' }}>
+            <span style={{ display: 'flex', width: 28, height: 28, color: 'var(--color-text-3)' }}><Icon.FileText /></span>
+          </div>
+        ) : (
+          <div className="grid-cell-placeholder" style={{ flexDirection: 'column', gap: 4, padding: 8 }}>
+            <span style={{ display: 'flex', width: 22, height: 22, color: 'var(--color-text-3)' }}><Icon.MessageCircle /></span>
+            {post.caption && <div style={{ fontSize: 10, color: 'var(--color-text-2)', textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{post.caption}</div>}
+          </div>
+        )}
+        {hovered && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'white', fontSize: 13, fontWeight: 600 }}>
+            <span>♥ {post.like_count}</span>
+            <span>💬 {post.comment_count}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   if (loading) return <div className="loading-center"><div className="spinner" /></div>
   if (!profile) return (
     <div className="empty-state" style={{ padding: 60 }}>
-      <div className="empty-icon">◉</div>
+      <div className="empty-icon"><Icon.Profile /></div>
       <div className="empty-title">Creator not found</div>
     </div>
   )
@@ -70,29 +126,41 @@ export default function ProfilePage() {
     <div style={{ maxWidth: 740, margin: '0 auto', padding: '24px 16px' }}>
       <div className="profile-hero">
         <div className="profile-hero-top">
-          <div className="profile-big-av">
+          {/* Clickable avatar */}
+          <div
+            className="profile-big-av"
+            style={{ cursor: profile.avatar_url ? 'zoom-in' : 'default' }}
+            onClick={() => profile.avatar_url && setAvatarLightbox(true)}
+          >
             {profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : initials(profile.full_name)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="profile-name">{profile.full_name}</div>
             <div className="profile-handle">@{profile.username}</div>
             {profMeta && (
-              <span className={`pill pill-${profMeta.pillClass}`} style={{ marginTop: 6, display: 'inline-flex' }}>
-                {profMeta.icon} {profMeta.label}
+              <span className={'pill pill-' + profMeta.pillClass} style={{ marginTop: 6, display: 'inline-flex' }}>
+                {profMeta.label}
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {isOwnProfile
-              ? <button className="btn btn-ghost btn-sm" onClick={() => setShowEditModal(true)}>Edit profile</button>
-              : <SocialButton targetId={profile.id} targetName={profile.full_name} />
-            }
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {isOwnProfile ? (
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowEditModal(true)}>Edit profile</button>
+            ) : (
+              <>
+                <button className="btn btn-ghost btn-sm" style={{ gap: 6 }} onClick={() => navigate('/messages?with=' + profile.id)}>
+                  <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.MessageCircle /></span> Message
+                </button>
+                <SocialButton targetId={profile.id} targetName={profile.full_name} />
+              </>
+            )}
           </div>
         </div>
         {profile.bio && <p className="profile-bio" style={{ marginBottom: 16 }}>{profile.bio}</p>}
         {profile.website && (
-          <a href={profile.website} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'var(--brand)', display: 'block', marginBottom: 16 }}>
-            🔗 {profile.website.replace(/^https?:\/\//, '')}
+          <a href={profile.website} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 16 }}>
+            <span style={{ display: 'flex', width: 12, height: 12 }}><Icon.Globe /></span>
+            {profile.website.replace(/^https?:\/\//, '')}
           </a>
         )}
         <div className="profile-stats">
@@ -104,30 +172,53 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-        <button className={`btn btn-sm ${gridView ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setGridView(true)}>⊞ Grid</button>
-        <button className={`btn btn-sm ${!gridView ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setGridView(false)}>≡ Feed</button>
+        <button className={'btn btn-sm ' + (gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(true)}>Grid</button>
+        <button className={'btn btn-sm ' + (!gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(false)}>Feed</button>
       </div>
 
       {posts.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">✦</div>
+          <div className="empty-icon"><Icon.Camera /></div>
           <div className="empty-title">{isOwnProfile ? "You haven't posted yet" : 'No posts yet'}</div>
         </div>
       ) : gridView ? (
         <div className="profile-grid">
-          {posts.map(p => (
-            <div key={p.id} className="grid-cell" onClick={() => setGridView(false)}>
-              {p.content_type === 'photo' && p.media_url
-                ? <img src={p.media_url} alt="" />
-                : <div className="grid-cell-placeholder">
-                    {p.content_type === 'audio' ? '🎵' : p.content_type === 'video' ? '🎬' : p.content_type === 'poem' ? '✍️' : p.content_type === 'document' ? '📄' : '💬'}
-                  </div>
-              }
-            </div>
-          ))}
+          {posts.map(p => <GridCell key={p.id} post={p} />)}
         </div>
       ) : (
-        posts.map(p => <PostCard key={p.id} post={p} />)
+        <>
+          {selectedPost && (
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedPost(null) }}>
+                <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.ArrowLeft /></span> All posts
+              </button>
+            </div>
+          )}
+          {(selectedPost ? [selectedPost] : posts).map(p => <PostCard key={p.id} post={p} />)}
+        </>
+      )}
+
+      {/* Avatar lightbox */}
+      {avatarLightbox && profile.avatar_url && (
+        <div
+          className="modal-overlay"
+          onClick={() => setAvatarLightbox(false)}
+          style={{ background: 'rgba(0,0,0,0.85)', zIndex: 10000 }}
+        >
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+            <img
+              src={profile.avatar_url}
+              alt={profile.full_name}
+              style={{ borderRadius: 'var(--r-xl)', maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', boxShadow: 'var(--shadow-xl)' }}
+            />
+            <button
+              onClick={() => setAvatarLightbox(false)}
+              style={{ position: 'absolute', top: -12, right: -12, width: 32, height: 32, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)' }}
+            >
+              <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.X /></span>
+            </button>
+          </div>
+        </div>
       )}
 
       {showEditModal && (
@@ -164,7 +255,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
     let avatarUrl = profile.avatar_url
     if (avatarFile) {
       const ext = avatarFile.name.split('.').pop()
-      const path = `${myProfile.id}/avatar.${ext}`
+      const path = myProfile.id + '/avatar.' + ext
       await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
       const { data } = supabase.storage.from('avatars').getPublicUrl(path)
       avatarUrl = data.publicUrl + '?t=' + Date.now()
@@ -180,16 +271,14 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
     setSaving(false)
   }
 
-  function initials(name: string) {
-    return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
-  }
+  function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <div className="modal-title">Edit profile</div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose}><Icon.X /></button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
           <div className="profile-big-av" style={{ width: 64, height: 64, fontSize: 22 }}>
