@@ -32,6 +32,7 @@ alter table public.groups enable row level security;
 drop policy if exists "groups_select" on public.groups;
 drop policy if exists "groups_insert" on public.groups;
 drop policy if exists "groups_update" on public.groups;
+drop policy if exists "groups_delete" on public.groups;
 
 create policy "groups_select" on public.groups for select using (true);
 create policy "groups_insert" on public.groups for insert
@@ -40,8 +41,11 @@ create policy "groups_insert" on public.groups for insert
     exists (select 1 from public.profiles where id = auth.uid() and profession is not null)
   );
 create policy "groups_update" on public.groups for update using (auth.uid() = created_by);
+-- Only the creator can delete, and only user-created (non-seeded) groups
+create policy "groups_delete" on public.groups for delete
+  using (auth.uid() = created_by and is_seeded = false);
 
-grant select, insert, update on public.groups to authenticated;
+grant select, insert, update, delete on public.groups to authenticated;
 
 -- ── TRIGGER: keep post_count in sync ──
 create or replace function public.handle_group_post_count()

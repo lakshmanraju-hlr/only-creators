@@ -45,18 +45,26 @@ export default function FeedPage({ onPost }: Props) {
         if (friendIds.length === 0) { setPosts([]); setLoading(false); return }
         userIdFilter = friendIds
       }
-      // Fetch posts
-      let query = supabase
-        .from('posts')
-        .select('id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,visibility,group_id,group:group_id(id,name,slug),created_at')
-        .order('created_at', { ascending: false })
-        .limit(30)
+      // Fetch posts — ranked by pro_upvote_count on discovery tabs,
+      // chronological on social tabs (following / friends)
+      const FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,visibility,group_id,group:group_id(id,name,slug),created_at'
+
+      let query = supabase.from('posts').select(FIELDS).limit(30)
 
       if (tab === 'pro') {
-        // Pro tab: only original work, ranked by upvotes
-        query = query.eq('is_pro_post', true).order('pro_upvote_count', { ascending: false })
-      } else if (userIdFilter) {
-        query = query.in('user_id', userIdFilter)
+        // Pro tab: original work only, ranked by pro upvotes
+        query = query.eq('is_pro_post', true)
+          .order('pro_upvote_count', { ascending: false })
+          .order('created_at', { ascending: false })
+      } else if (tab === 'following' || tab === 'friends') {
+        // Personal feed: chronological, filtered to social graph
+        query = query.in('user_id', userIdFilter!)
+          .order('created_at', { ascending: false })
+      } else {
+        // "For You" / all: ranked by pro upvotes — virality driven by peer quality signal
+        query = query
+          .order('pro_upvote_count', { ascending: false })
+          .order('created_at', { ascending: false })
       }
 
       const { data: postsData, error } = await query
