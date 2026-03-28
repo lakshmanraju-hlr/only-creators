@@ -24,7 +24,7 @@ export interface Profile {
   bio: string
   avatar_url: string
   website: string
-  profession: Profession | null
+  profession: string | null   // string so custom disciplines are supported
   professions: string[]
   is_pro: boolean
   personal_profile_public: boolean
@@ -100,6 +100,16 @@ export interface Notification {
   created_at: string
   actor?: Profile
   post?: Post
+}
+
+// Returns display metadata for any profession — predefined or custom user-generated
+export function getProfMeta(profession: string | null | undefined): { label: string; icon: string; pillClass: string } | null {
+  if (!profession) return null
+  const predefined = (PROFESSIONS as Record<string, { label: string; icon: string; pillClass: string }>)[profession]
+  if (predefined) return predefined
+  // Custom discipline fallback
+  const label = profession.charAt(0).toUpperCase() + profession.slice(1).replace(/-/g, ' ')
+  return { label, icon: '✦', pillClass: 'pill-other' }
 }
 
 export const PROFESSIONS: Record<Profession, { label: string; icon: string; pillClass: string }> = {

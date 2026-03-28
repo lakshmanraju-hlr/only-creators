@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
-import { supabase, Post, Comment, PROFESSIONS, Profile } from '@/lib/supabase'
+import { supabase, Post, Comment, getProfMeta, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
@@ -57,7 +57,7 @@ export default function PostCard({ post, onUpdated }: Props) {
   }
 
   const author = post.profiles
-  const profMeta = author?.profession ? PROFESSIONS[author.profession] : null
+  const profMeta = getProfMeta(author?.profession)
   const canProUpvote = !!(post.is_pro_post && profile?.profession && author?.profession && profile.profession === author.profession && profile.id !== post.user_id)
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }

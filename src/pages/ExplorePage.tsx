@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { supabase, Post, Profile, Group, PROFESSIONS, Profession } from '@/lib/supabase'
+import { supabase, Post, Profile, Group, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
 import CreateGroupModal from '@/components/CreateGroupModal'
+
+const PREDEFINED_KEYS = new Set(['photographer','singer','musician','poet','visual-artist','filmmaker','dancer','comedian'])
 
 type DisciplineIcon = () => JSX.Element
 
@@ -23,13 +25,25 @@ export default function ExplorePage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const selectedDiscipline = searchParams.get('discipline') as Profession | null
+  const selectedDiscipline = searchParams.get('discipline')
   const [posts, setPosts] = useState<Post[]>([])
   const [creators, setCreators] = useState<Profile[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'posts' | 'creators' | 'groups'>('posts')
   const [showCreateGroup, setShowCreateGroup] = useState(false)
+  const [customDisciplines, setCustomDisciplines] = useState<string[]>([])
+
+  // Load any user-generated disciplines not in the predefined set
+  useEffect(() => {
+    supabase.from('profiles').select('profession').not('profession', 'is', null)
+      .then(({ data }) => {
+        if (!data) return
+        const unique = [...new Set((data as any[]).map(p => p.profession as string))]
+          .filter(p => !PREDEFINED_KEYS.has(p))
+        setCustomDisciplines(unique)
+      })
+  }, [])
 
   useEffect(() => {
     if (!selectedDiscipline) return
@@ -56,7 +70,7 @@ export default function ExplorePage() {
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   if (selectedDiscipline) {
-    const meta = PROFESSIONS[selectedDiscipline]
+    const meta = getProfMeta(selectedDiscipline)
     const disc = DISCIPLINES.find(d => d.key === selectedDiscipline)
     return (
       <div style={{ maxWidth:640, margin:'0 auto', padding:'20px 16px' }}>
@@ -152,6 +166,24 @@ export default function ExplorePage() {
           </div>
         ))}
       </div>
+      {customDisciplines.length > 0 && (
+        <>
+          <div style={{ fontSize:14, fontWeight:600, letterSpacing:'-0.2px', margin:'28px 0 12px', color:'var(--color-text-2)' }}>
+            Community disciplines
+          </div>
+          <div className="explore-grid">
+            {customDisciplines.map(d => (
+              <div key={d} className="explore-card explore-card-custom" onClick={() => setSearchParams({ discipline: d })}>
+                <div className="explore-icon-wrap">
+                  <span style={{ fontSize:16, lineHeight:1 }}>✦</span>
+                </div>
+                <div className="explore-name">{d.charAt(0).toUpperCase() + d.slice(1)}</div>
+                <div className="explore-pro">Creator verified</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

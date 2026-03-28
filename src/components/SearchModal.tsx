@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, Profile, PROFESSIONS } from '@/lib/supabase'
+import { supabase, Profile, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriendStatus, sendFriendRequest, acceptFriendRequest, declineFriendRequest } from '@/lib/friends'
 import toast from 'react-hot-toast'
@@ -135,7 +135,7 @@ export default function SearchModal({ onClose }: Props) {
             </div>
           ) : (
             results.map((p, i) => {
-              const prof = p.profession ? PROFESSIONS[p.profession as keyof typeof PROFESSIONS] : null
+              const prof = getProfMeta(p.profession)
               const status = friendStatuses[p.id] || 'none'
               const btn = friendBtn[status]
               return (

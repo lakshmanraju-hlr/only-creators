@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, Profile, PROFESSIONS } from '@/lib/supabase'
+import { supabase, Profile, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
@@ -61,7 +61,7 @@ export default function RightPanel() {
         <div className="rp-section">
           <div className="rp-heading">Suggested creators</div>
           {suggested.map(c => {
-            const p = c.profession ? PROFESSIONS[c.profession as keyof typeof PROFESSIONS] : null
+            const p = getProfMeta(c.profession)
             return (
               <div key={c.id} className="sug-user">
                 <div className="sug-av" style={{ cursor:'pointer' }} onClick={() => navigate(`/profile/${c.username}`)}>
@@ -80,20 +80,20 @@ export default function RightPanel() {
         </div>
       )}
 
-      {profile?.profession && PROFESSIONS[profile.profession] && (
+      {profile?.profession && (() => { const pm = getProfMeta(profile.profession); return pm ? (
         <div className="rp-section">
           <div className="rp-heading">Your Pro Status</div>
           <div style={{ background:'var(--color-pro-light)', border:'1px solid var(--color-pro-border)', borderRadius:'var(--r-lg)', padding:14 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
               <span style={{ display:'flex', width:16, height:16, color:'var(--color-pro)' }}><Icon.Award /></span>
-              <span style={{ fontSize:13, fontWeight:600, color:'var(--amber-600)' }}>{PROFESSIONS[profile.profession].label}</span>
+              <span style={{ fontSize:13, fontWeight:600, color:'var(--amber-600)' }}>{pm.label}</span>
             </div>
             <div style={{ fontSize:12, color:'var(--gray-600)', lineHeight:1.7 }}>
-              Your Pro Upvotes carry peer authority. Only other verified {PROFESSIONS[profile.profession].label}s receive them.
+              Your Pro Upvotes carry peer authority. Only other verified {pm.label}s receive them.
             </div>
           </div>
         </div>
-      )}
+      ) : null })()}
     </>
   )
 }

@@ -1,7 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
-import { PROFESSIONS, supabase } from '@/lib/supabase'
+import { getProfMeta, supabase } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import FeedPage from '@/pages/FeedPage'
 import ExplorePage from '@/pages/ExplorePage'
@@ -64,7 +64,7 @@ export default function AppShell() {
   }, [])
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
-  const profMeta = profile?.profession ? PROFESSIONS[profile.profession] : null
+  const profMeta = getProfMeta(profile?.profession)
 
   const navItems = [
     { path: '/',              icon: <Icon.Feed />,          label: 'Feed' },

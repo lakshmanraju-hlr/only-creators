@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase, Profile, Post, PROFESSIONS } from '@/lib/supabase'
+import { supabase, Profile, Post, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
 import SocialButton from '@/components/SocialButton'
@@ -84,7 +84,7 @@ export default function ProfilePage() {
 
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
-  const profMeta = profile?.profession ? PROFESSIONS[profile.profession as keyof typeof PROFESSIONS] : null
+  const profMeta = getProfMeta(profile?.profession)
 
   // Grid cell: render appropriate thumbnail for each content type
   function GridCell({ post, onDelete }: { post: Post; onDelete?: () => void }) {
