@@ -3,6 +3,7 @@ import { supabase, Post, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriends } from '@/lib/friends'
 import PostCard from '@/components/PostCard'
+import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 
 type FeedTab = 'all' | 'following' | 'friends' | 'pro'
@@ -163,11 +164,11 @@ export default function FeedPage({ onPost }: Props) {
             value={composerText} onChange={e => setComposerText(e.target.value)} />
         </div>
         <div className="composer-foot">
-          <div className="composer-tool" onClick={onPost}>🖼</div>
-          <div className="composer-tool" onClick={onPost}>🎵</div>
-          <div className="composer-tool" onClick={onPost}>🎬</div>
-          <div className="composer-tool" onClick={onPost}>✍️</div>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>{composerText.length}/500</span>
+          <div className="composer-tool" onClick={onPost} title="Photo"><Icon.Camera /></div>
+          <div className="composer-tool" onClick={onPost} title="Audio"><Icon.Music /></div>
+          <div className="composer-tool" onClick={onPost} title="Video"><Icon.Video /></div>
+          <div className="composer-tool" onClick={onPost} title="Poem"><Icon.PenLine /></div>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-text-3)' }}>{composerText.length}/500</span>
           <button className="btn btn-primary btn-sm" style={{ marginLeft: 10 }}
             onClick={quickPost} disabled={posting || !composerText.trim()}>
             {posting ? <span className="spinner" /> : 'Post'}
@@ -179,7 +180,7 @@ export default function FeedPage({ onPost }: Props) {
         <div className="loading-center"><div className="spinner" /></div>
       ) : posts.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">✦</div>
+          <div className="empty-icon"><Icon.Feed /></div>
           <div className="empty-title">{emptyMessages[tab]}</div>
           <div style={{ marginTop: 12 }}>
             <button className="btn btn-primary btn-sm" onClick={onPost}>Create a post</button>

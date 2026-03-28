@@ -4,6 +4,7 @@ import { supabase, Profile, PROFESSIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriendStatus, sendFriendRequest, acceptFriendRequest, declineFriendRequest } from '@/lib/friends'
 import toast from 'react-hot-toast'
+import { Icon } from '@/lib/icons'
 
 interface Props { onClose: () => void }
 
@@ -100,7 +101,7 @@ export default function SearchModal({ onClose }: Props) {
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '16px 20px', borderBottom: '1px solid var(--border)',
         }}>
-          <span style={{ color: 'var(--text-3)', fontSize: 18, flexShrink: 0 }}>⌕</span>
+          <span style={{ display:'flex', width:18, height:18, color:'var(--color-text-3)', flexShrink:0 }}><Icon.Search /></span>
           <input
             ref={inputRef}
             value={query}
@@ -108,12 +109,12 @@ export default function SearchModal({ onClose }: Props) {
             placeholder="Search by name or @username…"
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: 'var(--text)', fontSize: 15, fontFamily: 'var(--font-sans)',
+              color: 'var(--color-text)', fontSize: 15, fontFamily: 'var(--font-sans)',
             }}
             onKeyDown={e => e.key === 'Escape' && onClose()}
           />
           {query && (
-            <button onClick={() => setQuery('')} style={{ color: 'var(--text-3)', fontSize: 18, padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setQuery('')} style={{ color:'var(--color-text-3)', display:'flex', width:16, height:16, background:'none', border:'none', cursor:'pointer', padding:4 }}><Icon.X /></button>
           )}
         </div>
 
@@ -124,12 +125,12 @@ export default function SearchModal({ onClose }: Props) {
               <div className="spinner" />
             </div>
           ) : results.length === 0 && query ? (
-            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-3)' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>◎</div>
-              <div style={{ fontSize: 14 }}>No creators found for <strong style={{ color: 'var(--text-2)' }}>"{query}"</strong></div>
+            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--color-text-3)' }}>
+              <div style={{ display:'flex', width:32, height:32, color:'var(--color-text-3)', margin:'0 auto 10px' }}><Icon.Search /></div>
+              <div style={{ fontSize: 14 }}>No creators found for <strong style={{ color: 'var(--color-text-2)' }}>"{query}"</strong></div>
             </div>
           ) : results.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-3)', fontSize: 14 }}>
+            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--color-text-3)', fontSize: 14 }}>
               Type a name or username to search creators
             </div>
           ) : (
@@ -146,7 +147,7 @@ export default function SearchModal({ onClose }: Props) {
                     borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none',
                     transition: 'background 0.1s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surf-2)')}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--gray-50)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   {/* Avatar — click to view profile */}
@@ -164,14 +165,14 @@ export default function SearchModal({ onClose }: Props) {
                       <span style={{ fontWeight: 600, fontSize: 14 }}>{p.full_name}</span>
                       {status === 'friends' && <span className="pro-chip" style={{ fontSize: 9 }}>✦ Friends</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>@{p.username}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{p.username}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
                       {prof && (
                         <span className={`pill pill-${prof.pillClass}`} style={{ fontSize: 10 }}>
                           {prof.icon} {prof.label}
                         </span>
                       )}
-                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                         {p.follower_count} followers
                       </span>
                     </div>
@@ -205,7 +206,7 @@ export default function SearchModal({ onClose }: Props) {
         {/* Footer hint */}
         <div style={{
           padding: '10px 20px', borderTop: '1px solid var(--border)',
-          display: 'flex', gap: 16, fontSize: 11, color: 'var(--text-3)',
+          display: 'flex', gap: 16, fontSize: 11, color: 'var(--color-text-3)',
         }}>
           <span>↵ View profile</span>
           <span>Esc Close</span>

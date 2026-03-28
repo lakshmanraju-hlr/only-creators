@@ -202,7 +202,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
               Change photo
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
             </label>
-            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>JPG, PNG, WebP — max 5MB</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>JPG, PNG, WebP — max 5MB</div>
           </div>
         </div>
         <div className="field"><label className="field-label">Display name</label><input className="field-input" value={fullName} onChange={e => setFullName(e.target.value)} /></div>

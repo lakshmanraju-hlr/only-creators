@@ -70,7 +70,7 @@ export default function FriendsPage() {
       <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 28, marginBottom: 4 }}>
         Friends
       </div>
-      <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>
+      <div style={{ fontSize: 14, color: 'var(--color-text-2)', marginBottom: 20 }}>
         Friends is a mutual connection — both people must agree. Following is one-way and anyone can do it.
       </div>
 
@@ -82,7 +82,7 @@ export default function FriendsPage() {
           )}
         </div>
         <div className={`feed-tab ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')}>
-          My friends {friends.length > 0 && <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>({friends.length})</span>}
+          My friends {friends.length > 0 && <span style={{ color: 'var(--color-text-3)', marginLeft: 4 }}>({friends.length})</span>}
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export default function FriendsPage() {
               return (
                 <div key={req.id} style={{
                   display: 'flex', alignItems: 'center', gap: 14,
-                  background: 'var(--surf-1)', border: '1px solid var(--border)',
+                  background: 'var(--gray-0)', border: '1px solid var(--border)',
                   borderRadius: 'var(--r-xl)', padding: '16px 18px',
                 }}>
                   <div className="post-avatar" style={{ width: 46, height: 46, fontSize: 16, flexShrink: 0 }}>
@@ -111,13 +111,13 @@ export default function FriendsPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{sender?.full_name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>@{sender?.username}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{sender?.username}</div>
                     {prof && (
                       <span className={`pill pill-${prof.pillClass}`} style={{ marginTop: 4, display: 'inline-flex' }}>
                         {prof.icon} {prof.label}
                       </span>
                     )}
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>
                       {formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}
                     </div>
                   </div>
@@ -154,7 +154,7 @@ export default function FriendsPage() {
               return (
                 <div key={f.id} style={{
                   display: 'flex', alignItems: 'center', gap: 14,
-                  background: 'var(--surf-1)', border: '1px solid var(--border)',
+                  background: 'var(--gray-0)', border: '1px solid var(--border)',
                   borderRadius: 'var(--r-xl)', padding: '14px 18px',
                 }}>
                   <div className="post-avatar" style={{ width: 42, height: 42, fontSize: 14, flexShrink: 0 }}>
@@ -162,7 +162,7 @@ export default function FriendsPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{f.full_name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>@{f.username}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{f.username}</div>
                     {prof && (
                       <span className={`pill pill-${prof.pillClass}`} style={{ marginTop: 3, display: 'inline-flex' }}>
                         {prof.icon} {prof.label}
