@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase, PROFESSIONS, Profession } from '@/lib/supabase'
+import { supabase, PROFESSIONS, Profession, DISCIPLINE_ALIASES } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 
@@ -10,7 +10,10 @@ const ALL_PROFESSIONS = Object.entries(PROFESSIONS) as [Profession, typeof PROFE
 function findSimilarPredefined(query: string): [Profession, typeof PROFESSIONS[Profession]][] {
   const q = query.toLowerCase().trim()
   if (!q) return []
+  // Check alias map first — e.g. "chef" → "culinary"
+  const aliasCanonical = DISCIPLINE_ALIASES[q]
   return ALL_PROFESSIONS.filter(([key, val]) =>
+    key === aliasCanonical ||
     val.label.toLowerCase().includes(q) ||
     q.includes(val.label.toLowerCase().split(' ')[0]) ||
     key.replace(/-/g, ' ').includes(q) ||

@@ -28,7 +28,14 @@ export default function NotificationsPage() {
 
     const ch = supabase.channel('notifs-' + profile.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + profile.id },
-        payload => setNotifications(prev => [payload.new as Notification, ...prev]))
+        async (payload) => {
+          const { data } = await supabase
+            .from('notifications')
+            .select('*, actor:actor_id(id, full_name, username, avatar_url), post:post_id(id, user_id, profiles(username))')
+            .eq('id', (payload.new as any).id)
+            .single()
+          if (data) setNotifications(prev => [data as Notification, ...prev])
+        })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [profile?.id])

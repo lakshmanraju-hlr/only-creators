@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { supabase, Post, Profile, Group, getProfMeta } from '@/lib/supabase'
+import { supabase, Post, Profile, Group, getProfMeta, getCanonicalDiscipline, getDisciplineMembers } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
 import CreateGroupModal from '@/components/CreateGroupModal'
 
-const PREDEFINED_KEYS = new Set(['photographer','singer','musician','poet','visual-artist','filmmaker','dancer','comedian'])
+const PREDEFINED_KEYS = new Set([
+  'photographer','singer','musician','poet','visual-artist','filmmaker','dancer','comedian',
+  'culinary','fitness','technology','fashion','architecture',
+])
 
 type DisciplineIcon = () => JSX.Element
 
@@ -19,6 +22,11 @@ const DISCIPLINES: { key: string; Icon: DisciplineIcon; name: string; count: str
   { key: 'musician',      Icon: Icon.Music,      name: 'Music',            count: '2.3k' },
   { key: 'dancer',        Icon: Icon.Star,       name: 'Dance',            count: '1.1k' },
   { key: 'comedian',      Icon: Icon.Drama,      name: 'Performance',      count: '740'  },
+  { key: 'culinary',      Icon: Icon.Utensils,   name: 'Culinary Arts',    count: ''     },
+  { key: 'fitness',       Icon: Icon.Activity,   name: 'Fitness & Sports', count: ''     },
+  { key: 'technology',    Icon: Icon.Code,       name: 'Technology',       count: ''     },
+  { key: 'fashion',       Icon: Icon.Scissors,   name: 'Fashion & Style',  count: ''     },
+  { key: 'architecture',  Icon: Icon.Building,   name: 'Architecture',     count: ''     },
 ]
 
 export default function ExplorePage() {
@@ -40,7 +48,7 @@ export default function ExplorePage() {
       .then(({ data }) => {
         if (!data) return
         const unique = [...new Set((data as any[]).map(p => p.profession as string))]
-          .filter(p => !PREDEFINED_KEYS.has(p))
+          .filter(p => !PREDEFINED_KEYS.has(p) && !PREDEFINED_KEYS.has(getCanonicalDiscipline(p) || ''))
         setCustomDisciplines(unique)
       })
   }, [])
@@ -49,17 +57,19 @@ export default function ExplorePage() {
     if (!selectedDiscipline) return
     async function load() {
       setLoading(true)
+      // Include all alias professions that map to this discipline
+      const members = getDisciplineMembers(selectedDiscipline!)
       if (view === 'posts') {
-        const { data: du } = await supabase.from('profiles').select('id').eq('profession', selectedDiscipline)
+        const { data: du } = await supabase.from('profiles').select('id').in('profession', members)
         const uids = (du || []).map((u: any) => u.id)
         if (uids.length === 0) { setPosts([]); setLoading(false); return }
         const { data } = await supabase.from('posts').select('*, profiles(*), group:group_id(*)').in('user_id', uids).order('pro_upvote_count', { ascending: false }).limit(20)
         setPosts((data || []) as Post[])
       } else if (view === 'creators') {
-        const { data } = await supabase.from('profiles').select('*').eq('profession', selectedDiscipline).order('follower_count', { ascending: false }).limit(30)
+        const { data } = await supabase.from('profiles').select('*').in('profession', members).order('follower_count', { ascending: false }).limit(30)
         setCreators((data || []) as Profile[])
       } else {
-        const { data } = await supabase.from('groups').select('*').eq('discipline', selectedDiscipline).order('post_count', { ascending: false })
+        const { data } = await supabase.from('groups').select('*').in('discipline', members).order('post_count', { ascending: false })
         setGroups((data || []) as Group[])
       }
       setLoading(false)
@@ -68,6 +78,12 @@ export default function ExplorePage() {
   }, [selectedDiscipline, view])
 
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
+
+  // User can create a group if their profession (or its canonical) matches the selected discipline
+  const canCreateGroup = !!(profile?.profession && selectedDiscipline && (
+    profile.profession === selectedDiscipline ||
+    getCanonicalDiscipline(profile.profession) === selectedDiscipline
+  ))
 
   if (selectedDiscipline) {
     const meta = getProfMeta(selectedDiscipline)
@@ -82,7 +98,7 @@ export default function ExplorePage() {
             <span style={{ display:'flex', width:18, height:18, color:'var(--color-primary)' }}><disc.Icon /></span>
           </div>}
           <div>
-            <div style={{ fontWeight:600, fontSize:16 }}>{meta?.label}</div>
+            <div style={{ fontWeight:600, fontSize:16 }}>{meta?.label || selectedDiscipline}</div>
             <div style={{ fontSize:12, color:'var(--color-text-3)' }}>Verified professionals</div>
           </div>
         </div>
@@ -98,13 +114,13 @@ export default function ExplorePage() {
             <div className="empty-state">
               <div className="empty-icon">{disc && <disc.Icon />}</div>
               <div className="empty-title">No posts yet</div>
-              <div className="empty-sub">Be the first verified {meta?.label} to post</div>
+              <div className="empty-sub">Be the first verified {meta?.label || selectedDiscipline} to post</div>
             </div>
           ) : posts.map(p => <PostCard key={p.id} post={p} />)
         ) : view === 'creators' ? (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {creators.length === 0 ? (
-              <div className="empty-state"><div className="empty-title">No verified {meta?.label}s yet</div></div>
+              <div className="empty-state"><div className="empty-title">No verified creators yet</div></div>
             ) : creators.map(c => (
               <div key={c.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', background:'var(--gray-0)', border:'1px solid var(--color-border)', borderRadius:'var(--r-xl)', boxShadow:'var(--shadow-xs)' }}>
                 <div className="post-avatar" style={{ width:44, height:44, fontSize:15, flexShrink:0 }}>
@@ -124,7 +140,7 @@ export default function ExplorePage() {
           </div>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {profile?.profession === selectedDiscipline && (
+            {canCreateGroup && (
               <button className="btn btn-primary btn-sm" style={{ alignSelf:'flex-end' }} onClick={() => setShowCreateGroup(true)}>
                 <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
                 New group
@@ -161,7 +177,7 @@ export default function ExplorePage() {
           <div key={d.key} className="explore-card" onClick={() => setSearchParams({ discipline: d.key })}>
             <div className="explore-icon-wrap"><span style={{ display:'flex', width:22, height:22 }}><d.Icon /></span></div>
             <div className="explore-name">{d.name}</div>
-            <div className="explore-count">{d.count} creators</div>
+            {d.count && <div className="explore-count">{d.count} creators</div>}
             <div className="explore-pro">Pro verified</div>
           </div>
         ))}
