@@ -4,7 +4,9 @@ import { supabase, Post, Profile, PROFESSIONS, Profession } from '@/lib/supabase
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
 
-const DISCIPLINES = [
+type DisciplineIcon = () => JSX.Element
+
+const DISCIPLINES: { key: string; Icon: DisciplineIcon; name: string; count: string }[] = [
   { key: 'photographer',  Icon: Icon.Camera,     name: 'Photography',     count: '4.1k' },
   { key: 'singer',        Icon: Icon.Mic,        name: 'Vocals & Singing', count: '2.8k' },
   { key: 'poet',          Icon: Icon.PenLine,    name: 'Poetry & Writing', count: '1.6k' },
