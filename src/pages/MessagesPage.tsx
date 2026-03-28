@@ -7,6 +7,43 @@ import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
 import toast from 'react-hot-toast'
 
+async function getOrCreateConversation(myId: string, otherId: string): Promise<string> {
+  // Find my conversation IDs
+  const { data: myRows } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', myId)
+
+  const myConvIds = (myRows || []).map((r: any) => r.conversation_id)
+
+  if (myConvIds.length > 0) {
+    // With the updated cp_select policy we can see all participants in our conversations
+    const { data: shared } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', otherId)
+      .in('conversation_id', myConvIds)
+      .limit(1)
+
+    if (shared && shared.length > 0) return shared[0].conversation_id
+  }
+
+  // No existing conversation — create one
+  const { data: conv, error: convErr } = await supabase
+    .from('conversations')
+    .insert({})
+    .select('id')
+    .single()
+  if (convErr || !conv) throw new Error(convErr?.message || 'Failed to create conversation')
+
+  await supabase.from('conversation_participants').insert([
+    { conversation_id: conv.id, user_id: myId },
+    { conversation_id: conv.id, user_id: otherId },
+  ])
+
+  return conv.id
+}
+
 export default function MessagesPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -50,9 +87,14 @@ export default function MessagesPage() {
     setMessages([])
     setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_or_create_conversation', { other_user_id: friend.id })
-    if (error) { toast.error('Could not open conversation: ' + error.message); setLoading(false); return }
-    const convId = data as string
+    let convId: string
+    try {
+      convId = await getOrCreateConversation(profile!.id, friend.id)
+    } catch (err: any) {
+      toast.error('Could not open conversation: ' + err.message)
+      setLoading(false)
+      return
+    }
     setConversationId(convId)
     convIdRef.current = convId
 

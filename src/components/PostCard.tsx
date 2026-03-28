@@ -7,6 +7,40 @@ import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
 
+async function getOrCreateConversation(myId: string, otherId: string): Promise<string> {
+  const { data: myRows } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', myId)
+
+  const myConvIds = (myRows || []).map((r: any) => r.conversation_id)
+
+  if (myConvIds.length > 0) {
+    const { data: shared } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', otherId)
+      .in('conversation_id', myConvIds)
+      .limit(1)
+
+    if (shared && shared.length > 0) return shared[0].conversation_id
+  }
+
+  const { data: conv, error: convErr } = await supabase
+    .from('conversations')
+    .insert({})
+    .select('id')
+    .single()
+  if (convErr || !conv) throw new Error(convErr?.message || 'Failed to create conversation')
+
+  await supabase.from('conversation_participants').insert([
+    { conversation_id: conv.id, user_id: myId },
+    { conversation_id: conv.id, user_id: otherId },
+  ])
+
+  return conv.id
+}
+
 interface Props { post: Post; onUpdated?: () => void }
 
 export default function PostCard({ post, onUpdated }: Props) {
@@ -133,8 +167,8 @@ export default function PostCard({ post, onUpdated }: Props) {
   async function shareToFriend(friend: Profile) {
     if (!profile) return
     setSharing(friend.id)
-    const { data: convData } = await supabase.rpc('get_or_create_conversation', { other_user_id: friend.id })
-    await supabase.from('messages').insert({ conversation_id: convData, sender_id: profile.id, post_id: post.id, body: null })
+    const convId = await getOrCreateConversation(profile.id, friend.id)
+    await supabase.from('messages').insert({ conversation_id: convId, sender_id: profile.id, post_id: post.id, body: null })
     setSharing(null)
     toast.success('Shared with ' + friend.full_name + '!')
     setShowShare(false)
