@@ -29,7 +29,32 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [mentionResults, setMentionResults] = useState<Profile[]>([])
   const [mentionIndex, setMentionIndex] = useState(0)
   const [mentionStart, setMentionStart] = useState(-1)
+  const [showMenu, setShowMenu] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const commentRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const isOwnPost = profile?.id === post.user_id
+
+  useEffect(() => {
+    if (!showMenu) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showMenu])
+
+  async function deletePost() {
+    if (!profile || !isOwnPost) return
+    setDeleting(true)
+    setShowMenu(false)
+    const { error } = await supabase.from('posts').delete().eq('id', post.id)
+    if (error) { toast.error('Failed to delete: ' + error.message); setDeleting(false); return }
+    if (post.media_path) await supabase.storage.from('posts').remove([post.media_path])
+    toast.success('Post deleted')
+    onUpdated?.()
+  }
 
   const author = post.profiles
   const profMeta = author?.profession ? PROFESSIONS[author.profession] : null
@@ -157,7 +182,24 @@ export default function PostCard({ post, onUpdated }: Props) {
           </div>
           <div className="post-time">@{author?.username} · {timeAgo}</div>
         </div>
-        <button className="post-more" style={{ background:'none', border:'none', cursor:'pointer' }}>···</button>
+        <div style={{ position: 'relative' }} ref={menuRef}>
+          <button className="post-more" style={{ background:'none', border:'none', cursor:'pointer' }} onClick={() => setShowMenu(v => !v)}>···</button>
+          {showMenu && (
+            <div className="post-menu-dropdown">
+              {isOwnPost && (
+                <button className="post-menu-item post-menu-item-danger" onClick={deletePost} disabled={deleting}>
+                  <span style={{ display:'flex', width:13, height:13 }}><Icon.Trash /></span>
+                  {deleting ? 'Deleting…' : 'Delete post'}
+                </button>
+              )}
+              {!isOwnPost && (
+                <button className="post-menu-item" onClick={() => setShowMenu(false)}>
+                  Report
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {post.content_type === 'photo' && post.media_url && <div className="media-photo"><img src={post.media_url} alt="post" /></div>}

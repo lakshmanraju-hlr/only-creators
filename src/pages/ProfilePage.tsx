@@ -87,7 +87,7 @@ export default function ProfilePage() {
   const profMeta = profile?.profession ? PROFESSIONS[profile.profession as keyof typeof PROFESSIONS] : null
 
   // Grid cell: render appropriate thumbnail for each content type
-  function GridCell({ post }: { post: Post }) {
+  function GridCell({ post, onDelete }: { post: Post; onDelete?: () => void }) {
     const [hovered, setHovered] = useState(false)
     return (
       <div
@@ -128,6 +128,18 @@ export default function ProfilePage() {
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'white', fontSize: 13, fontWeight: 600 }}>
             <span>♥ {post.like_count}</span>
             <span>💬 {post.comment_count}</span>
+            {isOwnProfile && onDelete && (
+              <button
+                onClick={async e => {
+                  e.stopPropagation()
+                  const { error } = await supabase.from('posts').delete().eq('id', post.id)
+                  if (!error) { if (post.media_path) await supabase.storage.from('posts').remove([post.media_path]); onDelete() }
+                }}
+                style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(220,38,38,0.85)', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer', display: 'flex', padding: '3px 7px', fontSize: 11, gap: 4, alignItems: 'center' }}
+              >
+                <span style={{ display: 'flex', width: 11, height: 11 }}><Icon.Trash /></span> Delete
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -230,7 +242,7 @@ export default function ProfilePage() {
 
       {posts.length > 0 && (gridView ? (
         <div className="profile-grid">
-          {posts.map(p => <GridCell key={p.id} post={p} />)}
+          {posts.map(p => <GridCell key={p.id} post={p} onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />)}
         </div>
       ) : (
         <>
@@ -241,7 +253,12 @@ export default function ProfilePage() {
               </button>
             </div>
           )}
-          {(selectedPost ? [selectedPost] : posts).map(p => <PostCard key={p.id} post={p} />)}
+          {(selectedPost ? [selectedPost] : posts).map(p => (
+            <PostCard key={p.id} post={p} onUpdated={() => {
+              setPosts(prev => prev.filter(x => x.id !== p.id))
+              if (selectedPost?.id === p.id) setSelectedPost(null)
+            }} />
+          ))}
         </>
       ))}
 
