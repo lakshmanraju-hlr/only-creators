@@ -45,22 +45,19 @@ export default function FeedPage({ onPost }: Props) {
         if (friendIds.length === 0) { setPosts([]); setLoading(false); return }
         userIdFilter = friendIds
       }
-      if (tab === 'pro') {
-        const { data: proUsers } = await supabase
-          .from('profiles').select('id').not('profession', 'is', null)
-        const ids = (proUsers || []).map((u: any) => u.id)
-        if (ids.length === 0) { setPosts([]); setLoading(false); return }
-        userIdFilter = ids
-      }
-
       // Fetch posts
       let query = supabase
         .from('posts')
-        .select('id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,created_at')
+        .select('id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,visibility,created_at')
         .order('created_at', { ascending: false })
         .limit(30)
 
-      if (userIdFilter) query = query.in('user_id', userIdFilter)
+      if (tab === 'pro') {
+        // Pro tab: only original work, ranked by upvotes
+        query = query.eq('is_pro_post', true).order('pro_upvote_count', { ascending: false })
+      } else if (userIdFilter) {
+        query = query.in('user_id', userIdFilter)
+      }
 
       const { data: postsData, error } = await query
       if (error) { toast.error(error.message); setLoading(false); return }

@@ -33,7 +33,7 @@ export default function PostCard({ post, onUpdated }: Props) {
 
   const author = post.profiles
   const profMeta = author?.profession ? PROFESSIONS[author.profession] : null
-  const canProUpvote = !!(profile?.profession && author?.profession && profile.profession === author.profession && profile.id !== post.user_id)
+  const canProUpvote = !!(post.is_pro_post && profile?.profession && author?.profession && profile.profession === author.profession && profile.id !== post.user_id)
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
   function goToAuthor() { if (author?.username) navigate('/profile/' + author.username) }
@@ -153,6 +153,7 @@ export default function PostCard({ post, onUpdated }: Props) {
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
             {profMeta && <span className={'pill pill-' + profMeta.pillClass}>{profMeta.label}</span>}
+            {post.is_pro_post && <span className="pro-original-badge">◆ Original</span>}
           </div>
           <div className="post-time">@{author?.username} · {timeAgo}</div>
         </div>

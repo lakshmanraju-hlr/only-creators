@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [profileTab, setProfileTab] = useState<'personal' | 'pro'>('personal')
   const [gridView, setGridView] = useState(true)
   const [avatarLightbox, setAvatarLightbox] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
@@ -34,18 +35,37 @@ export default function ProfilePage() {
       setProfile(profileData)
       if (!profileData) { setLoading(false); return }
 
-      const { data: postsData } = await supabase
+      const isOwn = !username || profileData.id === myProfile?.id
+      const isPrivate = !isOwn && profileData.personal_profile_public === false
+
+      // Private personal profile — show no posts
+      if (profileTab === 'personal' && isPrivate) {
+        setPosts([])
+        setLoading(false)
+        return
+      }
+
+      let postsQuery = supabase
         .from('posts')
-        .select('id, user_id, content_type, caption, poem_text, media_url, media_path, tags, like_count, comment_count, share_count, pro_upvote_count, created_at')
+        .select('id, user_id, content_type, caption, poem_text, media_url, media_path, tags, like_count, comment_count, share_count, pro_upvote_count, is_pro_post, visibility, created_at')
         .eq('user_id', profileData.id)
         .order('created_at', { ascending: false })
+
+      if (profileTab === 'pro') {
+        postsQuery = postsQuery.eq('is_pro_post', true)
+      } else if (!isOwn) {
+        // For others' personal profiles, only show public posts
+        postsQuery = postsQuery.eq('visibility', 'public')
+      }
+
+      const { data: postsData } = await postsQuery
 
       const enriched = (postsData || []).map((p: any) => ({ ...p, profiles: profileData })) as Post[]
       setPosts(enriched)
       setLoading(false)
     }
     load()
-  }, [username, myProfile?.id])
+  }, [username, myProfile?.id, profileTab])
 
   // Scroll to post if #post-id in URL
   useEffect(() => {
@@ -171,17 +191,44 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-        <button className={'btn btn-sm ' + (gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(true)}>Grid</button>
-        <button className={'btn btn-sm ' + (!gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(false)}>Feed</button>
+      {/* Profile tabs */}
+      <div className="profile-tabs">
+        <button className={'profile-tab ' + (profileTab === 'personal' ? 'active' : '')} onClick={() => { setProfileTab('personal'); setSelectedPost(null) }}>
+          Personal
+        </button>
+        <button className={'profile-tab ' + (profileTab === 'pro' ? 'active' : '')} onClick={() => { setProfileTab('pro'); setSelectedPost(null) }}>
+          ◆ Pro
+        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          <button className={'btn btn-sm ' + (gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(true)}>Grid</button>
+          <button className={'btn btn-sm ' + (!gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(false)}>Feed</button>
+        </div>
       </div>
 
-      {posts.length === 0 ? (
+      {profileTab === 'pro' && posts.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon" style={{ fontSize: 24 }}>◆</div>
+          <div className="empty-title">{isOwnProfile ? 'No Pro posts yet' : 'No original work posted yet'}</div>
+          {isOwnProfile && <div className="empty-sub">When uploading, mark content as original work to add it to your Pro Profile.</div>}
+        </div>
+      )}
+
+      {profileTab === 'personal' && !isOwnProfile && profile.personal_profile_public === false && (
+        <div className="empty-state">
+          <div className="empty-icon"><Icon.Lock /></div>
+          <div className="empty-title">This profile is private</div>
+          <div className="empty-sub">Only friends can see this person's personal posts.</div>
+        </div>
+      )}
+
+      {posts.length === 0 && profileTab !== 'pro' && !(profileTab === 'personal' && !isOwnProfile && profile.personal_profile_public === false) && (
         <div className="empty-state">
           <div className="empty-icon"><Icon.Camera /></div>
           <div className="empty-title">{isOwnProfile ? "You haven't posted yet" : 'No posts yet'}</div>
         </div>
-      ) : gridView ? (
+      )}
+
+      {posts.length > 0 && (gridView ? (
         <div className="profile-grid">
           {posts.map(p => <GridCell key={p.id} post={p} />)}
         </div>
@@ -196,7 +243,7 @@ export default function ProfilePage() {
           )}
           {(selectedPost ? [selectedPost] : posts).map(p => <PostCard key={p.id} post={p} />)}
         </>
-      )}
+      ))}
 
       {/* Avatar lightbox */}
       {avatarLightbox && profile.avatar_url && (
@@ -238,6 +285,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
   const [username, setUsername] = useState(profile.username)
   const [bio, setBio] = useState(profile.bio || '')
   const [website, setWebsite] = useState(profile.website || '')
+  const [personalPublic, setPersonalPublic] = useState(profile.personal_profile_public !== false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState(profile.avatar_url || '')
   const [saving, setSaving] = useState(false)
@@ -264,6 +312,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
       full_name: fullName,
       username: username.replace('@', '').toLowerCase(),
       bio, website, avatar_url: avatarUrl,
+      personal_profile_public: personalPublic,
       updated_at: new Date().toISOString(),
     }).eq('id', myProfile.id)
     if (error) toast.error(error.message)
@@ -298,6 +347,13 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
         <div className="field"><label className="field-label">Username</label><input className="field-input" value={username} onChange={e => setUsername(e.target.value)} /></div>
         <div className="field"><label className="field-label">Bio</label><textarea className="field-textarea" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the world about your craft…" /></div>
         <div className="field"><label className="field-label">Website</label><input className="field-input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yourportfolio.com" /></div>
+        <div className="upload-option-row" onClick={() => setPersonalPublic(v => !v)} style={{ marginBottom: 16 }}>
+          <div className="upload-option-label">
+            <span style={{ display: 'flex', width: 14, height: 14, color: 'var(--color-text-3)' }}>{personalPublic ? <Icon.Globe /> : <Icon.Lock />}</span>
+            Personal profile is {personalPublic ? 'public' : 'private (friends only)'}
+          </div>
+          <div className={`upload-toggle ${personalPublic ? 'on' : ''}`} />
+        </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" style={{ flex: 2 }} onClick={save} disabled={saving}>

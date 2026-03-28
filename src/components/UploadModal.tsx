@@ -23,6 +23,8 @@ export default function UploadModal({ onClose }: Props) {
   const [tags, setTags] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [isProPost, setIsProPost] = useState(false)
+  const [postVisibility, setPostVisibility] = useState<'public' | 'friends'>('public')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -56,7 +58,7 @@ export default function UploadModal({ onClose }: Props) {
     }
     setProgress(85)
     const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
-    const { error } = await supabase.from('posts').insert({ user_id: profile.id, content_type: contentType, caption: caption.trim(), poem_text: poemText.trim(), media_url: mediaUrl, media_path: mediaPath, tags: tagArray })
+    const { error } = await supabase.from('posts').insert({ user_id: profile.id, content_type: contentType, caption: caption.trim(), poem_text: poemText.trim(), media_url: mediaUrl, media_path: mediaPath, tags: tagArray, is_pro_post: isProPost, visibility: isProPost ? 'public' : postVisibility })
     setProgress(100)
     if (error) { toast.error('Failed to post: ' + error.message) }
     else { toast.success('Post published!'); onClose() }
@@ -114,6 +116,40 @@ export default function UploadModal({ onClose }: Props) {
           <label className="field-label">Tags</label>
           <input className="field-input" placeholder="#photography  #portrait  #blackandwhite" value={tags} onChange={e => setTags(e.target.value)} />
         </div>
+
+        {/* Visibility — always shown */}
+        <div className="upload-option-row">
+          <div className="upload-option-label">
+            <span style={{ display:'flex', width:14, height:14, color:'var(--color-text-3)' }}>{postVisibility === 'friends' ? <Icon.Lock /> : <Icon.Globe />}</span>
+            Who can see this?
+          </div>
+          <div className="upload-option-toggle">
+            <button
+              className={'upload-vis-btn ' + (postVisibility === 'public' && !isProPost ? 'active' : '')}
+              onClick={() => { setPostVisibility('public'); }}
+              disabled={isProPost}
+            >Public</button>
+            <button
+              className={'upload-vis-btn ' + (postVisibility === 'friends' && !isProPost ? 'active' : '')}
+              onClick={() => { setPostVisibility('friends'); setIsProPost(false) }}
+              disabled={isProPost}
+            >Friends only</button>
+          </div>
+        </div>
+
+        {/* Pro post toggle — only for users with a profession */}
+        {profile?.profession && (
+          <div className="upload-option-row pro-option-row" onClick={() => { setIsProPost(v => !v); if (!isProPost) setPostVisibility('public') }}>
+            <div className="upload-option-label">
+              <span className="pro-badge-inline">◆</span>
+              Mark as original work (Pro post)
+            </div>
+            <div className={`upload-toggle ${isProPost ? 'on' : ''}`} />
+            {isProPost && <div style={{ width:'100%', fontSize:11, color:'var(--color-text-3)', marginTop:4 }}>
+              Pro posts are always public and visible on your Pro Profile. Creators in your discipline can upvote them.
+            </div>}
+          </div>
+        )}
 
         {uploading && <div className="upload-progress" style={{ marginBottom:12 }}><div className="upload-progress-fill" style={{ width:`${progress}%` }} /></div>}
 

@@ -26,6 +26,7 @@ export interface Profile {
   website: string
   profession: Profession | null
   is_pro: boolean
+  personal_profile_public: boolean
   follower_count: number
   following_count: number
   friend_count: number
@@ -46,6 +47,8 @@ export interface Post {
   comment_count: number
   share_count: number
   pro_upvote_count: number
+  is_pro_post: boolean
+  visibility: 'public' | 'friends'
   created_at: string
   profiles?: Profile
   user_liked?: boolean
