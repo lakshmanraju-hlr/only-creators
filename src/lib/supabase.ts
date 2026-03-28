@@ -93,3 +93,22 @@ export const PROFESSIONS: Record<Profession, { label: string; icon: string; pill
   dancer:          { label: 'Dancer',                icon: '💃', pillClass: 'pill-dancer' },
   comedian:        { label: 'Comedian',              icon: '🎭', pillClass: 'pill-comedian' },
 }
+
+export interface Message {
+  id: string
+  conversation_id: string
+  sender_id: string
+  body: string | null
+  post_id: string | null
+  created_at: string
+  sender?: Profile
+  post?: Post
+}
+
+export interface Conversation {
+  id: string
+  created_at: string
+  other_user?: Profile
+  last_message?: Message
+  unread_count?: number
+}

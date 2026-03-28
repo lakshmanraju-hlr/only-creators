@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
-import { supabase, Post, Comment, PROFESSIONS } from '@/lib/supabase'
+import { supabase, Post, Comment, PROFESSIONS, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
+import { getFriends } from '@/lib/friends'
 
 interface Props { post: Post; onUpdated?: () => void }
 
@@ -20,20 +21,27 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [commentText, setCommentText] = useState('')
   const [loadingComments, setLoadingComments] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [friends, setFriends] = useState<Profile[]>([])
+  const [sharing, setSharing] = useState<string | null>(null)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionResults, setMentionResults] = useState<Profile[]>([])
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const [mentionStart, setMentionStart] = useState(-1)
+  const commentRef = useRef<HTMLInputElement>(null)
 
   const author = post.profiles
   const profMeta = author?.profession ? PROFESSIONS[author.profession] : null
   const canProUpvote = !!(profile?.profession && author?.profession && profile.profession === author.profession && profile.id !== post.user_id)
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
-  function goToAuthor() { if (author?.username) navigate(`/profile/${author.username}`) }
+  function goToAuthor() { if (author?.username) navigate('/profile/' + author.username) }
 
   async function toggleLike() {
     if (!profile) return toast.error('Sign in to like posts')
     const was = liked; setLiked(!was); setLikeCount(c => was ? c - 1 : c + 1)
-    if (was) {
-      await supabase.from('likes').delete().match({ user_id: profile.id, post_id: post.id })
-    } else {
+    if (was) { await supabase.from('likes').delete().match({ user_id: profile.id, post_id: post.id }) }
+    else {
       await supabase.from('likes').insert({ user_id: profile.id, post_id: post.id })
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'like', post_id: post.id })
     }
@@ -42,9 +50,8 @@ export default function PostCard({ post, onUpdated }: Props) {
   async function toggleProUpvote() {
     if (!canProUpvote || !profile) return
     const was = proUpvoted; setProUpvoted(!was); setProCount(c => was ? c - 1 : c + 1)
-    if (was) {
-      await supabase.from('pro_upvotes').delete().match({ user_id: profile.id, post_id: post.id })
-    } else {
+    if (was) { await supabase.from('pro_upvotes').delete().match({ user_id: profile.id, post_id: post.id }) }
+    else {
       await supabase.from('pro_upvotes').insert({ user_id: profile.id, post_id: post.id, profession: profile.profession })
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'pro_upvote', post_id: post.id })
       toast.success('Pro Upvote given!')
@@ -61,22 +68,82 @@ export default function PostCard({ post, onUpdated }: Props) {
     setLoadingComments(false)
   }
 
+  function handleCommentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setCommentText(val)
+    const cursor = e.target.selectionStart ?? val.length
+    const before = val.slice(0, cursor)
+    const atIdx = before.lastIndexOf('@')
+    if (atIdx !== -1) {
+      const afterAt = before.slice(atIdx + 1)
+      if (!afterAt.includes(' ') && afterAt.length <= 20) {
+        setMentionStart(atIdx); setMentionQuery(afterAt); setMentionIndex(0); return
+      }
+    }
+    setMentionStart(-1); setMentionQuery(''); setMentionResults([])
+  }
+
+  useEffect(() => {
+    if (!mentionQuery || mentionStart === -1 || !profile) { setMentionResults([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from('profiles').select('id,username,full_name,avatar_url').ilike('username', mentionQuery + '%').neq('id', profile.id).limit(5)
+      setMentionResults((data || []) as Profile[])
+    }, 180)
+    return () => clearTimeout(t)
+  }, [mentionQuery, mentionStart])
+
+  function pickMention(username: string) {
+    const before = commentText.slice(0, mentionStart)
+    const after = commentText.slice(mentionStart + 1 + mentionQuery.length)
+    setCommentText(before + '@' + username + ' ' + after)
+    setMentionStart(-1); setMentionQuery(''); setMentionResults([])
+    commentRef.current?.focus()
+  }
+
+  function handleCommentKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (mentionResults.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => Math.min(i + 1, mentionResults.length - 1)); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => Math.max(i - 1, 0)); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMention(mentionResults[mentionIndex].username); return }
+      if (e.key === 'Escape') { setMentionResults([]); return }
+    }
+    if (e.key === 'Enter' && mentionResults.length === 0) submitComment()
+  }
+
   async function submitComment() {
     if (!profile || !commentText.trim()) return
     setSubmitting(true)
     const { data, error } = await supabase.from('comments').insert({ post_id: post.id, user_id: profile.id, body: commentText.trim() }).select('*, profiles(id,username,full_name,avatar_url)').single()
     if (!error && data) {
-      setComments(c => [...c, data as Comment])
-      setCommentText('')
+      setComments(c => [...c, data as Comment]); setCommentText(''); setMentionResults([])
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'comment', post_id: post.id })
     }
     setSubmitting(false)
   }
 
+  async function openShare() {
+    setShowShare(true)
+    if (!profile) return
+    const ids = await getFriends(profile.id)
+    if (!ids.length) return
+    const { data } = await supabase.from('profiles').select('*').in('id', ids)
+    setFriends((data || []) as Profile[])
+  }
+
+  async function shareToFriend(friend: Profile) {
+    if (!profile) return
+    setSharing(friend.id)
+    const { data: convData } = await supabase.rpc('get_or_create_conversation', { other_user_id: friend.id })
+    await supabase.from('messages').insert({ conversation_id: convData, sender_id: profile.id, post_id: post.id, body: null })
+    setSharing(null)
+    toast.success('Shared with ' + friend.full_name + '!')
+    setShowShare(false)
+  }
+
   const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
 
   return (
-    <div className="post-card">
+    <div className="post-card" id={'post-' + post.id}>
       <div className="post-header">
         <div className="post-avatar" onClick={goToAuthor}>
           {author?.avatar_url ? <img src={author.avatar_url} alt="" /> : initials(author?.full_name || '?')}
@@ -84,14 +151,13 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div style={{ flex:1, minWidth:0 }}>
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
-            {profMeta && <span className={`pill pill-${profMeta.pillClass}`}>{profMeta.label}</span>}
+            {profMeta && <span className={'pill pill-' + profMeta.pillClass}>{profMeta.label}</span>}
           </div>
           <div className="post-time">@{author?.username} · {timeAgo}</div>
         </div>
         <button className="post-more" style={{ background:'none', border:'none', cursor:'pointer' }}>···</button>
       </div>
 
-      {/* Media */}
       {post.content_type === 'photo' && post.media_url && <div className="media-photo"><img src={post.media_url} alt="post" /></div>}
       {post.content_type === 'video' && post.media_url && <div className="media-video"><video controls src={post.media_url} /></div>}
       {post.content_type === 'audio' && post.media_url && (
@@ -106,39 +172,34 @@ export default function PostCard({ post, onUpdated }: Props) {
       {post.content_type === 'document' && post.media_url && (
         <div className="media-doc">
           <div className="doc-icon-wrap"><Icon.FileText /></div>
-          <div>
-            <div className="doc-name">{post.caption || 'Document'}</div>
-            <a href={post.media_url} target="_blank" rel="noreferrer" style={{ color:'var(--color-primary)', fontSize:12 }}>Open document</a>
-          </div>
+          <div><div className="doc-name">{post.caption || 'Document'}</div><a href={post.media_url} target="_blank" rel="noreferrer" style={{ color:'var(--color-primary)', fontSize:12 }}>Open document</a></div>
         </div>
       )}
 
-      {/* Caption */}
       {post.caption && post.content_type !== 'audio' && (
         <div className="post-caption">
           {post.caption.split(' ').map((word, i) =>
-            word.startsWith('#') ? <span key={i} className="tag">{word} </span> : <span key={i}>{word} </span>
+            word.startsWith('#') ? <span key={i} className="tag">{word} </span> :
+            word.startsWith('@') ? <span key={i} className="mention" onClick={() => navigate('/profile/' + word.slice(1))}>{word} </span> :
+            <span key={i}>{word} </span>
           )}
         </div>
       )}
 
-      {/* Actions */}
       <div className="post-actions">
-        <button className={`act-btn ${liked ? 'liked' : ''}`} onClick={toggleLike}>
-          <span style={{ display:'flex', width:16, height:16 }}>
-            {liked ? <Icon.Heart filled /> : <Icon.Heart />}
-          </span>
+        <button className={'act-btn ' + (liked ? 'liked' : '')} onClick={toggleLike}>
+          <span style={{ display:'flex', width:16, height:16 }}>{liked ? <Icon.Heart filled /> : <Icon.Heart />}</span>
           <span className="act-count">{likeCount}</span>
         </button>
         <button className="act-btn" onClick={loadComments}>
           <span style={{ display:'flex', width:16, height:16 }}><Icon.MessageCircle /></span>
           <span className="act-count">{post.comment_count}</span>
         </button>
-        <button className="act-btn" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/profile/' + author?.username); toast.success('Link copied!') }}>
+        <button className="act-btn" onClick={openShare}>
           <span style={{ display:'flex', width:16, height:16 }}><Icon.Share /></span>
         </button>
         <button
-          className={`pro-btn ${proUpvoted ? 'active' : ''} ${!canProUpvote ? 'locked' : ''}`}
+          className={'pro-btn ' + (proUpvoted ? 'active' : '') + ' ' + (!canProUpvote ? 'locked' : '')}
           onClick={canProUpvote ? toggleProUpvote : () => toast('Only verified creators in the same discipline can give Pro Upvotes')}
         >
           <span style={{ display:'flex', width:13, height:13 }}><Icon.Award /></span>
@@ -146,28 +207,84 @@ export default function PostCard({ post, onUpdated }: Props) {
         </button>
       </div>
 
-      {/* Comments */}
       {showComments && (
         <div className="comments-wrap">
           {loadingComments
             ? <div style={{ display:'flex', justifyContent:'center', padding:12 }}><div className="spinner" /></div>
             : comments.map(c => (
               <div key={c.id} className="comment-item">
-                <div className="post-avatar" style={{ width:28, height:28, fontSize:10, flexShrink:0, cursor:'pointer' }} onClick={() => c.profiles?.username && navigate(`/profile/${c.profiles.username}`)}>
+                <div className="post-avatar" style={{ width:28, height:28, fontSize:10, flexShrink:0, cursor:'pointer' }} onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>
                   {c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} alt="" /> : initials(c.profiles?.full_name || '?')}
                 </div>
                 <div className="comment-bubble">
-                  <div className="comment-author" onClick={() => c.profiles?.username && navigate(`/profile/${c.profiles.username}`)}>@{c.profiles?.username}</div>
-                  <div className="comment-text">{c.body}</div>
+                  <div className="comment-author" onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>@{c.profiles?.username}</div>
+                  <div className="comment-text">
+                    {c.body.split(' ').map((w, i) =>
+                      w.startsWith('@') ? <span key={i} className="mention" onClick={() => navigate('/profile/' + w.slice(1))}>{w} </span> : <span key={i}>{w} </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
           }
-          <div className="comment-input-row" style={{ marginTop:10 }}>
-            <input className="comment-input" placeholder="Add a comment…" value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitComment()} />
-            <button className="comment-submit" onClick={submitComment} disabled={submitting}>
-              {submitting ? <div className="spinner" style={{ width:12, height:12 }} /> : <span style={{ display:'flex', width:14, height:14 }}><Icon.Send /></span>}
-            </button>
+          <div style={{ position:'relative', marginTop:10 }}>
+            {mentionResults.length > 0 && (
+              <div className="mention-dropdown">
+                {mentionResults.map((r, i) => (
+                  <button key={r.id} className={'mention-option ' + (i === mentionIndex ? 'active' : '')} onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}>
+                    <div className="post-avatar" style={{ width:24, height:24, fontSize:8, flexShrink:0 }}>
+                      {r.avatar_url ? <img src={r.avatar_url} alt="" /> : initials(r.full_name)}
+                    </div>
+                    <span style={{ fontWeight:500, fontSize:13 }}>{r.full_name}</span>
+                    <span style={{ fontSize:12, color:'var(--color-text-3)' }}>@{r.username}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="comment-input-row">
+              <input ref={commentRef} className="comment-input" placeholder="Add a comment… (@ to mention)" value={commentText} onChange={handleCommentChange} onKeyDown={handleCommentKey} />
+              <button className="comment-submit" onClick={submitComment} disabled={submitting}>
+                {submitting ? <div className="spinner" style={{ width:12, height:12 }} /> : <span style={{ display:'flex', width:14, height:14 }}><Icon.Send /></span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShare && (
+        <div className="modal-overlay" onClick={() => setShowShare(false)}>
+          <div className="modal" style={{ width:380 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Share post</div>
+              <button className="modal-close" onClick={() => setShowShare(false)}><Icon.X /></button>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <button className="btn btn-ghost btn-sm btn-full" style={{ gap:8 }} onClick={() => { navigator.clipboard.writeText(window.location.origin + '/profile/' + author?.username); toast.success('Link copied!'); setShowShare(false) }}>
+                <span style={{ display:'flex', width:14, height:14 }}><Icon.Link /></span> Copy link
+              </button>
+            </div>
+            {friends.length > 0 && (
+              <>
+                <div style={{ fontSize:11, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'var(--color-text-3)', marginBottom:8 }}>Send to a friend</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {friends.map(f => (
+                    <div key={f.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:'var(--r-md)', background:'var(--gray-50)', border:'1px solid var(--color-border)' }}>
+                      <div className="post-avatar" style={{ width:32, height:32, fontSize:11, flexShrink:0 }}>
+                        {f.avatar_url ? <img src={f.avatar_url} alt="" /> : initials(f.full_name)}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:500, fontSize:13 }}>{f.full_name}</div>
+                        <div style={{ fontSize:11.5, color:'var(--color-text-3)' }}>@{f.username}</div>
+                      </div>
+                      <button className="btn btn-primary btn-xs" disabled={sharing === f.id} onClick={() => shareToFriend(f)}>
+                        {sharing === f.id ? <div className="spinner" style={{ width:10, height:10 }} /> : 'Send'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {friends.length === 0 && <div style={{ textAlign:'center', color:'var(--color-text-3)', fontSize:13, padding:'12px 0' }}>Add friends to share posts with them</div>}
           </div>
         </div>
       )}

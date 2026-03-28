@@ -16,7 +16,7 @@ export default function NotificationsPage() {
     async function load() {
       const { data } = await supabase
         .from('notifications')
-        .select('*, actor:actor_id(id, full_name, username, avatar_url)')
+        .select('*, actor:actor_id(id, full_name, username, avatar_url), post:post_id(id, user_id, profiles(username))')
         .eq('user_id', profile!.id)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -27,7 +27,7 @@ export default function NotificationsPage() {
     load()
 
     const ch = supabase.channel('notifs-' + profile.id)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${profile.id}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + profile.id },
         payload => setNotifications(prev => [payload.new as Notification, ...prev]))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -37,60 +37,26 @@ export default function NotificationsPage() {
 
   function getNotifMeta(n: Notification): NotifMeta {
     const actor = (n as any).actor
+    const post = (n as any).post
     const name = actor?.full_name || 'Someone'
-    const goToActor = () => { if (actor?.username) navigate(`/profile/${actor.username}`) }
-    const goToPost = () => { if (actor?.username) navigate(`/profile/${actor.username}`) }
+    const postUsername = post?.profiles?.username || actor?.username
+    const goToActor = () => { if (actor?.username) navigate('/profile/' + actor.username) }
+    // Navigate to the post by going to the author's profile with a post anchor
+    const goToPost = () => {
+      if (postUsername) navigate('/profile/' + postUsername + '#post-' + n.post_id)
+      else if (actor?.username) navigate('/profile/' + actor.username)
+    }
 
     const iconStyle = { display: 'flex' as const, width: 16, height: 16 }
-
     switch (n.type) {
-      case 'like': return {
-        text: `${name} liked your post`,
-        icon: <span style={iconStyle}><Icon.Heart filled /></span>,
-        color: 'var(--red-500)', bg: '#fff1f2',
-        action: goToPost,
-      }
-      case 'pro_upvote': return {
-        text: `${name} gave your post a Pro Upvote`,
-        icon: <span style={iconStyle}><Icon.Award /></span>,
-        color: 'var(--color-pro)', bg: 'var(--color-pro-light)',
-        action: goToPost,
-      }
-      case 'comment': return {
-        text: `${name} commented on your post`,
-        icon: <span style={iconStyle}><Icon.MessageCircle /></span>,
-        color: 'var(--blue-600)', bg: 'var(--blue-50)',
-        action: goToPost,
-      }
-      case 'follow': return {
-        text: `${name} started following you`,
-        icon: <span style={iconStyle}><Icon.Profile /></span>,
-        color: 'var(--green-600)', bg: 'var(--green-50)',
-        action: goToActor,
-      }
-      case 'share': return {
-        text: `${name} shared your post`,
-        icon: <span style={iconStyle}><Icon.Share /></span>,
-        color: 'var(--blue-600)', bg: 'var(--blue-50)',
-        action: goToPost,
-      }
-      case 'friend_request': return {
-        text: `${name} sent you a friend request`,
-        icon: <span style={iconStyle}><Icon.UserPlus /></span>,
-        color: 'var(--purple-600)', bg: 'var(--purple-50)',
-        action: () => navigate('/friends'),
-      }
-      case 'friend_accepted': return {
-        text: `${name} accepted your friend request`,
-        icon: <span style={iconStyle}><Icon.UserCheck /></span>,
-        color: 'var(--green-600)', bg: 'var(--green-50)',
-        action: goToActor,
-      }
-      default: return {
-        text: 'New activity',
-        icon: <span style={iconStyle}><Icon.Bell /></span>,
-        color: 'var(--gray-500)', bg: 'var(--gray-100)',
-      }
+      case 'like': return { text: name + ' liked your post', icon: <span style={iconStyle}><Icon.Heart filled /></span>, color: 'var(--red-500)', bg: '#fff1f2', action: goToPost }
+      case 'pro_upvote': return { text: name + ' gave your post a Pro Upvote', icon: <span style={iconStyle}><Icon.Award /></span>, color: 'var(--color-pro)', bg: 'var(--color-pro-light)', action: goToPost }
+      case 'comment': return { text: name + ' commented on your post', icon: <span style={iconStyle}><Icon.MessageCircle /></span>, color: 'var(--blue-600)', bg: 'var(--blue-50)', action: goToPost }
+      case 'follow': return { text: name + ' started following you', icon: <span style={iconStyle}><Icon.Profile /></span>, color: 'var(--green-600)', bg: 'var(--green-50)', action: goToActor }
+      case 'share': return { text: name + ' shared your post', icon: <span style={iconStyle}><Icon.Share /></span>, color: 'var(--blue-600)', bg: 'var(--blue-50)', action: goToPost }
+      case 'friend_request': return { text: name + ' sent you a friend request', icon: <span style={iconStyle}><Icon.UserPlus /></span>, color: 'var(--purple-600)', bg: 'var(--purple-50)', action: () => navigate('/friends') }
+      case 'friend_accepted': return { text: name + ' accepted your friend request', icon: <span style={iconStyle}><Icon.UserCheck /></span>, color: 'var(--green-600)', bg: 'var(--green-50)', action: goToActor }
+      default: return { text: 'New activity', icon: <span style={iconStyle}><Icon.Bell /></span>, color: 'var(--gray-500)', bg: 'var(--gray-100)' }
     }
   }
 
@@ -128,26 +94,16 @@ export default function NotificationsPage() {
                 onMouseEnter={e => { if (meta.action) e.currentTarget.style.background = n.is_read ? 'var(--gray-50)' : 'var(--blue-100)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = !n.is_read ? 'var(--blue-50)' : 'transparent' }}
               >
-                {/* Unread indicator */}
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: !n.is_read ? 'var(--color-primary)' : 'transparent', flexShrink: 0, marginTop: 6 }} />
-
-                {/* Notif icon */}
                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: meta.bg, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {meta.icon}
                 </div>
-
-                {/* Actor avatar */}
                 {actor && (
-                  <div
-                    className="post-avatar"
-                    style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0, cursor: 'pointer' }}
-                    onClick={e => { e.stopPropagation(); if (actor.username) navigate(`/profile/${actor.username}`) }}
-                  >
+                  <div className="post-avatar" style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0, cursor: 'pointer' }}
+                    onClick={e => { e.stopPropagation(); if (actor.username) navigate('/profile/' + actor.username) }}>
                     {actor.avatar_url ? <img src={actor.avatar_url} alt="" /> : initials(actor.full_name)}
                   </div>
                 )}
-
-                {/* Text */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--color-text)' }}>
                     <strong style={{ fontWeight: 600 }}>{(n as any).actor?.full_name || 'Someone'}</strong>
@@ -157,8 +113,6 @@ export default function NotificationsPage() {
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                   </div>
                 </div>
-
-                {/* Arrow hint for clickable items */}
                 {meta.action && (
                   <div style={{ display: 'flex', width: 14, height: 14, color: 'var(--color-text-3)', flexShrink: 0, marginTop: 4 }}>
                     <Icon.ChevronRight />
