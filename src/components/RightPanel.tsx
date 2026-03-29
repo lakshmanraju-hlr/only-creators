@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, Profile, getProfMeta } from '@/lib/supabase'
+import { supabase, Profile, Group, getProfMeta, getCanonicalDiscipline } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
@@ -17,8 +17,9 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
   const [friends, setFriends] = useState<Profile[]>([])
   const [suggested, setSuggested] = useState<Profile[]>([])
   const [following, setFollowing] = useState<Set<string>>(new Set())
-  // Simulate online status: friends who posted in the last 30 min are "active"
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
+  const [groups, setGroups] = useState<Group[]>([])
+  const [joinedGroupIds, setJoinedGroupIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!profile) return
@@ -60,6 +61,20 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
         .limit(10)
       const filtered = (data || []).filter((c: any) => !followedIds.has(c.id) && !friendIds.includes(c.id)).slice(0, 4) as Profile[]
       setSuggested(filtered)
+
+      // Load groups for user's discipline
+      const canonical = getCanonicalDiscipline(profile!.profession)
+      if (canonical) {
+        const [groupsRes, memberRes] = await Promise.all([
+          supabase.from('groups').select('id,name,slug,discipline,member_count,post_count')
+            .eq('discipline', canonical)
+            .order('post_count', { ascending: false })
+            .limit(6),
+          supabase.from('group_members').select('group_id').eq('user_id', profile!.id),
+        ])
+        setGroups((groupsRes.data || []) as Group[])
+        setJoinedGroupIds(new Set((memberRes.data || []).map((r: any) => r.group_id)))
+      }
     }
     load()
   }, [profile?.id])
@@ -155,6 +170,43 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Your Groups */}
+      {groups.length > 0 && (
+        <div className="rp-section">
+          <div className="rp-heading">
+            Your groups
+            <button
+              style={{ marginLeft:'auto', fontSize:11, color:'var(--color-primary)', background:'none', border:'none', cursor:'pointer', padding:0, fontWeight:500 }}
+              onClick={() => navigate('/explore?discipline=' + getCanonicalDiscipline(profile?.profession))}
+            >
+              See all
+            </button>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+            {groups.map(g => {
+              const joined = joinedGroupIds.has(g.id)
+              return (
+                <div
+                  key={g.id}
+                  className="friend-row"
+                  onClick={() => navigate('/groups/' + g.slug)}
+                  title={g.name}
+                >
+                  <div style={{ width:30, height:30, borderRadius:'var(--r-md)', background:'var(--color-primary-light)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <span style={{ fontSize:13 }}>◈</span>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12.5, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{g.name}</div>
+                    <div style={{ fontSize:10, color:'var(--color-text-3)' }}>{g.post_count} posts · {g.member_count} members</div>
+                  </div>
+                  {joined && <span style={{ fontSize:10, color:'var(--color-primary)', fontWeight:600, flexShrink:0 }}>Joined</span>}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

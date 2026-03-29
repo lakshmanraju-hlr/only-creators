@@ -5,7 +5,7 @@ import { Icon } from '@/lib/icons'
 import { suggestGroup } from '@/lib/groupCategorization'
 import toast from 'react-hot-toast'
 
-interface Props { onClose: () => void }
+interface Props { onClose: () => void; defaultGroup?: Group }
 
 const ALL_PROFESSIONS = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
 
@@ -129,7 +129,7 @@ function ProfessionStep({ onConfirm, onSkip }: ProfStepProps) {
 }
 // ──────────────────────────────────────────────────────────────────────────
 
-export default function UploadModal({ onClose }: Props) {
+export default function UploadModal({ onClose, defaultGroup }: Props) {
   const { profile, refreshProfile } = useAuth()
 
   // First-post profession capture
@@ -145,7 +145,7 @@ export default function UploadModal({ onClose }: Props) {
   const [isProPost, setIsProPost] = useState(false)
   const [postVisibility, setPostVisibility] = useState<'public' | 'friends'>('public')
   const [availableGroups, setAvailableGroups] = useState<Group[]>([])
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(defaultGroup ?? null)
   const [groupSuggestion, setGroupSuggestion] = useState<Group | null>(null)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -159,7 +159,16 @@ export default function UploadModal({ onClose }: Props) {
   useEffect(() => {
     if (!profile?.profession) return
     supabase.from('groups').select('*').eq('discipline', profile.profession).order('post_count', { ascending: false })
-      .then(({ data }) => { if (data) setAvailableGroups(data as Group[]) })
+      .then(({ data }) => {
+        if (!data) return
+        const list = data as Group[]
+        // Ensure defaultGroup is in the list even if discipline differs
+        if (defaultGroup && !list.find(g => g.id === defaultGroup.id)) {
+          setAvailableGroups([defaultGroup, ...list])
+        } else {
+          setAvailableGroups(list)
+        }
+      })
   }, [profile?.profession])
 
   useEffect(() => {

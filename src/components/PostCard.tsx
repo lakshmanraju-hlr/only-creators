@@ -25,6 +25,13 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [showShare, setShowShare] = useState(false)
   const [friends, setFriends] = useState<Profile[]>([])
   const [sharing, setSharing] = useState<string | null>(null)
+  const [upvoterPreview, setUpvoterPreview] = useState<Profile[]>([])
+  const [upvoterTotal, setUpvoterTotal] = useState(0)
+  const [upvoterLoading, setUpvoterLoading] = useState(false)
+  const [showUpvoterTooltip, setShowUpvoterTooltip] = useState(false)
+  const [showUpvoterDialog, setShowUpvoterDialog] = useState(false)
+  const [allUpvoters, setAllUpvoters] = useState<Profile[]>([])
+  const upvoterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [mentionQuery, setMentionQuery] = useState('')
   const [mentionResults, setMentionResults] = useState<Profile[]>([])
   const [mentionIndex, setMentionIndex] = useState(0)
@@ -257,14 +264,119 @@ export default function PostCard({ post, onUpdated }: Props) {
         <button className="act-btn" onClick={openShare}>
           <span style={{ display:'flex', width:16, height:16 }}><Icon.Share /></span>
         </button>
-        <button
-          className={'pro-btn ' + (proUpvoted ? 'active' : '') + ' ' + (!canProUpvote ? 'locked' : '')}
-          onClick={canProUpvote ? toggleProUpvote : () => toast('Only verified creators in the same discipline can give Pro Upvotes')}
+        <div
+          className="pro-btn-wrap"
+          onMouseEnter={() => {
+            if (proCount === 0) return
+            upvoterTimerRef.current = setTimeout(async () => {
+              setUpvoterLoading(true)
+              setShowUpvoterTooltip(true)
+              const { data } = await supabase
+                .from('pro_upvotes')
+                .select('profiles:user_id(id,username,full_name,avatar_url)')
+                .eq('post_id', post.id)
+                .limit(5)
+              const profiles = (data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[]
+              setUpvoterPreview(profiles)
+              setUpvoterTotal(proCount)
+              setUpvoterLoading(false)
+            }, 300)
+          }}
+          onMouseLeave={() => {
+            if (upvoterTimerRef.current) clearTimeout(upvoterTimerRef.current)
+            setShowUpvoterTooltip(false)
+          }}
+          style={{ position:'relative' }}
         >
-          <span style={{ display:'flex', width:13, height:13 }}><Icon.Award /></span>
-          <span>{proCount} Pro</span>
-        </button>
+          <button
+            className={'pro-btn ' + (proUpvoted ? 'active' : '') + ' ' + (!canProUpvote ? 'locked' : '')}
+            onClick={canProUpvote ? toggleProUpvote : () => toast('Only verified creators in the same discipline can give Pro Upvotes')}
+          >
+            <span style={{ display:'flex', width:13, height:13 }}><Icon.Award /></span>
+            <span>{proCount} Pro</span>
+          </button>
+
+          {showUpvoterTooltip && proCount > 0 && (
+            <div className="pro-upvoter-tooltip">
+              {upvoterLoading ? (
+                <div style={{ padding:'8px 12px' }}><div className="spinner" style={{ width:12, height:12 }} /></div>
+              ) : upvoterPreview.length === 0 ? null : (
+                <>
+                  <div className="pro-upvoter-list">
+                    {upvoterPreview.map(u => (
+                      <div key={u.id} className="pro-upvoter-row">
+                        <div className="pro-upvoter-av">
+                          {u.avatar_url ? <img src={u.avatar_url} alt="" /> : initials(u.full_name)}
+                        </div>
+                        <span className="pro-upvoter-name">{u.full_name}</span>
+                      </div>
+                    ))}
+                    {proCount > 5 && (
+                      <div className="pro-upvoter-row pro-upvoter-more">
+                        ···  {proCount - 5} more
+                      </div>
+                    )}
+                  </div>
+                  {proCount > 5 && (
+                    <button
+                      className="pro-upvoter-view-all"
+                      onMouseDown={async e => {
+                        e.preventDefault()
+                        setShowUpvoterTooltip(false)
+                        setShowUpvoterDialog(true)
+                        const { data } = await supabase
+                          .from('pro_upvotes')
+                          .select('profiles:user_id(id,username,full_name,avatar_url,profession)')
+                          .eq('post_id', post.id)
+                        const all = (data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[]
+                        setAllUpvoters(all)
+                      }}
+                    >
+                      View all {proCount} Pro Upvoters
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {showUpvoterDialog && (
+        <div className="modal-overlay" onClick={() => setShowUpvoterDialog(false)}>
+          <div className="modal" style={{ width:380, maxHeight:'70vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span style={{ display:'flex', width:14, height:14, color:'var(--color-pro)', marginRight:6 }}><Icon.Award /></span>
+                Pro Upvoters · {proCount}
+              </div>
+              <button className="modal-close" onClick={() => setShowUpvoterDialog(false)}><Icon.X /></button>
+            </div>
+            <div style={{ overflowY:'auto', flex:1 }}>
+              {allUpvoters.length === 0 ? (
+                <div style={{ padding:'20px 0', textAlign:'center' }}><div className="spinner" /></div>
+              ) : allUpvoters.map(u => {
+                const pm = getProfMeta(u.profession)
+                return (
+                  <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
+                    <div className="post-avatar" style={{ width:38, height:38, fontSize:13, flexShrink:0, cursor:'pointer' }}
+                      onClick={() => { setShowUpvoterDialog(false); navigate('/profile/' + u.username) }}>
+                      {u.avatar_url ? <img src={u.avatar_url} alt="" /> : initials(u.full_name)}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:600, fontSize:13.5, cursor:'pointer' }} onClick={() => { setShowUpvoterDialog(false); navigate('/profile/' + u.username) }}>{u.full_name}</div>
+                      <div style={{ fontSize:12, color:'var(--color-text-3)' }}>
+                        @{u.username}{pm ? ` · ${pm.label}` : ''}
+                      </div>
+                    </div>
+                    <span style={{ fontSize:13, color:'var(--color-pro)' }}>◆</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showComments && (
         <div className="comments-wrap">

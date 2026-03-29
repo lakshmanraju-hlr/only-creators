@@ -941,6 +941,37 @@ img { display: block; max-width: 100%; }
 }
 [data-theme="dark"] .peer-verified-badge { background: #1c1405; color: #f59e0b; border-color: #78350f; }
 
+/* ── Pro upvote tooltip & dialog ── */
+.pro-btn-wrap { position: relative; }
+.pro-upvoter-tooltip {
+  position: absolute; bottom: calc(100% + 8px); right: 0;
+  min-width: 180px; max-width: 240px;
+  background: var(--gray-0); border: 1px solid var(--color-border);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-lg);
+  z-index: 200; padding: 8px 0; pointer-events: auto;
+}
+.pro-upvoter-list { display: flex; flex-direction: column; }
+.pro-upvoter-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; font-size: 12.5px;
+}
+.pro-upvoter-more { color: var(--color-text-3); font-size: 11.5px; }
+.pro-upvoter-av {
+  width: 24px; height: 24px; border-radius: 50%; overflow: hidden;
+  background: var(--color-primary-light); color: var(--color-primary);
+  font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pro-upvoter-av img { width: 100%; height: 100%; object-fit: cover; }
+.pro-upvoter-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pro-upvoter-view-all {
+  display: block; width: 100%; text-align: center; padding: 6px 12px;
+  font-size: 11.5px; font-weight: 600; color: var(--color-primary);
+  background: none; border: none; border-top: 1px solid var(--color-border);
+  cursor: pointer; margin-top: 4px;
+}
+.pro-upvoter-view-all:hover { background: var(--color-primary-light); }
+[data-theme="dark"] .pro-upvoter-tooltip { background: var(--gray-100); }
+
 /* ── Profile stats ── */
 .profile-tabs {
   display: flex; align-items: center;
