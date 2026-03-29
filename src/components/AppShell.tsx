@@ -1,7 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
-import { getProfMeta, supabase } from '@/lib/supabase'
+import { getProfMeta, getCanonicalDiscipline, supabase, Profile } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import FeedPage from '@/pages/FeedPage'
 import ExplorePage from '@/pages/ExplorePage'
@@ -13,6 +13,29 @@ import RightPanel from '@/components/RightPanel'
 import UploadModal from '@/components/UploadModal'
 import SearchModal from '@/components/SearchModal'
 import GroupPage from '@/pages/GroupPage'
+
+// All disciplines shown in the left panel
+const ALL_DISCIPLINES = [
+  { key: 'photographer',  icon: <Icon.Camera />,     label: 'Photography' },
+  { key: 'singer',        icon: <Icon.Mic />,        label: 'Vocals & Singing' },
+  { key: 'musician',      icon: <Icon.Music />,      label: 'Music' },
+  { key: 'poet',          icon: <Icon.PenLine />,    label: 'Poetry & Writing' },
+  { key: 'visual-artist', icon: <Icon.Paintbrush />, label: 'Visual Arts' },
+  { key: 'filmmaker',     icon: <Icon.Film />,       label: 'Film & Video' },
+  { key: 'dancer',        icon: <Icon.Music />,      label: 'Dance' },
+  { key: 'comedian',      icon: <Icon.Drama />,      label: 'Performance' },
+  { key: 'culinary',      icon: <Icon.Utensils />,   label: 'Culinary Arts' },
+  { key: 'fitness',       icon: <Icon.Activity />,   label: 'Fitness & Sports' },
+  { key: 'technology',    icon: <Icon.Code />,       label: 'Technology' },
+  { key: 'fashion',       icon: <Icon.Scissors />,   label: 'Fashion & Style' },
+  { key: 'architecture',  icon: <Icon.Building />,   label: 'Architecture' },
+  { key: 'medicine',      icon: <Icon.Heart2 />,     label: 'Medicine & Health' },
+  { key: 'education',     icon: <Icon.PenLine />,    label: 'Education' },
+  { key: 'law',           icon: <Icon.Shield />,     label: 'Law & Justice' },
+  { key: 'science',       icon: <Icon.Microscope />, label: 'Science & Research' },
+  { key: 'business',      icon: <Icon.Briefcase />,  label: 'Business' },
+  { key: 'wellness',      icon: <Icon.Heart2 />,     label: 'Wellness & Mind' },
+] as const
 
 export default function AppShell() {
   const { profile, signOut } = useAuth()
@@ -27,10 +50,11 @@ export default function AppShell() {
     if (saved) return saved === 'dark'
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
+  // Online friends for right panel
+  const [onlineFriends, setOnlineFriends] = useState<Profile[]>([])
 
   const path = location.pathname
 
-  // Apply theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
@@ -65,6 +89,7 @@ export default function AppShell() {
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
   const profMeta = getProfMeta(profile?.profession)
+  const myCanonical = getCanonicalDiscipline(profile?.profession)
 
   const navItems = [
     { path: '/',              icon: <Icon.Feed />,          label: 'Feed' },
@@ -75,13 +100,14 @@ export default function AppShell() {
     { path: '/profile',       icon: <Icon.Profile />,       label: 'Profile' },
   ]
 
-  // Discipline nav items — icon only, no emojis
-  const disciplineItems = [
-    { key: 'photographer',  icon: <Icon.Camera />,     label: 'Photography' },
-    { key: 'singer',        icon: <Icon.Mic />,        label: 'Vocals' },
-    { key: 'poet',          icon: <Icon.PenLine />,    label: 'Poetry' },
-    { key: 'visual-artist', icon: <Icon.Paintbrush />, label: 'Visual Arts' },
-  ] as const
+  // Sort disciplines: user's own first, then the rest
+  const sortedDisciplines = [...ALL_DISCIPLINES].sort((a, b) => {
+    const aIsMine = a.key === myCanonical
+    const bIsMine = b.key === myCanonical
+    if (aIsMine && !bIsMine) return -1
+    if (!aIsMine && bIsMine) return 1
+    return 0
+  })
 
   return (
     <div className="app-shell">
@@ -115,7 +141,7 @@ export default function AppShell() {
         </div>
       </div>
 
-      {/* SIDEBAR */}
+      {/* LEFT SIDEBAR */}
       <div className="sidebar">
         <div className="nav-section">
           {navItems.map(item => (
@@ -133,14 +159,24 @@ export default function AppShell() {
 
         <div className="nav-divider" />
 
-        <div className="nav-section">
+        {/* Disciplines section — user's own discipline pinned at top */}
+        <div className="nav-section" style={{ flex:1, overflowY:'auto', minHeight:0 }}>
           <div className="nav-label">Disciplines</div>
-          {disciplineItems.map(d => (
-            <button key={d.key} className="nav-item" onClick={() => navigate('/explore?discipline=' + d.key)}>
-              <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
-              {d.label}
-            </button>
-          ))}
+          {sortedDisciplines.map(d => {
+            const isMine = d.key === myCanonical
+            return (
+              <button
+                key={d.key}
+                className={'nav-item ' + (isMine ? 'nav-item-mine' : '')}
+                onClick={() => navigate('/explore?discipline=' + d.key)}
+                title={isMine ? 'Your discipline' : d.label}
+              >
+                <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
+                <span style={{ flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</span>
+                {isMine && <span className="discipline-mine-dot" />}
+              </button>
+            )
+          })}
         </div>
 
         <div className="nav-divider" />
@@ -148,7 +184,7 @@ export default function AppShell() {
           <Icon.Plus /> New post
         </button>
 
-        <div style={{ flex:1 }} />
+        <div style={{ flex:0 }} />
         <div className="sidebar-user-area">
           <button className="sidebar-user-btn" onClick={() => navigate('/profile')}>
             <div className="sidebar-avatar">
@@ -192,7 +228,9 @@ export default function AppShell() {
         </Routes>
       </div>
 
-      <div className="right-panel"><RightPanel /></div>
+      <div className="right-panel">
+        <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} />
+      </div>
 
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} />}
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}

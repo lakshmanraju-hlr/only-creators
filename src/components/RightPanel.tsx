@@ -3,22 +3,62 @@ import { useNavigate } from 'react-router-dom'
 import { supabase, Profile, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
+import { getFriends } from '@/lib/friends'
 import toast from 'react-hot-toast'
 
-export default function RightPanel() {
+interface Props {
+  onlineFriends: Profile[]
+  setOnlineFriends: (p: Profile[]) => void
+}
+
+export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const [friends, setFriends] = useState<Profile[]>([])
   const [suggested, setSuggested] = useState<Profile[]>([])
   const [following, setFollowing] = useState<Set<string>>(new Set())
+  // Simulate online status: friends who posted in the last 30 min are "active"
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!profile) return
     async function load() {
+      // Load follows
       const { data: followData } = await supabase.from('follows').select('following_id').eq('follower_id', profile!.id)
-      const followedIds = new Set((followData || []).map((r: any) => r.following_id))
+      const followedIds = new Set((followData || []).map((r: any) => r.following_id as string))
       setFollowing(followedIds)
-      const { data } = await supabase.from('profiles').select('*').neq('id', profile!.id).order('follower_count', { ascending: false }).limit(8)
-      const filtered = (data || []).filter((c: any) => !followedIds.has(c.id)).slice(0, 5) as Profile[]
+
+      // Load friends
+      const friendIds = await getFriends(profile!.id)
+      if (friendIds.length > 0) {
+        const { data: friendProfiles } = await supabase
+          .from('profiles')
+          .select('id,username,full_name,avatar_url,profession,is_pro,verification_count')
+          .in('id', friendIds)
+          .limit(20)
+        const fp = (friendProfiles || []) as Profile[]
+        setFriends(fp)
+
+        // Mark "active": friends who posted or interacted in last 2 hours
+        const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+        const { data: recentPosts } = await supabase
+          .from('posts')
+          .select('user_id')
+          .in('user_id', friendIds)
+          .gte('created_at', cutoff)
+        const activeSet = new Set((recentPosts || []).map((p: any) => p.user_id as string))
+        setActiveIds(activeSet)
+        setOnlineFriends(fp.filter(f => activeSet.has(f.id)))
+      }
+
+      // Load suggested (not already followed or friended)
+      const { data } = await supabase
+        .from('profiles')
+        .select('id,username,full_name,avatar_url,profession,is_pro,follower_count')
+        .neq('id', profile!.id)
+        .order('follower_count', { ascending: false })
+        .limit(10)
+      const filtered = (data || []).filter((c: any) => !followedIds.has(c.id) && !friendIds.includes(c.id)).slice(0, 4) as Profile[]
       setSuggested(filtered)
     }
     load()
@@ -28,35 +68,73 @@ export default function RightPanel() {
     if (!profile) return
     if (following.has(targetId)) {
       await supabase.from('follows').delete().match({ follower_id: profile.id, following_id: targetId })
-      setFollowing(f => { const n = new Set(f); n.delete(targetId); return n }); toast(`Unfollowed ${name}`)
+      setFollowing(f => { const n = new Set(f); n.delete(targetId); return n })
+      toast(`Unfollowed ${name}`)
     } else {
       await supabase.from('follows').insert({ follower_id: profile.id, following_id: targetId })
       await supabase.from('notifications').insert({ user_id: targetId, actor_id: profile.id, type: 'follow' })
-      setFollowing(f => new Set([...f, targetId])); toast.success(`Following ${name}`)
+      setFollowing(f => new Set([...f, targetId]))
+      toast.success(`Following ${name}`)
     }
   }
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
-  const TRENDING = [
-    { tag: '#PortraitSunday', count: '4.2k' }, { tag: '#AcousticSessions', count: '2.8k' },
-    { tag: '#UrbanPoetry', count: '1.9k' }, { tag: '#GoldenHour', count: '1.7k' },
-    { tag: '#FilmCommunity', count: '1.4k' }, { tag: '#NewWork', count: '982' },
-  ]
+  // Sort friends: active first
+  const sortedFriends = [...friends].sort((a, b) => {
+    const aActive = activeIds.has(a.id) ? 1 : 0
+    const bActive = activeIds.has(b.id) ? 1 : 0
+    return bActive - aActive
+  })
 
   return (
     <>
-      <div className="rp-section">
-        <div className="rp-heading">Trending</div>
-        {TRENDING.map((t, i) => (
-          <div key={t.tag} className="trending-item">
-            <span className="trending-rank">{i + 1}</span>
-            <span className="trending-name">{t.tag}</span>
-            <span className="trending-count">{t.count}</span>
+      {/* Friends & Active */}
+      {friends.length > 0 && (
+        <div className="rp-section">
+          <div className="rp-heading">
+            Friends
+            <span style={{ marginLeft:'auto', fontSize:11, color:'var(--color-text-3)', fontWeight:400 }}>
+              {activeIds.size > 0 && <><span className="online-dot-sm" /> {activeIds.size} active</>}
+            </span>
           </div>
-        ))}
-      </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+            {sortedFriends.map(f => {
+              const isActive = activeIds.has(f.id)
+              const prof = getProfMeta(f.profession)
+              return (
+                <div
+                  key={f.id}
+                  className="friend-row"
+                  onClick={() => navigate('/messages?with=' + f.id)}
+                  title={`Message ${f.full_name}`}
+                >
+                  <div style={{ position:'relative', flexShrink:0 }}>
+                    <div className="sug-av" style={{ width:34, height:34, fontSize:12 }}>
+                      {f.avatar_url ? <img src={f.avatar_url} alt="" /> : initials(f.full_name)}
+                    </div>
+                    {isActive && <span className="online-dot" />}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12.5, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.full_name}</div>
+                    {prof && <div style={{ fontSize:10, color:'var(--color-text-3)' }}>{prof.label}</div>}
+                  </div>
+                  <span style={{ display:'flex', width:12, height:12, color:'var(--color-text-3)', flexShrink:0 }}><Icon.MessageCircle /></span>
+                </div>
+              )
+            })}
+          </div>
+          <button
+            className="btn btn-ghost btn-sm btn-full"
+            style={{ marginTop:8, fontSize:11 }}
+            onClick={() => navigate('/friends')}
+          >
+            See all friends
+          </button>
+        </div>
+      )}
 
+      {/* Suggested creators */}
       {suggested.length > 0 && (
         <div className="rp-section">
           <div className="rp-heading">Suggested creators</div>
@@ -80,6 +158,7 @@ export default function RightPanel() {
         </div>
       )}
 
+      {/* Pro Status */}
       {profile?.profession && (() => { const pm = getProfMeta(profile.profession); return pm ? (
         <div className="rp-section">
           <div className="rp-heading">Your Pro Status</div>
@@ -91,6 +170,11 @@ export default function RightPanel() {
             <div style={{ fontSize:12, color:'var(--gray-600)', lineHeight:1.7 }}>
               Your Pro Upvotes carry peer authority. Only other verified {pm.label}s receive them.
             </div>
+            {(profile as any).verification_count > 0 && (
+              <div style={{ marginTop:8, fontSize:12, color:'var(--color-pro)', fontWeight:600 }}>
+                ◈ Verified by {(profile as any).verification_count} peer{(profile as any).verification_count === 1 ? '' : 's'}
+              </div>
+            )}
           </div>
         </div>
       ) : null })()}

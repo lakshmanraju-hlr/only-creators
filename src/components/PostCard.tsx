@@ -181,6 +181,11 @@ export default function PostCard({ post, onUpdated }: Props) {
             <span className="post-author-name">{author?.full_name}</span>
             {profMeta && <span className={'pill pill-' + profMeta.pillClass}>{profMeta.label}</span>}
             {post.is_pro_post && <span className="pro-original-badge">◆ Original</span>}
+            {(author?.verification_count ?? 0) > 0 && (
+              <span className="peer-verified-badge" title={`Verified by ${author!.verification_count} peer${author!.verification_count === 1 ? '' : 's'}`}>
+                ◈ {author!.verification_count}
+              </span>
+            )}
           </div>
           <div className="post-time">@{author?.username} · {timeAgo}</div>
         </div>

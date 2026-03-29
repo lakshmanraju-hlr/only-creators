@@ -9,6 +9,7 @@ import CreateGroupModal from '@/components/CreateGroupModal'
 const PREDEFINED_KEYS = new Set([
   'photographer','singer','musician','poet','visual-artist','filmmaker','dancer','comedian',
   'culinary','fitness','technology','fashion','architecture',
+  'medicine','education','law','science','business','wellness',
 ])
 
 type DisciplineIcon = () => JSX.Element
@@ -20,13 +21,19 @@ const DISCIPLINES: { key: string; Icon: DisciplineIcon; name: string; count: str
   { key: 'visual-artist', Icon: Icon.Paintbrush, name: 'Visual Arts',      count: '3.2k' },
   { key: 'filmmaker',     Icon: Icon.Film,       name: 'Film & Video',     count: '980'  },
   { key: 'musician',      Icon: Icon.Music,      name: 'Music',            count: '2.3k' },
-  { key: 'dancer',        Icon: Icon.Star,       name: 'Dance',            count: '1.1k' },
+  { key: 'dancer',        Icon: Icon.Music,      name: 'Dance',            count: '1.1k' },
   { key: 'comedian',      Icon: Icon.Drama,      name: 'Performance',      count: '740'  },
   { key: 'culinary',      Icon: Icon.Utensils,   name: 'Culinary Arts',    count: ''     },
   { key: 'fitness',       Icon: Icon.Activity,   name: 'Fitness & Sports', count: ''     },
   { key: 'technology',    Icon: Icon.Code,       name: 'Technology',       count: ''     },
   { key: 'fashion',       Icon: Icon.Scissors,   name: 'Fashion & Style',  count: ''     },
   { key: 'architecture',  Icon: Icon.Building,   name: 'Architecture',     count: ''     },
+  { key: 'medicine',      Icon: Icon.Heart2,     name: 'Medicine & Health',  count: ''     },
+  { key: 'education',     Icon: Icon.PenLine,    name: 'Education',          count: ''     },
+  { key: 'law',           Icon: Icon.Shield,     name: 'Law & Justice',      count: ''     },
+  { key: 'science',       Icon: Icon.Microscope, name: 'Science & Research', count: ''     },
+  { key: 'business',      Icon: Icon.Briefcase,  name: 'Business',           count: ''     },
+  { key: 'wellness',      Icon: Icon.Heart2,     name: 'Wellness & Mind',    count: ''     },
 ]
 
 export default function ExplorePage() {

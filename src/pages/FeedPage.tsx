@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase, Post, Profile } from '@/lib/supabase'
+import { useNavigate } from 'react-router-dom'
+import { supabase, Post, Profile, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriends } from '@/lib/friends'
 import PostCard from '@/components/PostCard'
@@ -11,6 +12,8 @@ interface Props { onPost: () => void }
 
 export default function FeedPage({ onPost }: Props) {
   const { profile } = useAuth()
+  const navigate = useNavigate()
+  const profMeta = getProfMeta(profile?.profession)
   const [tab, setTab] = useState<FeedTab>('all')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,7 +79,7 @@ export default function FeedPage({ onPost }: Props) {
       const uids = [...new Set(rawPosts.map((p: any) => p.user_id))]
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id,username,full_name,avatar_url,profession,is_pro')
+        .select('id,username,full_name,avatar_url,profession,is_pro,verification_count')
         .in('id', uids)
 
       const profileMap: Record<string, Profile> = {}
@@ -85,6 +88,17 @@ export default function FeedPage({ onPost }: Props) {
       let enriched: Post[] = rawPosts.map((p: any) => ({
         ...p, profiles: profileMap[p.user_id] || null,
       }))
+
+      // Re-sort discovery tabs by combined peer-authority score:
+      // score = pro_upvote_count + (author.verification_count * 0.5)
+      // More verified authors get a ranking boost, ensuring legitimate content surfaces first
+      if (tab === 'pro' || tab === 'all') {
+        enriched = enriched.sort((a, b) => {
+          const aVerif = (a.profiles?.verification_count ?? 0) * 0.5
+          const bVerif = (b.profiles?.verification_count ?? 0) * 0.5
+          return (b.pro_upvote_count + bVerif) - (a.pro_upvote_count + aVerif)
+        })
+      }
 
       // Mark liked / pro-upvoted
       if (profile && enriched.length > 0) {
@@ -150,6 +164,37 @@ export default function FeedPage({ onPost }: Props) {
 
   return (
     <div className="feed-wrap">
+
+      {/* ── Landing welcome banner ── */}
+      <div className="feed-hero">
+        <div className="feed-hero-left">
+          <div className="feed-hero-greeting">
+            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, <strong>{profile?.full_name?.split(' ')[0] || 'Creator'}</strong>
+          </div>
+          <div className="feed-hero-sub">
+            {profMeta
+              ? <>Your <span className="feed-hero-discipline">{profMeta.icon} {profMeta.label}</span> community is active. Share your work — peers are watching.</>
+              : <>Welcome to Only Creators — where professionals recognize each other.</>}
+          </div>
+        </div>
+        <div className="feed-hero-actions">
+          {profMeta && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ gap:5, fontSize:12 }}
+              onClick={() => navigate('/explore?discipline=' + profile?.profession)}
+            >
+              <span style={{ display:'flex', width:13, height:13 }}><Icon.Explore /></span>
+              Browse {profMeta.label}
+            </button>
+          )}
+          <button className="btn btn-primary btn-sm" style={{ gap:5 }} onClick={onPost}>
+            <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
+            New post
+          </button>
+        </div>
+      </div>
+
       <div className="feed-tabs">
         {tabs.map(t => (
           <div key={t.key} className={`feed-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>

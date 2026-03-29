@@ -7,10 +7,18 @@ type AuthMode = 'login' | 'signup' | 'forgot'
 
 const ALL_PROFESSIONS = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
 
+const CONTENT_FORMATS = [
+  { key: 'photo',    label: 'Photos',       icon: '📷' },
+  { key: 'video',    label: 'Videos',       icon: '🎬' },
+  { key: 'audio',    label: 'Audio',        icon: '🎵' },
+  { key: 'text',     label: 'Writing',      icon: '✍️' },
+  { key: 'poem',     label: 'Poetry',       icon: '📜' },
+  { key: 'document', label: 'Articles & Research', icon: '📄' },
+]
+
 function findSimilarPredefined(query: string): [Profession, typeof PROFESSIONS[Profession]][] {
   const q = query.toLowerCase().trim()
   if (!q) return []
-  // Check alias map first — e.g. "chef" → "culinary"
   const aliasCanonical = DISCIPLINE_ALIASES[q]
   return ALL_PROFESSIONS.filter(([key, val]) =>
     key === aliasCanonical ||
@@ -31,28 +39,29 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  // Signup
+  // Signup basics
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [username, setUsername] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPass, setSignupPass] = useState('')
 
-  // Single mandatory profession
+  // Profession (single mandatory)
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null)
   const [professionSearch, setProfessionSearch] = useState('')
   const [customConfirmed, setCustomConfirmed] = useState(false)
-
-  // Existing custom disciplines from DB (for duplicate detection)
   const [existingCustom, setExistingCustom] = useState<string[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // Preferences (optional)
+  const [interests, setInterests] = useState<string[]>([])         // disciplines to see
+  const [postFormats, setPostFormats] = useState<string[]>([])     // content types to post
 
   // Forgot
   const [forgotEmail, setForgotEmail] = useState('')
 
   const searchTrimmed = professionSearch.trim()
 
-  // Predefined suggestions filtered by search
   const predefinedSuggestions = ALL_PROFESSIONS.filter(([key, val]) =>
     key !== selectedProfession &&
     (searchTrimmed === '' ||
@@ -64,16 +73,13 @@ export default function AuthPage() {
     val.label.toLowerCase() === searchTrimmed.toLowerCase()
   )
 
-  // Existing custom disciplines matching the search (DB duplicates)
   const matchingExistingCustom = existingCustom.filter(d =>
     d.toLowerCase() !== selectedProfession?.toLowerCase() &&
     d.toLowerCase().includes(searchTrimmed.toLowerCase()) &&
     searchTrimmed.length >= 2
   )
 
-  const hasExactCustomMatch = existingCustom.some(
-    d => d.toLowerCase() === searchTrimmed.toLowerCase()
-  )
+  const hasExactCustomMatch = existingCustom.some(d => d.toLowerCase() === searchTrimmed.toLowerCase())
 
   const showOtherOption =
     searchTrimmed.length >= 2 &&
@@ -84,17 +90,14 @@ export default function AuthPage() {
   const similarToPredefined = findSimilarPredefined(searchTrimmed)
   const showSimilarWarning = showOtherOption && (similarToPredefined.length > 0 || matchingExistingCustom.length > 0) && !customConfirmed
 
-  // Load existing custom disciplines from DB (debounced on search change)
   useEffect(() => {
     if (searchTrimmed.length < 2) return
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       const { data } = await supabase
-        .from('profiles')
-        .select('profession')
+        .from('profiles').select('profession')
         .not('profession', 'is', null)
-        .ilike('profession', `%${searchTrimmed}%`)
-        .limit(10)
+        .ilike('profession', `%${searchTrimmed}%`).limit(10)
       if (!data) return
       const predefinedKeys = new Set<string>(ALL_PROFESSIONS.map(([k]) => k))
       const customs = [...new Set((data as any[]).map(p => p.profession as string).filter(p => !predefinedKeys.has(p)))]
@@ -124,6 +127,14 @@ export default function AuthPage() {
   function profLabel(p: string) {
     const found = ALL_PROFESSIONS.find(([key]) => key === p)
     return found ? found[1].label : p.charAt(0).toUpperCase() + p.slice(1).replace(/-/g, ' ')
+  }
+
+  function toggleInterest(key: string) {
+    setInterests(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key])
+  }
+
+  function toggleFormat(key: string) {
+    setPostFormats(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key])
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -156,6 +167,8 @@ export default function AuthPage() {
         profession,
         professions: [selectedProfession],
         is_pro: true,
+        interests,
+        post_formats: postFormats,
       }).eq('id', user.id)
     }
     toast.success('Welcome to Only Creators!')
@@ -176,7 +189,6 @@ export default function AuthPage() {
 
   return (
     <div className="auth-page">
-      {/* Brand panel */}
       <div className="auth-brand">
         <div className="auth-brand-logo">only <em>creators</em></div>
         <div className="auth-brand-headline">Where professionals recognize each other.</div>
@@ -184,16 +196,13 @@ export default function AuthPage() {
           Share your craft. Earn peer recognition from verified creators in your discipline — not just generic likes.
         </p>
         <div className="auth-brand-stats">
-          <div><div className="auth-stat-num">8+</div><div className="auth-stat-label">Disciplines</div></div>
+          <div><div className="auth-stat-num">15+</div><div className="auth-stat-label">Disciplines</div></div>
           <div><div className="auth-stat-num">Free</div><div className="auth-stat-label">Always</div></div>
           <div><div className="auth-stat-num">Real</div><div className="auth-stat-label">Connections</div></div>
         </div>
       </div>
 
-      {/* Form panel */}
       <div className="auth-form-area">
-
-        {/* FORGOT PASSWORD */}
         {mode === 'forgot' && (
           <>
             <div style={{ marginBottom:24 }}>
@@ -228,11 +237,10 @@ export default function AuthPage() {
           </>
         )}
 
-        {/* LOGIN / SIGNUP */}
         {mode !== 'forgot' && (
           <>
             <div className="auth-form-title">{mode === 'login' ? 'Welcome back' : 'Create your account'}</div>
-            <div className="auth-form-sub">{mode === 'login' ? 'Sign in to your creator account' : 'Join the creator community — it\'s free'}</div>
+            <div className="auth-form-sub">{mode === 'login' ? 'Sign in to your creator account' : "Join the creator community — it's free"}</div>
 
             <div className="seg-ctrl">
               <button className={`seg-btn ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Sign in</button>
@@ -275,7 +283,7 @@ export default function AuthPage() {
                   </button>
                 </div>
 
-                {/* ── PROFESSION SELECTOR (mandatory, single) ── */}
+                {/* ── DISCIPLINE (mandatory) ── */}
                 <div className="pro-callout">
                   <div className="pro-callout-title">
                     <span style={{ display:'flex', width:14, height:14 }}><Icon.Award /></span>
@@ -283,7 +291,6 @@ export default function AuthPage() {
                   </div>
                   <p>Choose your discipline. This determines who can give you Pro Upvotes.</p>
 
-                  {/* Selected chip — shown when one is chosen */}
                   {selectedProfession ? (
                     <div className="prof-chips" style={{ marginTop:10 }}>
                       <div className="prof-chip">
@@ -295,30 +302,27 @@ export default function AuthPage() {
                     </div>
                   ) : (
                     <>
-                      {/* Search input */}
                       <div className="field" style={{ marginTop:10, marginBottom:0 }}>
                         <label className="field-label">Select your discipline *</label>
                         <input
                           className="field-input field-input-required"
-                          placeholder="Type to search, or pick below…"
+                          placeholder="e.g. photographer, doctor, chef…"
                           value={professionSearch}
                           onChange={e => { setProfessionSearch(e.target.value); setCustomConfirmed(false) }}
                           autoComplete="off"
                         />
                       </div>
 
-                      {/* Predefined suggestion pills */}
                       {predefinedSuggestions.length > 0 && (
                         <div className="prof-suggestions">
                           {predefinedSuggestions.map(([key, val]) => (
                             <button key={key} type="button" className="prof-suggestion-pill" onClick={() => selectPredefined(key)}>
-                              {val.label}
+                              {val.icon} {val.label}
                             </button>
                           ))}
                         </div>
                       )}
 
-                      {/* Exact custom match in DB — block and suggest */}
                       {hasExactCustomMatch && searchTrimmed.length >= 2 && (
                         <div className="group-duplicate-banner" style={{ marginTop:8 }}>
                           <span style={{ display:'flex', width:13, height:13, flexShrink:0, color:'var(--red-500)' }}>
@@ -326,26 +330,21 @@ export default function AuthPage() {
                           </span>
                           <div style={{ flex:1 }}>
                             <strong>"{searchTrimmed}"</strong> already exists.
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-ghost"
-                              style={{ marginLeft:8, padding:'2px 8px', fontSize:11 }}
-                              onClick={() => selectCustom(existingCustom.find(d => d.toLowerCase() === searchTrimmed.toLowerCase())!)}
-                            >
+                            <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft:8, padding:'2px 8px', fontSize:11 }}
+                              onClick={() => selectCustom(existingCustom.find(d => d.toLowerCase() === searchTrimmed.toLowerCase())!)}>
                               Select it
                             </button>
                           </div>
                         </div>
                       )}
 
-                      {/* Similar warning — show existing options before allowing custom */}
                       {showOtherOption && showSimilarWarning && (
                         <div className="prof-similar-warning" style={{ marginTop:8 }}>
                           <div className="prof-similar-warning-title">Did you mean one of these?</div>
                           <div className="prof-suggestions" style={{ marginTop:6 }}>
                             {similarToPredefined.map(([key, val]) => (
                               <button key={key} type="button" className="prof-suggestion-pill" onClick={() => selectPredefined(key)}>
-                                {val.label}
+                                {val.icon} {val.label}
                               </button>
                             ))}
                             {matchingExistingCustom.map(d => (
@@ -363,7 +362,6 @@ export default function AuthPage() {
                         </div>
                       )}
 
-                      {/* "Other" add button — shown after confirming no duplicates */}
                       {showOtherOption && !showSimilarWarning && (
                         <div className="prof-other-section">
                           <button type="button" className="prof-other-btn" onClick={() => selectCustom(searchTrimmed)}>
@@ -374,6 +372,50 @@ export default function AuthPage() {
                       )}
                     </>
                   )}
+                </div>
+
+                {/* ── WHAT DO YOU WANT TO SEE? ── */}
+                <div className="pro-callout" style={{ marginTop:12 }}>
+                  <div className="pro-callout-title">
+                    <span style={{ display:'flex', width:14, height:14 }}><Icon.Explore /></span>
+                    What do you want to see in your feed?
+                    <span style={{ marginLeft:'auto', fontSize:10, color:'var(--color-text-3)', fontWeight:400 }}>Optional</span>
+                  </div>
+                  <p>Choose disciplines you're interested in following.</p>
+                  <div className="pref-pill-grid">
+                    {ALL_PROFESSIONS.map(([key, val]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`pref-pill ${interests.includes(key) ? 'active' : ''}`}
+                        onClick={() => toggleInterest(key)}
+                      >
+                        <span>{val.icon}</span> {val.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── WHAT WILL YOU POST? ── */}
+                <div className="pro-callout" style={{ marginTop:12 }}>
+                  <div className="pro-callout-title">
+                    <span style={{ display:'flex', width:14, height:14 }}><Icon.Plus /></span>
+                    What type of content will you share?
+                    <span style={{ marginLeft:'auto', fontSize:10, color:'var(--color-text-3)', fontWeight:400 }}>Optional</span>
+                  </div>
+                  <p>This helps us tailor your experience.</p>
+                  <div className="pref-pill-grid">
+                    {CONTENT_FORMATS.map(f => (
+                      <button
+                        key={f.key}
+                        type="button"
+                        className={`pref-pill ${postFormats.includes(f.key) ? 'active' : ''}`}
+                        onClick={() => toggleFormat(f.key)}
+                      >
+                        <span>{f.icon}</span> {f.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button

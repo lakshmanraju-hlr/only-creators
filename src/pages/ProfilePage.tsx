@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase, Profile, Post, getProfMeta } from '@/lib/supabase'
+import { supabase, Profile, Post, getProfMeta, getCanonicalDiscipline } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
 import SocialButton from '@/components/SocialButton'
@@ -21,6 +21,13 @@ export default function ProfilePage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
 
   const isOwnProfile = !username || profile?.id === myProfile?.id
+  const [hasVerified, setHasVerified] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+
+  // Can verify: both are pro, same canonical discipline, not own profile
+  const myDiscipline = getCanonicalDiscipline(myProfile?.profession)
+  const theirDiscipline = getCanonicalDiscipline(profile?.profession)
+  const canVerify = !isOwnProfile && !!(myProfile?.is_pro && profile?.is_pro && myDiscipline && theirDiscipline && myDiscipline === theirDiscipline)
 
   useEffect(() => {
     async function load() {
@@ -66,6 +73,39 @@ export default function ProfilePage() {
     }
     load()
   }, [username, myProfile?.id, profileTab])
+
+  // Load whether current user has already verified this profile
+  useEffect(() => {
+    if (!myProfile || !profile || isOwnProfile) return
+    supabase.from('peer_verifications')
+      .select('id').eq('verifier_id', myProfile.id).eq('verified_id', profile.id).single()
+      .then(({ data }) => setHasVerified(!!data))
+  }, [myProfile?.id, profile?.id])
+
+  async function toggleVerify() {
+    if (!myProfile || !profile || !canVerify) return
+    setVerifying(true)
+    if (hasVerified) {
+      await supabase.from('peer_verifications').delete().match({ verifier_id: myProfile.id, verified_id: profile.id })
+      setHasVerified(false)
+      setProfile(p => p ? { ...p, verification_count: Math.max(0, (p.verification_count || 0) - 1) } : p)
+      toast('Verification removed')
+    } else {
+      const { error } = await supabase.from('peer_verifications').insert({
+        verifier_id: myProfile.id,
+        verified_id: profile.id,
+        discipline: myDiscipline,
+      })
+      if (error) { toast.error(error.message); setVerifying(false); return }
+      await supabase.from('notifications').insert({
+        user_id: profile.id, actor_id: myProfile.id, type: 'peer_verify', post_id: null,
+      })
+      setHasVerified(true)
+      setProfile(p => p ? { ...p, verification_count: (p.verification_count || 0) + 1 } : p)
+      toast.success('Peer verified!')
+    }
+    setVerifying(false)
+  }
 
   // Scroll to post if #post-id in URL
   useEffect(() => {
@@ -184,6 +224,18 @@ export default function ProfilePage() {
                   <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.MessageCircle /></span> Message
                 </button>
                 <SocialButton targetId={profile.id} targetName={profile.full_name} />
+                {canVerify && (
+                  <button
+                    className={`btn btn-sm ${hasVerified ? 'btn-gold' : 'btn-ghost'}`}
+                    onClick={toggleVerify}
+                    disabled={verifying}
+                    title={hasVerified ? 'Remove peer verification' : 'Verify as a peer in your discipline'}
+                    style={{ gap: 5 }}
+                  >
+                    <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
+                    {hasVerified ? 'Verified ✓' : 'Verify Peer'}
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -200,6 +252,14 @@ export default function ProfilePage() {
           <div><div className="p-stat-num">{profile.follower_count}</div><div className="p-stat-label">Followers</div></div>
           <div><div className="p-stat-num">{profile.following_count}</div><div className="p-stat-label">Following</div></div>
           <div><div className="p-stat-num">{profile.friend_count || 0}</div><div className="p-stat-label">Friends</div></div>
+          {profile.is_pro && (
+            <div title="Number of peer professionals who have verified this creator">
+              <div className="p-stat-num" style={{ color: 'var(--color-pro)' }}>
+                {profile.verification_count || 0}
+              </div>
+              <div className="p-stat-label">Verified by</div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -13,6 +13,7 @@ export type Profession =
   | 'singer' | 'musician' | 'photographer' | 'poet'
   | 'visual-artist' | 'filmmaker' | 'dancer' | 'comedian'
   | 'culinary' | 'fitness' | 'technology' | 'fashion' | 'architecture'
+  | 'medicine' | 'education' | 'law' | 'science' | 'business' | 'wellness'
 
 export type ContentType = 'text' | 'photo' | 'audio' | 'video' | 'poem' | 'document'
 
@@ -33,6 +34,9 @@ export interface Profile {
   following_count: number
   friend_count: number
   post_count: number
+  interests: string[]
+  post_formats: string[]
+  verification_count: number
   created_at: string
 }
 
@@ -95,7 +99,7 @@ export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted'
+  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted' | 'peer_verify'
   post_id: string | null
   is_read: boolean
   created_at: string
@@ -117,6 +121,12 @@ export const PROFESSIONS: Record<Profession, { label: string; icon: string; pill
   technology:      { label: 'Technology',          icon: '💻', pillClass: 'pill-technology' },
   fashion:         { label: 'Fashion & Style',     icon: '👗', pillClass: 'pill-fashion' },
   architecture:    { label: 'Architecture',        icon: '🏛️', pillClass: 'pill-architecture' },
+  medicine:        { label: 'Medicine & Health',  icon: '🩺', pillClass: 'pill-medicine' },
+  education:       { label: 'Education',          icon: '📚', pillClass: 'pill-education' },
+  law:             { label: 'Law & Justice',      icon: '⚖️', pillClass: 'pill-law' },
+  science:         { label: 'Science & Research', icon: '🔬', pillClass: 'pill-science' },
+  business:        { label: 'Business',           icon: '💼', pillClass: 'pill-business' },
+  wellness:        { label: 'Wellness & Mind',    icon: '🧘', pillClass: 'pill-wellness' },
 }
 
 // Maps variant profession strings → canonical discipline key in PROFESSIONS
@@ -135,12 +145,13 @@ export const DISCIPLINE_ALIASES: Record<string, string> = {
   'personal trainer': 'fitness', 'personal-trainer': 'fitness',
   'yogi': 'fitness', 'yoga instructor': 'fitness',
   'gymnast': 'fitness', 'martial artist': 'fitness',
-  'weightlifter': 'fitness', 'crossfit': 'fitness',
+  'weightlifter': 'fitness', 'crossfit': 'fitness', 'runner': 'fitness',
   // Technology
   'developer': 'technology', 'programmer': 'technology',
   'software engineer': 'technology', 'coder': 'technology',
   'ux designer': 'technology', 'product designer': 'technology',
   'web developer': 'technology', 'frontend developer': 'technology',
+  'data scientist': 'technology', 'engineer': 'technology',
   // Fashion
   'model': 'fashion', 'stylist': 'fashion',
   'tailor': 'fashion', 'seamstress': 'fashion',
@@ -148,6 +159,45 @@ export const DISCIPLINE_ALIASES: Record<string, string> = {
   // Architecture
   'architect': 'architecture', 'interior designer': 'architecture',
   'interior-designer': 'architecture', 'urban planner': 'architecture',
+  // Medicine
+  'doctor': 'medicine', 'physician': 'medicine', 'nurse': 'medicine',
+  'surgeon': 'medicine', 'dentist': 'medicine', 'pharmacist': 'medicine',
+  'therapist': 'medicine', 'psychiatrist': 'medicine',
+  'medical student': 'medicine', 'paramedic': 'medicine',
+  'veterinarian': 'medicine', 'vet': 'medicine',
+  'physiotherapist': 'medicine', 'occupational therapist': 'medicine',
+  'radiologist': 'medicine', 'cardiologist': 'medicine',
+  'pediatrician': 'medicine', 'dermatologist': 'medicine',
+  'neurologist': 'medicine', 'oncologist': 'medicine',
+  // Education
+  'teacher': 'education', 'professor': 'education',
+  'lecturer': 'education', 'tutor': 'education',
+  'educator': 'education', 'instructor': 'education',
+  'principal': 'education', 'dean': 'education',
+  'school counselor': 'education', 'teaching assistant': 'education',
+  // Law
+  'lawyer': 'law', 'attorney': 'law', 'solicitor': 'law',
+  'barrister': 'law', 'judge': 'law', 'paralegal': 'law',
+  'legal consultant': 'law', 'advocate': 'law',
+  'public defender': 'law', 'prosecutor': 'law',
+  // Science
+  'scientist': 'science', 'researcher': 'science',
+  'biologist': 'science', 'chemist': 'science',
+  'physicist': 'science', 'geologist': 'science',
+  'astronomer': 'science', 'ecologist': 'science',
+  'lab technician': 'science', 'marine biologist': 'science',
+  // Business
+  'entrepreneur': 'business', 'consultant': 'business',
+  'manager': 'business', 'ceo': 'business',
+  'founder': 'business', 'executive': 'business',
+  'analyst': 'business', 'accountant': 'business',
+  'marketer': 'business', 'product manager': 'business',
+  // Wellness
+  'life coach': 'wellness', 'counselor': 'wellness',
+  'meditation teacher': 'wellness', 'nutritionist': 'wellness',
+  'dietitian': 'wellness', 'mindfulness coach': 'wellness',
+  'psychologist': 'wellness', 'mental health': 'wellness',
+  'holistic healer': 'wellness', 'reiki': 'wellness',
 }
 
 // Returns the canonical discipline key for any profession string
