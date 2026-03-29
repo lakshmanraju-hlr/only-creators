@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase, Profile, Post, getProfMeta, getCanonicalDiscipline } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
@@ -10,6 +10,7 @@ import { Icon } from '@/lib/icons'
 export default function ProfilePage() {
   const { username } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { profile: myProfile, refreshProfile } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
@@ -70,9 +71,19 @@ export default function ProfilePage() {
       const enriched = (postsData || []).map((p: any) => ({ ...p, profiles: profileData })) as Post[]
       setPosts(enriched)
       setLoading(false)
+
+      // Scroll to a specific post if navigated from a notification (#post-<id>)
+      if (location.hash) {
+        setGridView(false) // switch to feed view so PostCard renders with its id
+        const anchor = location.hash.slice(1)
+        setTimeout(() => {
+          const el = document.getElementById(anchor)
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 250)
+      }
     }
     load()
-  }, [username, myProfile?.id, profileTab])
+  }, [username, myProfile?.id, profileTab, location.hash])
 
   // Load whether current user has already verified this profile
   useEffect(() => {

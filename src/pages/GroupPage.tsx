@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase, Post, Group, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -19,6 +19,22 @@ export default function GroupPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Store group ID in a ref so reloadPosts never has a stale closure
+  const groupIdRef = useRef<string | null>(null)
+
+  const reloadPosts = useCallback(async () => {
+    const gid = groupIdRef.current
+    if (!gid) return
+    const { data } = await supabase.from('posts')
+      .select('*, profiles(*), group:group_id(*)')
+      .eq('group_id', gid)
+      .order('created_at', { ascending: false })
+      .limit(40)
+    setPosts((data || []) as Post[])
+    // Refresh group meta (post count)
+    const { data: gData } = await supabase.from('groups').select('*').eq('id', gid).single()
+    if (gData) setGroup(gData as Group)
+  }, [])
 
   useEffect(() => {
     if (!slug) return
@@ -27,12 +43,12 @@ export default function GroupPage() {
       const { data: gData } = await supabase.from('groups').select('*').eq('slug', slug).single()
       if (!gData) { setLoading(false); return }
       setGroup(gData as Group)
+      groupIdRef.current = gData.id
 
       const [postsRes, memberRes] = await Promise.all([
         supabase.from('posts')
           .select('*, profiles(*), group:group_id(*)')
           .eq('group_id', gData.id)
-          .order('pro_upvote_count', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(40),
         profile
@@ -45,6 +61,16 @@ export default function GroupPage() {
     }
     load()
   }, [slug, profile?.id])
+
+  // Real-time: auto-refresh when a new post is added to this group
+  useEffect(() => {
+    if (!group?.id) return
+    const ch = supabase.channel('group-posts-' + group.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: 'group_id=eq.' + group.id },
+        () => reloadPosts())
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [group?.id, reloadPosts])
 
   async function toggleMembership() {
     if (!profile || !group) return
@@ -74,17 +100,6 @@ export default function GroupPage() {
     if (error) { toast.error('Failed to delete group: ' + error.message); return }
     toast.success('Group deleted')
     navigate(-1)
-  }
-
-  function reloadPosts() {
-    if (!group) return
-    supabase.from('posts')
-      .select('*, profiles(*), group:group_id(*)')
-      .eq('group_id', group.id)
-      .order('pro_upvote_count', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(40)
-      .then(({ data }) => setPosts((data || []) as Post[]))
   }
 
   const isCreator = !!(group && profile && group.created_by === profile.id)

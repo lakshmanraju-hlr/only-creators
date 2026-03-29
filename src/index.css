@@ -312,6 +312,13 @@ img { display: block; max-width: 100%; }
 .composer-tool svg { width: 15px; height: 15px; stroke-width: 1.75; }
 
 /* ── POST CARD ── */
+@keyframes post-highlight {
+  0%   { box-shadow: 0 0 0 3px var(--color-primary); }
+  60%  { box-shadow: 0 0 0 3px var(--color-primary); }
+  100% { box-shadow: none; }
+}
+.post-card:target { animation: post-highlight 2s ease forwards; }
+
 .post-card {
   background: var(--gray-0); border: 1px solid var(--color-border);
   border-radius: var(--r-xl); margin-bottom: 12px; overflow: hidden;
@@ -414,8 +421,16 @@ img { display: block; max-width: 100%; }
 
 /* ── Comments ── */
 .comments-wrap { border-top: 1px solid var(--color-border); padding: 12px 14px; background: var(--gray-25); }
-.comment-item { display: flex; gap: 8px; margin-bottom: 10px; }
-.comment-bubble { flex: 1; background: var(--gray-0); border-radius: 0 var(--r-md) var(--r-md); padding: 8px 12px; border: 1px solid var(--color-border); }
+.comment-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+.comment-bubble { flex: 1; background: var(--gray-0); border-radius: 0 var(--r-md) var(--r-md); padding: 8px 12px; border: 1px solid var(--color-border); min-width: 0; }
+.comment-delete-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; flex-shrink: 0; margin-top: 6px;
+  background: none; border: none; cursor: pointer; border-radius: var(--r-md);
+  color: var(--color-text-3); opacity: 0; transition: opacity 0.15s, color 0.15s;
+}
+.comment-item:hover .comment-delete-btn { opacity: 1; }
+.comment-delete-btn:hover { color: var(--red-500); background: var(--red-50); }
 .comment-author { font-size: 12px; font-weight: 600; color: var(--color-text); margin-bottom: 2px; cursor: pointer; }
 .comment-author:hover { color: var(--color-primary); }
 .comment-text { font-size: 13px; color: var(--color-text-2); line-height: 1.5; }

@@ -159,6 +159,11 @@ export default function PostCard({ post, onUpdated }: Props) {
     setSubmitting(false)
   }
 
+  async function deleteComment(commentId: string) {
+    await supabase.from('comments').delete().eq('id', commentId)
+    setComments(c => c.filter(x => x.id !== commentId))
+  }
+
   async function openShare() {
     setShowShare(true)
     if (!profile) return
@@ -382,19 +387,28 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div className="comments-wrap">
           {loadingComments
             ? <div style={{ display:'flex', justifyContent:'center', padding:12 }}><div className="spinner" /></div>
-            : comments.map(c => (
+            : comments.map((c: Comment) => (
               <div key={c.id} className="comment-item">
                 <div className="post-avatar" style={{ width:28, height:28, fontSize:10, flexShrink:0, cursor:'pointer' }} onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>
                   {c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} alt="" /> : initials(c.profiles?.full_name || '?')}
                 </div>
-                <div className="comment-bubble">
+                <div className="comment-bubble" style={{ flex:1, minWidth:0 }}>
                   <div className="comment-author" onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>@{c.profiles?.username}</div>
                   <div className="comment-text">
-                    {c.body.split(' ').map((w, i) =>
+                    {c.body.split(' ').map((w: string, i: number) =>
                       w.startsWith('@') ? <span key={i} className="mention" onClick={() => navigate('/profile/' + w.slice(1))}>{w} </span> : <span key={i}>{w} </span>
                     )}
                   </div>
                 </div>
+                {profile && c.user_id === profile.id && (
+                  <button
+                    className="comment-delete-btn"
+                    onClick={() => deleteComment(c.id)}
+                    title="Delete comment"
+                  >
+                    <span style={{ display:'flex', width:12, height:12 }}><Icon.Trash /></span>
+                  </button>
+                )}
               </div>
             ))
           }
