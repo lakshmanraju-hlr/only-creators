@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase, Post, Group, Profile } from '@/lib/supabase'
+import { supabase, Post, Group, Profile, getCanonicalDiscipline } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
@@ -67,13 +67,17 @@ export default function GroupPage() {
     if (!group?.id) return
     const ch = supabase.channel('group-posts-' + group.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: 'group_id=eq.' + group.id },
-        () => reloadPosts())
+        () => setTimeout(() => reloadPosts(), 300))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [group?.id, reloadPosts])
 
   async function toggleMembership() {
     if (!profile || !group) return
+    if (!isSameDiscipline) {
+      toast.error(`Only ${group.discipline} creators can join this group`)
+      return
+    }
     setJoining(true)
     if (isMember) {
       const { error } = await supabase.from('group_members').delete().match({ group_id: group.id, user_id: profile.id })
@@ -104,6 +108,11 @@ export default function GroupPage() {
 
   const isCreator = !!(group && profile && group.created_by === profile.id)
   const canDelete = isCreator && !group?.is_seeded
+
+  // Discipline gate: user may only join/post in groups matching their own discipline
+  const userDiscipline = getCanonicalDiscipline(profile?.profession)
+  const groupDiscipline = getCanonicalDiscipline(group?.discipline)
+  const isSameDiscipline = !!(userDiscipline && groupDiscipline && userDiscipline === groupDiscipline)
 
   function initials(n: string | undefined) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
@@ -137,15 +146,15 @@ export default function GroupPage() {
             </div>
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
-            {/* Post in group — available to members and creator */}
-            {(isMember || isCreator) && (
+            {/* Post in group — only same-discipline members/creator */}
+            {isSameDiscipline && (isMember || isCreator) && (
               <button className="btn btn-primary btn-sm" style={{ gap:5 }} onClick={() => setShowUpload(true)}>
                 <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
                 Post here
               </button>
             )}
-            {/* Join / Leave — not shown to creator */}
-            {profile && !isCreator && (
+            {/* Join / Leave — only same discipline, not shown to creator */}
+            {profile && !isCreator && isSameDiscipline && (
               <button
                 className={isMember ? 'btn btn-ghost btn-sm' : 'btn btn-sm'}
                 style={isMember ? { color:'var(--color-text-2)' } : { background:'var(--color-primary)', color:'#fff' }}
@@ -188,18 +197,28 @@ export default function GroupPage() {
             You created this group
           </div>
         )}
+
+        {/* Out-of-discipline notice */}
+        {profile && !isCreator && !isSameDiscipline && (
+          <div style={{ marginTop:10, fontSize:11, color:'var(--color-text-3)', display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ display:'flex', width:11, height:11 }}><Icon.Info /></span>
+            This group is for <strong style={{ color:'var(--color-text-2)', marginLeft:3 }}>{group.discipline}</strong>&nbsp;creators. You can view posts but not join or post here.
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop:20 }}>
         {posts.length === 0 ? (
           <div className="empty-state">
             <div className="empty-title">No posts in this group yet</div>
-            {(isMember || isCreator) ? (
+            {isSameDiscipline && (isMember || isCreator) ? (
               <div style={{ marginTop:12 }}>
                 <button className="btn btn-primary btn-sm" onClick={() => setShowUpload(true)}>Be the first to post</button>
               </div>
-            ) : (
+            ) : isSameDiscipline ? (
               <div className="empty-sub">Join the group to post here</div>
+            ) : (
+              <div className="empty-sub">Only {group.discipline} creators can post here</div>
             )}
           </div>
         ) : (
@@ -215,7 +234,11 @@ export default function GroupPage() {
 
       {showUpload && (
         <UploadModal
-          onClose={() => { setShowUpload(false); reloadPosts() }}
+          onClose={() => {
+            setShowUpload(false)
+            // Small delay so Supabase write propagates before we SELECT
+            setTimeout(() => reloadPosts(), 600)
+          }}
           defaultGroup={group}
         />
       )}

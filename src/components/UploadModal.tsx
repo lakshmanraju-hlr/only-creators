@@ -173,6 +173,8 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
 
   useEffect(() => {
     if (!profile?.profession || availableGroups.length === 0) return
+    // Don't auto-suggest when a defaultGroup was explicitly passed
+    if (defaultGroup) return
     const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
     const suggestion = suggestGroup(caption, tagArray, profile.profession, availableGroups)
     setGroupSuggestion(suggestion)
