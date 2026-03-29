@@ -195,14 +195,23 @@ export default function PostCard({ post, onUpdated }: Props) {
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
             {profMeta && <span className={'pill pill-' + profMeta.pillClass}>{profMeta.label}</span>}
-            {post.is_pro_post && <span className="pro-original-badge">◆ Original</span>}
             {(author?.verification_count ?? 0) > 0 && (
               <span className="peer-verified-badge" title={`Verified by ${author!.verification_count} peer${author!.verification_count === 1 ? '' : 's'}`}>
                 ◈ {author!.verification_count}
               </span>
             )}
           </div>
-          <div className="post-time">@{author?.username} · {timeAgo}</div>
+          <div className="post-time" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span>@{author?.username} · {timeAgo}</span>
+            {post.post_type === 'pro' && post.persona_discipline ? (() => {
+              const pm = getProfMeta(post.persona_discipline)
+              return (
+                <span className="post-type-badge pro" title={`Pro Post — ${pm?.label ?? post.persona_discipline}`}>
+                  ◆ {pm?.label ?? post.persona_discipline}
+                </span>
+              )
+            })() : post.post_type === 'general' ? null : null}
+          </div>
         </div>
         <div style={{ position: 'relative' }} ref={menuRef}>
           <button className="post-more" style={{ background:'none', border:'none', cursor:'pointer' }} onClick={() => setShowMenu(v => !v)}>···</button>

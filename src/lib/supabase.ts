@@ -40,6 +40,23 @@ export interface Profile {
   created_at: string
 }
 
+export type PostType = 'general' | 'pro'
+
+export type PersonaLevel = 'newcomer' | 'contributor' | 'expert' | 'authority'
+
+export interface DisciplinePersona {
+  id: string
+  user_id: string
+  discipline: string
+  role_title: string | null
+  years_exp: number | null
+  bio: string | null
+  credentials: string | null
+  level: PersonaLevel
+  post_count: number
+  created_at: string
+}
+
 export interface Post {
   id: string
   user_id: string
@@ -54,6 +71,8 @@ export interface Post {
   share_count: number
   pro_upvote_count: number
   is_pro_post: boolean
+  post_type: PostType
+  persona_discipline: string | null
   visibility: 'public' | 'friends'
   group_id?: string | null
   group?: Group
@@ -231,6 +250,13 @@ export function getProfMeta(profession: string | null | undefined): { label: str
   // Custom discipline fallback
   const label = profession.charAt(0).toUpperCase() + profession.slice(1).replace(/-/g, ' ')
   return { label, icon: '✦', pillClass: 'pill-other' }
+}
+
+export const PERSONA_LEVELS: Record<PersonaLevel, { label: string; next?: PersonaLevel; nextDesc: string }> = {
+  newcomer:    { label: 'Newcomer',    next: 'contributor', nextDesc: '5 Pro Posts + 5 Pro Upvotes received' },
+  contributor: { label: 'Contributor', next: 'expert',      nextDesc: '20 Pro Posts + 30 Pro Upvotes received' },
+  expert:      { label: 'Expert',      next: 'authority',   nextDesc: '50 Pro Posts + 100 Pro Upvotes received' },
+  authority:   { label: 'Authority',   nextDesc: 'Top level — you\'ve earned it' },
 }
 
 export interface Message {

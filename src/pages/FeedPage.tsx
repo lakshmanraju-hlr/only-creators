@@ -52,7 +52,7 @@ export default function FeedPage({ onPost }: Props) {
     })
   }, [profile?.id])
 
-  const FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,visibility,group_id,group:group_id(id,name,slug),created_at'
+  const FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,post_type,persona_discipline,visibility,group_id,created_at'
 
   // Fetch + enrich a batch of raw posts from any query
   async function enrichPosts(rawPosts: any[]): Promise<Post[]> {
@@ -102,7 +102,7 @@ export default function FeedPage({ onPost }: Props) {
       // ── Pro tab: original work ranked by peer upvotes ─────────────────
       if (tab === 'pro') {
         const { data, error } = await supabase.from('posts').select(FIELDS)
-          .eq('is_pro_post', true)
+          .eq('post_type', 'pro')
           .order('pro_upvote_count', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(40)
@@ -273,6 +273,7 @@ export default function FeedPage({ onPost }: Props) {
     setPosting(true)
     const { error } = await supabase.from('posts').insert({
       user_id: profile.id, content_type: 'text', caption: composerText.trim(),
+      post_type: 'general',
     })
     if (!error) { setComposerText(''); toast.success('Posted! ✦'); fetchPosts() }
     else toast.error(error.message)
