@@ -260,6 +260,18 @@ img { display: block; max-width: 100%; }
   color: var(--color-primary); font-weight: 600;
 }
 .feed-hero-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+
+/* ── FEED SECTION DIVIDERS ── */
+.feed-section-divider {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--color-text-3); margin: 20px 0 8px;
+}
+.feed-section-divider::before, .feed-section-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--color-border);
+}
+.feed-section-divider::before { max-width: 20px; }
+
 [data-theme="dark"] .feed-hero {
   background: linear-gradient(135deg, rgba(120,53,15,0.18) 0%, transparent 100%);
   border-color: rgba(120,53,15,0.3);

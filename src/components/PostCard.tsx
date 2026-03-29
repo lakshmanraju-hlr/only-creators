@@ -72,6 +72,7 @@ export default function PostCard({ post, onUpdated }: Props) {
     else {
       await supabase.from('likes').insert({ user_id: profile.id, post_id: post.id })
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'like', post_id: post.id })
+      if (authorDiscipline) supabase.rpc('increment_discipline_score', { p_user_id: profile.id, p_discipline: authorDiscipline, p_delta: 1 })
     }
   }
 
@@ -82,6 +83,7 @@ export default function PostCard({ post, onUpdated }: Props) {
     else {
       await supabase.from('pro_upvotes').insert({ user_id: profile.id, post_id: post.id, profession: profile.profession })
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'pro_upvote', post_id: post.id })
+      if (authorDiscipline) supabase.rpc('increment_discipline_score', { p_user_id: profile.id, p_discipline: authorDiscipline, p_delta: 5 })
       toast.success('Pro Upvote given!')
     }
   }
@@ -145,6 +147,7 @@ export default function PostCard({ post, onUpdated }: Props) {
     if (!error && data) {
       setComments(c => [...c, data as Comment]); setCommentText(''); setMentionResults([])
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'comment', post_id: post.id })
+      if (authorDiscipline) supabase.rpc('increment_discipline_score', { p_user_id: profile.id, p_discipline: authorDiscipline, p_delta: 2 })
     }
     setSubmitting(false)
   }
