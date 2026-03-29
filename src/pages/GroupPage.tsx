@@ -21,19 +21,30 @@ export default function GroupPage() {
   const [deleting, setDeleting] = useState(false)
   // Store group ID in a ref so reloadPosts never has a stale closure
   const groupIdRef = useRef<string | null>(null)
+  const groupRef = useRef<Group | null>(null)
 
   const reloadPosts = useCallback(async () => {
     const gid = groupIdRef.current
     if (!gid) return
-    const { data } = await supabase.from('posts')
-      .select('*, profiles(*), group:group_id(*)')
+    // Fetch group separately so we can attach it to each post (avoids FK join issues)
+    const { data, error } = await supabase.from('posts')
+      .select('*, profiles(*)')
       .eq('group_id', gid)
       .order('created_at', { ascending: false })
       .limit(40)
-    setPosts((data || []) as Post[])
-    // Refresh group meta (post count)
-    const { data: gData } = await supabase.from('groups').select('*').eq('id', gid).single()
-    if (gData) setGroup(gData as Group)
+    if (error) console.error('[GroupPage] reloadPosts error:', error)
+    const g = groupRef.current
+    setPosts(((data || []) as Post[]).map(p => ({ ...p, group: g ?? undefined })))
+    // Refresh group meta (post count + real member count)
+    const [gRes, mRes] = await Promise.all([
+      supabase.from('groups').select('*').eq('id', gid).single(),
+      supabase.from('group_members').select('user_id', { count: 'exact', head: true }).eq('group_id', gid),
+    ])
+    if (gRes.data) {
+      const updated = { ...(gRes.data as Group), member_count: mRes.count ?? (gRes.data as Group).member_count }
+      setGroup(updated)
+      groupRef.current = updated
+    }
   }, [])
 
   useEffect(() => {
@@ -44,19 +55,27 @@ export default function GroupPage() {
       if (!gData) { setLoading(false); return }
       setGroup(gData as Group)
       groupIdRef.current = gData.id
+      groupRef.current = gData as Group
 
-      const [postsRes, memberRes] = await Promise.all([
+      const [postsRes, memberRes, countRes] = await Promise.all([
         supabase.from('posts')
-          .select('*, profiles(*), group:group_id(*)')
+          .select('*, profiles(*)')
           .eq('group_id', gData.id)
           .order('created_at', { ascending: false })
           .limit(40),
         profile
           ? supabase.from('group_members').select('user_id').eq('group_id', gData.id).eq('user_id', profile.id).maybeSingle()
           : Promise.resolve({ data: null }),
+        supabase.from('group_members').select('user_id', { count: 'exact', head: true }).eq('group_id', gData.id),
       ])
-      setPosts((postsRes.data || []) as Post[])
+      if (postsRes.error) console.error('[GroupPage] load posts error:', postsRes.error)
+      // Inject group onto each post so PostCard group chip works without FK join
+      setPosts(((postsRes.data || []) as Post[]).map(p => ({ ...p, group: gData as Group })))
       setIsMember(!!memberRes.data)
+      // Use real member count instead of potentially stale trigger value
+      if (countRes.count !== null) {
+        setGroup(g => g ? { ...g, member_count: countRes.count! } : g)
+      }
       setLoading(false)
     }
     load()
