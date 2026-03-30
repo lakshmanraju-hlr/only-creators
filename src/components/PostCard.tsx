@@ -25,6 +25,7 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [showShare, setShowShare] = useState(false)
   const [friends, setFriends] = useState<Profile[]>([])
   const [sharing, setSharing] = useState<string | null>(null)
+  const [proCommenters, setProCommenters] = useState<Set<string>>(new Set())
   const [upvoterPreview, setUpvoterPreview] = useState<Profile[]>([])
   const [upvoterTotal, setUpvoterTotal] = useState(0)
   const [upvoterLoading, setUpvoterLoading] = useState(false)
@@ -102,7 +103,17 @@ export default function PostCard({ post, onUpdated }: Props) {
     if (comments.length > 0) return
     setLoadingComments(true)
     const { data } = await supabase.from('comments').select('*, profiles(id,username,full_name,avatar_url)').eq('post_id', post.id).order('created_at', { ascending: true })
-    setComments((data || []) as Comment[])
+    const loaded = (data || []) as Comment[]
+    setComments(loaded)
+    // For Pro posts: find which commenters have a persona in this discipline
+    if (post.post_type === 'pro' && post.persona_discipline && loaded.length > 0) {
+      const commenterIds = [...new Set(loaded.map(c => c.user_id))]
+      const { data: pd } = await supabase.from('discipline_personas')
+        .select('user_id')
+        .eq('discipline', post.persona_discipline)
+        .in('user_id', commenterIds)
+      setProCommenters(new Set((pd || []).map((r: any) => r.user_id as string)))
+    }
     setLoadingComments(false)
   }
 
@@ -397,13 +408,26 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div className="comments-wrap">
           {loadingComments
             ? <div style={{ display:'flex', justifyContent:'center', padding:12 }}><div className="spinner" /></div>
-            : comments.map((c: Comment) => (
-              <div key={c.id} className="comment-item">
+            : [...comments]
+                // Pro posts: Pro commenters float to top, then chronological
+                .sort((a, b) => {
+                  if (post.post_type !== 'pro') return 0
+                  const aPro = proCommenters.has(a.user_id) ? 1 : 0
+                  const bPro = proCommenters.has(b.user_id) ? 1 : 0
+                  return bPro - aPro
+                })
+                .map((c: Comment) => {
+                  const isPro = proCommenters.has(c.user_id)
+                  return (
+              <div key={c.id} className={'comment-item' + (isPro ? ' comment-item-pro' : '')}>
                 <div className="post-avatar" style={{ width:28, height:28, fontSize:10, flexShrink:0, cursor:'pointer' }} onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>
                   {c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} alt="" /> : initials(c.profiles?.full_name || '?')}
                 </div>
                 <div className="comment-bubble" style={{ flex:1, minWidth:0 }}>
-                  <div className="comment-author" onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>@{c.profiles?.username}</div>
+                  <div className="comment-author" onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>
+                    @{c.profiles?.username}
+                    {isPro && <span className="comment-pro-badge">◆ Pro</span>}
+                  </div>
                   <div className="comment-text">
                     {c.body.split(' ').map((w: string, i: number) =>
                       w.startsWith('@') ? <span key={i} className="mention" onClick={() => navigate('/profile/' + w.slice(1))}>{w} </span> : <span key={i}>{w} </span>
@@ -420,7 +444,8 @@ export default function PostCard({ post, onUpdated }: Props) {
                   </button>
                 )}
               </div>
-            ))
+                  )
+                })
           }
           <div style={{ position:'relative', marginTop:10 }}>
             {mentionResults.length > 0 && (

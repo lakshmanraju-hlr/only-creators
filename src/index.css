@@ -431,7 +431,11 @@ img { display: block; max-width: 100%; }
 }
 .comment-item:hover .comment-delete-btn { opacity: 1; }
 .comment-delete-btn:hover { color: var(--red-500); background: var(--red-50); }
-.comment-author { font-size: 12px; font-weight: 600; color: var(--color-text); margin-bottom: 2px; cursor: pointer; }
+.comment-author { font-size: 12px; font-weight: 600; color: var(--color-text); margin-bottom: 2px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.comment-item-pro .comment-bubble { border-color: var(--amber-200); background: var(--amber-50); }
+[data-theme="dark"] .comment-item-pro .comment-bubble { border-color: #78350f; background: #1c1200; }
+.comment-pro-badge { font-size: 10px; font-weight: 700; color: var(--amber-600); letter-spacing: 0.02em; }
+[data-theme="dark"] .comment-pro-badge { color: var(--amber-400); }
 .comment-author:hover { color: var(--color-primary); }
 .comment-text { font-size: 13px; color: var(--color-text-2); line-height: 1.5; }
 .comment-input-row { display: flex; gap: 8px; }

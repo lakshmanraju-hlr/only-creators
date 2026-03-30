@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
 import CreateGroupModal from '@/components/CreateGroupModal'
+import UploadModal from '@/components/UploadModal'
 
 const PREDEFINED_KEYS = new Set([
   'photographer','singer','musician','poet','visual-artist','filmmaker','dancer','comedian',
@@ -52,7 +53,8 @@ export default function ExplorePage() {
   const [customDisciplines, setCustomDisciplines] = useState<string[]>([])
   // Which disciplines the user has already joined as Pro
   const [myDisciplines, setMyDisciplines] = useState<Set<string>>(new Set())
-  const [joining, setJoining] = useState(false)
+  const [showUpload, setShowUpload] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   // Load user's Pro disciplines
   useEffect(() => {
@@ -63,15 +65,12 @@ export default function ExplorePage() {
       })
   }, [profile?.id])
 
-  async function joinDiscipline(discipline: string) {
+  async function leaveDiscipline(discipline: string) {
     if (!profile) return
-    setJoining(true)
-    await supabase.from('discipline_personas').upsert(
-      { user_id: profile.id, discipline, level: 'newcomer' },
-      { onConflict: 'user_id,discipline', ignoreDuplicates: true }
-    )
-    setMyDisciplines(prev => new Set([...prev, discipline]))
-    setJoining(false)
+    setLeaving(true)
+    await supabase.from('discipline_personas').delete().eq('user_id', profile.id).eq('discipline', discipline)
+    setMyDisciplines(prev => { const n = new Set(prev); n.delete(discipline); return n })
+    setLeaving(false)
   }
 
   // Load any user-generated disciplines not in the predefined set
@@ -136,7 +135,7 @@ export default function ExplorePage() {
           <div className={`feed-tab ${view === 'groups' ? 'active' : ''}`} onClick={() => setView('groups')}>Groups</div>
         </div>
 
-        {/* Join discipline banner — shown when user hasn't joined this discipline yet */}
+        {/* Not yet a Pro in this discipline — invite them to post */}
         {profile && !myDisciplines.has(selectedDiscipline) && (
           <div className="discipline-join-banner">
             <div className="discipline-join-banner-icon">
@@ -144,26 +143,31 @@ export default function ExplorePage() {
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div className="discipline-join-banner-title">
-                Become a {meta?.label ?? selectedDiscipline} on Only Creators
+                Share your {meta?.label ?? selectedDiscipline} work here
               </div>
               <div className="discipline-join-banner-sub">
-                Share your work with fellow professionals. Your first Pro post makes you a Newcomer.
+                Post Pro content to establish yourself in this community. Your first post makes you a Newcomer.
               </div>
             </div>
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ flexShrink:0 }}
-              onClick={() => joinDiscipline(selectedDiscipline)}
-              disabled={joining}
-            >
-              {joining ? <span className="spinner" /> : 'Join discipline'}
+            <button className="btn btn-primary btn-sm" style={{ flexShrink:0 }} onClick={() => setShowUpload(true)}>
+              Post here
             </button>
           </div>
         )}
+        {/* Already a Pro — show status + leave option */}
         {profile && myDisciplines.has(selectedDiscipline) && (
           <div className="discipline-joined-badge">
             <span style={{ display:'flex', width:13, height:13, color:'var(--amber-500)' }}><Icon.Award /></span>
-            You're a {meta?.label ?? selectedDiscipline} · <span style={{ color:'var(--color-text-3)', fontWeight:400 }}>Post Pro content to grow your standing</span>
+            <span>You're a {meta?.label ?? selectedDiscipline}</span>
+            <span style={{ color:'var(--color-text-3)', fontWeight:400 }}>· Post Pro content to grow your standing</span>
+            <button
+              className="btn btn-ghost btn-xs"
+              style={{ marginLeft:'auto', color:'var(--color-text-3)', fontSize:11 }}
+              onClick={() => leaveDiscipline(selectedDiscipline)}
+              disabled={leaving}
+            >
+              {leaving ? <span className="spinner" style={{ width:10, height:10 }} /> : 'Leave'}
+            </button>
           </div>
         )}
 
@@ -222,6 +226,19 @@ export default function ExplorePage() {
             discipline={selectedDiscipline}
             onClose={() => setShowCreateGroup(false)}
             onCreated={g => { setGroups(gs => [g, ...gs]); setShowCreateGroup(false) }}
+          />
+        )}
+        {showUpload && selectedDiscipline && (
+          <UploadModal
+            defaultDiscipline={selectedDiscipline}
+            onClose={() => {
+              setShowUpload(false)
+              // Re-check if user is now Pro in this discipline
+              if (profile) {
+                supabase.from('discipline_personas').select('discipline').eq('user_id', profile.id)
+                  .then(({ data }) => setMyDisciplines(new Set((data || []).map((r: any) => r.discipline as string))))
+              }
+            }}
           />
         )}
       </div>

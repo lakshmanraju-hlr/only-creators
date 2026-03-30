@@ -6,7 +6,7 @@ import { suggestGroup } from '@/lib/groupCategorization'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
-interface Props { onClose: () => void; defaultGroup?: Group }
+interface Props { onClose: () => void; defaultGroup?: Group; defaultDiscipline?: string }
 
 const CONTENT_TYPES: { type: ContentType; icon: React.ReactNode; label: string; accept?: string }[] = [
   { type: 'text',     icon: <Icon.PenLine />,  label: 'Text' },
@@ -17,14 +17,16 @@ const CONTENT_TYPES: { type: ContentType; icon: React.ReactNode; label: string; 
   { type: 'poem',     icon: <Icon.PenLine />,  label: 'Poem' },
 ]
 
-export default function UploadModal({ onClose, defaultGroup }: Props) {
+export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }: Props) {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  // Always default to general — Pro is an explicit opt-in
-  const [postType, setPostType] = useState<'general' | 'pro'>('general')
+  // If a discipline is pre-selected, open in Pro mode
+  const [postType, setPostType] = useState<'general' | 'pro'>(defaultDiscipline ? 'pro' : 'general')
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
   const [selectedPersona, setSelectedPersona] = useState<DisciplinePersona | null>(null)
+  // For when posting from a discipline page — may not have a persona yet
+  const [overrideDiscipline] = useState<string | null>(defaultDiscipline ?? null)
 
   const [contentType, setContentType] = useState<ContentType>('text')
   const [caption, setCaption] = useState('')
@@ -59,7 +61,14 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
       .then(({ data }) => {
         const list = (data || []) as DisciplinePersona[]
         setPersonas(list)
-        if (list.length > 0) setSelectedPersona(list[0])
+        if (overrideDiscipline) {
+          // Pre-select the override discipline if a persona exists, otherwise it's a new one
+          const match = list.find(p => p.discipline === overrideDiscipline)
+          if (match) setSelectedPersona(match)
+          // If no persona yet, selectedPersona stays null — submit will create it
+        } else if (list.length > 0) {
+          setSelectedPersona(list[0])
+        }
       })
   }, [profile?.id])
 
@@ -157,7 +166,8 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     if (needsFile && !file) return toast.error('Please select a file')
     if (contentType === 'poem' && !poemText.trim()) return toast.error('Please write your poem')
     if (!caption.trim() && contentType === 'text') return toast.error('Please write something')
-    if (postType === 'pro' && !selectedPersona) return toast.error('Choose a discipline for your Pro post')
+    const effectiveDiscipline = selectedPersona?.discipline ?? overrideDiscipline
+    if (postType === 'pro' && !effectiveDiscipline) return toast.error('Choose a discipline for your Pro post')
 
     setUploading(true); setProgress(10)
     let mediaUrl = '', mediaPath = ''
@@ -174,9 +184,9 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     setProgress(85)
 
     // Auto-create persona record on first Pro post in a discipline
-    if (postType === 'pro' && selectedPersona) {
+    if (postType === 'pro' && effectiveDiscipline) {
       await supabase.from('discipline_personas').upsert(
-        { user_id: profile.id, discipline: selectedPersona.discipline, level: 'newcomer' },
+        { user_id: profile.id, discipline: effectiveDiscipline, level: 'newcomer' },
         { onConflict: 'user_id,discipline', ignoreDuplicates: true }
       )
     }
@@ -192,7 +202,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
       tags: tagArray,
       post_type: postType,
       is_pro_post: postType === 'pro',
-      persona_discipline: postType === 'pro' ? selectedPersona?.discipline ?? null : null,
+      persona_discipline: postType === 'pro' ? effectiveDiscipline : null,
       visibility: postType === 'pro' ? 'public' : postVisibility,
       group_id: selectedGroup?.id ?? null,
     })
@@ -280,7 +290,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
         {/* ── Pro expansion (only when Pro mode active) ─────── */}
         {postType === 'pro' && (
           <div className="upload-pro-section">
-            {personas.length === 0 ? (
+            {personas.length === 0 && !overrideDiscipline ? (
               <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
                 You haven't joined any discipline as a Pro yet.{' '}
                 <button
@@ -290,6 +300,13 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
                 >
                   Browse disciplines →
                 </button>
+              </div>
+            ) : overrideDiscipline && !selectedPersona ? (
+              // First Pro post in this discipline — show it as pre-selected, no picker needed
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{getProfMeta(overrideDiscipline)?.label ?? overrideDiscipline}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>· This post establishes you as a Newcomer</span>
               </div>
             ) : (
               <>

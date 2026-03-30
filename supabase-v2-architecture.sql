@@ -23,6 +23,11 @@ create table if not exists public.discipline_personas (
 
 alter table public.discipline_personas enable row level security;
 
+drop policy if exists "dp_select_public" on public.discipline_personas;
+drop policy if exists "dp_insert_own"    on public.discipline_personas;
+drop policy if exists "dp_update_own"    on public.discipline_personas;
+drop policy if exists "dp_delete_own"    on public.discipline_personas;
+
 create policy "dp_select_public"   on public.discipline_personas for select using (true);
 create policy "dp_insert_own"      on public.discipline_personas for insert with check (auth.uid() = user_id);
 create policy "dp_update_own"      on public.discipline_personas for update using (auth.uid() = user_id);
