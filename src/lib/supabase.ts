@@ -28,6 +28,7 @@ export interface Profile {
   website: string
   profession: string | null
   professions: string[]
+  role_title: string | null   // optional job title shown next to name, e.g. "Cardiologist"
   is_pro: boolean
   personal_profile_public: boolean
   follower_count: number

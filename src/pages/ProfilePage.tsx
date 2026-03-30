@@ -478,6 +478,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
   const { profile: myProfile } = useAuth()
   const [fullName, setFullName] = useState(profile.full_name)
   const [username, setUsername] = useState(profile.username)
+  const [roleTitle, setRoleTitle] = useState(profile.role_title || '')
   const [bio, setBio] = useState(profile.bio || '')
   const [website, setWebsite] = useState(profile.website || '')
   const [personalPublic, setPersonalPublic] = useState(profile.personal_profile_public !== false)
@@ -506,6 +507,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
     const { error } = await supabase.from('profiles').update({
       full_name: fullName,
       username: username.replace('@', '').toLowerCase(),
+      role_title: roleTitle.trim() || null,
       bio, website, avatar_url: avatarUrl,
       personal_profile_public: personalPublic,
       updated_at: new Date().toISOString(),
@@ -539,6 +541,14 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
           </div>
         </div>
         <div className="field"><label className="field-label">Display name</label><input className="field-input" value={fullName} onChange={e => setFullName(e.target.value)} /></div>
+        <div className="field">
+          <label className="field-label">
+            Title / role
+            <span style={{ fontWeight: 400, color: 'var(--color-text-3)', marginLeft: 6 }}>optional</span>
+          </label>
+          <input className="field-input" placeholder="e.g. Cardiologist, Street Photographer, Head Chef…" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>Shown next to your name across the platform.</div>
+        </div>
         <div className="field"><label className="field-label">Username</label><input className="field-input" value={username} onChange={e => setUsername(e.target.value)} /></div>
         <div className="field"><label className="field-label">Bio</label><textarea className="field-textarea" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the world about your craft…" /></div>
         <div className="field"><label className="field-label">Website</label><input className="field-input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yourportfolio.com" /></div>

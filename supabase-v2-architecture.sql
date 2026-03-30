@@ -104,7 +104,8 @@ end;
 $$;
 
 -- ─────────────────────────────────────────────────────────────────
--- 7. Make profession optional on profiles (already nullable, just confirming)
+-- 7. Add role_title to profiles
+--    Optional job title shown next to name (e.g. "Cardiologist", "Street Photographer")
 -- ─────────────────────────────────────────────────────────────────
--- profiles.profession is already nullable — no change needed.
--- profiles.interests already exists — no change needed.
+alter table public.profiles
+  add column if not exists role_title text;

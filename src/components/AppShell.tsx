@@ -192,7 +192,7 @@ export default function AppShell() {
             </div>
             <div style={{ flex:1, minWidth:0, textAlign:'left' }}>
               <div className="sidebar-name">{profile?.full_name}</div>
-              <div className="sidebar-role">{profMeta ? profMeta.label : 'General account'}</div>
+              <div className="sidebar-role">{profile?.role_title || (profMeta ? profMeta.label : 'General account')}</div>
             </div>
           </button>
           <button className="btn btn-ghost btn-sm btn-full" style={{ marginTop:6, gap:6 }} onClick={signOut}>
