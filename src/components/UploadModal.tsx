@@ -12,13 +12,14 @@ const CONTENT_TYPES: { type: ContentType; icon: React.ReactNode; label: string; 
   { type: 'photo',    icon: <Icon.Camera />,   label: 'Photo',    accept: 'image/*' },
   { type: 'audio',    icon: <Icon.Music />,    label: 'Audio',    accept: 'audio/*' },
   { type: 'video',    icon: <Icon.Video />,    label: 'Video',    accept: 'video/*' },
-  { type: 'document', icon: <Icon.FileText />, label: 'Document', accept: '.pdf,.doc,.docx' },
+  { type: 'document', icon: <Icon.FileText />, label: 'Doc',      accept: '.pdf,.doc,.docx' },
   { type: 'poem',     icon: <Icon.PenLine />,  label: 'Poem' },
 ]
 
 export default function UploadModal({ onClose, defaultGroup }: Props) {
-  const { profile, refreshProfile } = useAuth()
+  const { profile } = useAuth()
 
+  // Always default to general — Pro is an explicit opt-in
   const [postType, setPostType] = useState<'general' | 'pro'>('general')
   const [selectedPersona, setSelectedPersona] = useState<DisciplinePersona | null>(null)
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
@@ -46,6 +47,9 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const captionRef = useRef<HTMLTextAreaElement>(null)
 
+  // Auto-focus textarea on open
+  useEffect(() => { captionRef.current?.focus() }, [])
+
   // Load user's active discipline personas
   useEffect(() => {
     if (!profile) return
@@ -56,17 +60,17 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
       .then(({ data }) => {
         const list = (data || []) as DisciplinePersona[]
         setPersonas(list)
-        // If user has personas, default postType to 'pro' and pre-select primary
-        if (list.length > 0 && !defaultGroup) {
+        // Pre-select primary persona (but don't switch to Pro mode)
+        if (list.length > 0) {
           const primary = list.find(p => p.discipline === profile.profession) ?? list[0]
           setSelectedPersona(primary)
-          setPostType('pro')
         }
       })
   }, [profile?.id])
 
-  // Load groups for the selected persona's discipline (or profile profession)
+  // Load groups for the selected persona's discipline (only relevant in Pro mode)
   useEffect(() => {
+    if (postType !== 'pro') return
     const discipline = selectedPersona?.discipline ?? profile?.profession
     if (!discipline) return
     supabase.from('groups').select('*').eq('discipline', discipline).order('post_count', { ascending: false })
@@ -79,16 +83,25 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
           setAvailableGroups(list)
         }
       })
-  }, [selectedPersona?.discipline, profile?.profession])
+  }, [postType, selectedPersona?.discipline, profile?.profession])
 
-  // Group suggestion (only when no defaultGroup)
+  // Clear groups when switching back to general (unless defaultGroup)
   useEffect(() => {
-    if (defaultGroup || availableGroups.length === 0 || !profile?.profession) return
+    if (postType === 'general' && !defaultGroup) {
+      setAvailableGroups([])
+      setSelectedGroup(null)
+      setGroupSuggestion(null)
+    }
+  }, [postType])
+
+  // Group suggestion (only when no defaultGroup, in Pro mode)
+  useEffect(() => {
+    if (defaultGroup || postType !== 'pro' || availableGroups.length === 0 || !selectedPersona) return
     const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
-    const suggestion = suggestGroup(caption, tagArray, profile.profession, availableGroups)
+    const suggestion = suggestGroup(caption, tagArray, selectedPersona.discipline, availableGroups)
     setGroupSuggestion(suggestion)
     if (suggestion && !selectedGroup) setSelectedGroup(suggestion)
-  }, [caption, tags, availableGroups])
+  }, [caption, tags, availableGroups, postType])
 
   // Mention autocomplete
   useEffect(() => {
@@ -138,6 +151,15 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     else setFilePreview(null)
   }
 
+  function togglePro() {
+    if (postType === 'pro') { setPostType('general'); return }
+    if (personas.length === 0) {
+      toast('Add a discipline in your profile first to make Pro Posts', { icon: '💡' })
+      return
+    }
+    setPostType('pro')
+  }
+
   const currentCT = CONTENT_TYPES.find(c => c.type === contentType)!
   const needsFile = ['photo', 'audio', 'video', 'document'].includes(contentType)
 
@@ -146,7 +168,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     if (needsFile && !file) return toast.error('Please select a file')
     if (contentType === 'poem' && !poemText.trim()) return toast.error('Please write your poem')
     if (!caption.trim() && contentType === 'text') return toast.error('Please write something')
-    if (postType === 'pro' && !selectedPersona) return toast.error('Select a discipline persona for your Pro Post')
+    if (postType === 'pro' && !selectedPersona) return toast.error('Select a discipline for your Pro Post')
 
     setUploading(true); setProgress(10)
     let mediaUrl = '', mediaPath = ''
@@ -179,88 +201,49 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     })
     setProgress(100)
     if (error) { toast.error('Failed to post: ' + error.message) }
-    else { toast.success('Post published!'); onClose() }
+    else { toast.success('Posted!'); onClose() }
     setUploading(false)
   }
 
-  const personaMeta = selectedPersona ? getProfMeta(selectedPersona.discipline) : null
-
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal upload-modal">
         <div className="modal-header">
           <div className="modal-title">New post</div>
           <button className="modal-close" onClick={onClose}><Icon.X /></button>
         </div>
 
-        {/* ── Post type toggle ──────────────────────────────────── */}
-        <div className="upload-post-type-row">
-          <button
-            className={`upload-post-type-btn ${postType === 'general' ? 'active' : ''}`}
-            onClick={() => setPostType('general')}
-          >
-            <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.Globe /></span>
-            General Post
-          </button>
-          <button
-            className={`upload-post-type-btn ${postType === 'pro' ? 'active' : ''}`}
-            onClick={() => {
-              if (personas.length === 0) {
-                toast('Add a discipline persona in your profile first to make Pro Posts', { icon: '💡' })
-                return
-              }
-              setPostType('pro')
-            }}
-            title={personas.length === 0 ? 'Activate a discipline persona first' : undefined}
-          >
-            <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.Award /></span>
-            Pro Post
-            {personas.length === 0 && <span style={{ fontSize: 10, opacity: 0.6 }}> · unlock in profile</span>}
-          </button>
+        {/* ── Caption / text ─────────────────────────────────── */}
+        <div style={{ position: 'relative' }}>
+          {mentionResults.length > 0 && (
+            <div className="mention-dropdown">
+              {mentionResults.map((r, i) => (
+                <button key={r.id} className={'mention-option ' + (i === mentionIndex ? 'active' : '')} onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}>
+                  <div className="post-avatar" style={{ width: 24, height: 24, fontSize: 8, flexShrink: 0 }}>
+                    {r.avatar_url ? <img src={r.avatar_url} alt="" /> : r.full_name?.slice(0, 2).toUpperCase()}
+                  </div>
+                  <span style={{ fontWeight: 500, fontSize: 13 }}>{r.full_name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>@{r.username}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <textarea
+            ref={captionRef}
+            className="upload-caption"
+            placeholder={contentType === 'poem' ? 'Add a caption…' : contentType === 'text' ? "What's on your mind?" : 'Add a caption…'}
+            value={caption}
+            onChange={handleCaptionChange}
+            onKeyDown={handleCaptionKey}
+          />
         </div>
 
-        {/* ── Post type explanation ─────────────────────────────── */}
-        <div className="upload-post-type-hint">
-          {postType === 'general'
-            ? 'Visible to followers + general Explore. No discipline tag.'
-            : 'Tagged to your discipline community. Surfaces in the discipline hub and earns Pro Upvotes from peers.'}
-        </div>
-
-        {/* ── Persona selector (pro only) ───────────────────────── */}
-        {postType === 'pro' && personas.length > 0 && (
-          <div className="upload-option-row" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <div className="upload-option-label" style={{ width: '100%' }}>
-              <span style={{ display: 'flex', width: 14, height: 14, color: 'var(--color-pro)' }}><Icon.Award /></span>
-              Posting as
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, width: '100%' }}>
-              {personas.map(p => {
-                const meta = getProfMeta(p.discipline)
-                return (
-                  <button
-                    key={p.id}
-                    className={`upload-vis-btn ${selectedPersona?.id === p.id ? 'active' : ''}`}
-                    onClick={() => setSelectedPersona(p)}
-                  >
-                    {meta?.icon} {meta?.label ?? p.discipline}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+        {/* ── Poem editor ───────────────────────────────────── */}
+        {contentType === 'poem' && (
+          <textarea className="poem-editor" placeholder={'Let the words flow…\n\nEach line, a brushstroke\nOn the canvas of silence'} value={poemText} onChange={e => setPoemText(e.target.value)} />
         )}
 
-        {/* ── Content type ─────────────────────────────────────── */}
-        <div className="ct-grid">
-          {CONTENT_TYPES.map(ct => (
-            <button key={ct.type} className={`ct-btn ${contentType === ct.type ? 'active' : ''}`}
-              onClick={() => { setContentType(ct.type); setFile(null); setFilePreview(null) }}>
-              <span style={{ display: 'flex', width: 20, height: 20, margin: '0 auto 4px' }}>{ct.icon}</span>
-              {ct.label}
-            </button>
-          ))}
-        </div>
-
+        {/* ── File upload zone ──────────────────────────────── */}
         {needsFile && (
           <div>
             <div className="upload-zone" onClick={() => fileRef.current?.click()}>
@@ -278,87 +261,110 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
                 </>}
             </div>
             <input ref={fileRef} type="file" accept={currentCT.accept} style={{ display: 'none' }} onChange={handleFileChange} />
-            {file && <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 10 }}>Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</div>}
+            {file && <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 8 }}>Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</div>}
           </div>
         )}
 
-        {contentType === 'poem' && (
-          <textarea className="poem-editor" placeholder={'Let the words flow…\n\nEach line, a brushstroke\nOn the canvas of silence'} value={poemText} onChange={e => setPoemText(e.target.value)} />
-        )}
-
-        <div className="field" style={{ position: 'relative' }}>
-          <label className="field-label">{contentType === 'text' ? 'Your post *' : 'Caption'}</label>
-          {mentionResults.length > 0 && (
-            <div className="mention-dropdown">
-              {mentionResults.map((r, i) => (
-                <button key={r.id} className={'mention-option ' + (i === mentionIndex ? 'active' : '')} onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}>
-                  <div className="post-avatar" style={{ width: 24, height: 24, fontSize: 8, flexShrink: 0 }}>
-                    {r.avatar_url ? <img src={r.avatar_url} alt="" /> : r.full_name?.slice(0, 2).toUpperCase()}
-                  </div>
-                  <span style={{ fontWeight: 500, fontSize: 13 }}>{r.full_name}</span>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>@{r.username}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <textarea
-            ref={captionRef}
-            className="field-textarea"
-            placeholder={contentType === 'text' ? 'Share something… use @ to tag creators' : 'Add a caption… use @ to tag creators'}
-            value={caption}
-            onChange={handleCaptionChange}
-            onKeyDown={handleCaptionKey}
-            style={{ minHeight: contentType === 'text' ? 90 : 64 }}
-          />
+        {/* ── Content type icon row ─────────────────────────── */}
+        <div className="upload-ct-row">
+          {CONTENT_TYPES.map(ct => (
+            <button
+              key={ct.type}
+              className={`upload-ct-btn ${contentType === ct.type ? 'active' : ''}`}
+              onClick={() => { setContentType(ct.type); setFile(null); setFilePreview(null) }}
+              title={ct.label}
+            >
+              <span style={{ display: 'flex', width: 16, height: 16 }}>{ct.icon}</span>
+              <span>{ct.label}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="field">
-          <label className="field-label">Tags</label>
-          <input className="field-input" placeholder="#photography  #portrait" value={tags} onChange={e => setTags(e.target.value)} />
-        </div>
+        {/* ── Pro expansion (only when Pro mode active) ─────── */}
+        {postType === 'pro' && personas.length > 0 && (
+          <div className="upload-pro-section">
+            <div className="upload-pro-section-label">
+              <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
+              Posting as
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {personas.map(p => {
+                const meta = getProfMeta(p.discipline)
+                return (
+                  <button
+                    key={p.id}
+                    className={`upload-vis-btn ${selectedPersona?.id === p.id ? 'active' : ''}`}
+                    onClick={() => setSelectedPersona(p)}
+                  >
+                    {meta?.icon} {meta?.label ?? p.discipline}
+                  </button>
+                )
+              })}
+            </div>
 
-        {/* Visibility — only for general posts */}
-        {postType === 'general' && (
-          <div className="upload-option-row">
-            <div className="upload-option-label">
-              <span style={{ display: 'flex', width: 14, height: 14, color: 'var(--color-text-3)' }}>{postVisibility === 'friends' ? <Icon.Lock /> : <Icon.Globe />}</span>
-              Who can see this?
-            </div>
-            <div className="upload-option-toggle">
-              <button className={'upload-vis-btn ' + (postVisibility === 'public' ? 'active' : '')} onClick={() => setPostVisibility('public')}>Public</button>
-              <button className={'upload-vis-btn ' + (postVisibility === 'friends' ? 'active' : '')} onClick={() => setPostVisibility('friends')}>Friends only</button>
-            </div>
+            {availableGroups.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="upload-pro-section-label">
+                  <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Friends /></span>
+                  Community group
+                  {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
+                    <span style={{ fontSize: 10, color: 'var(--color-primary)', marginLeft: 6, fontWeight: 500 }}>suggested</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <button className={`upload-vis-btn ${!selectedGroup ? 'active' : ''}`} onClick={() => setSelectedGroup(null)}>None</button>
+                  {availableGroups.map(g => (
+                    <button key={g.id} className={`upload-vis-btn ${selectedGroup?.id === g.id ? 'active' : ''}`} onClick={() => setSelectedGroup(g)}>
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Group selector — show when discipline/persona selected */}
-        {availableGroups.length > 0 && (
-          <div className="upload-option-row" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <div className="upload-option-label" style={{ width: '100%' }}>
-              <span style={{ display: 'flex', width: 14, height: 14, color: 'var(--color-text-3)' }}><Icon.Friends /></span>
-              Community group
-              {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
-                <span style={{ fontSize: 10, color: 'var(--color-primary)', marginLeft: 6, fontWeight: 500 }}>suggested</span>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, width: '100%' }}>
-              <button className={`upload-vis-btn ${!selectedGroup ? 'active' : ''}`} onClick={() => setSelectedGroup(null)}>None</button>
-              {availableGroups.map(g => (
-                <button key={g.id} className={`upload-vis-btn ${selectedGroup?.id === g.id ? 'active' : ''}`} onClick={() => setSelectedGroup(g)}>
-                  {g.name}
-                </button>
-              ))}
-            </div>
+        {/* ── Tags (subtle) ─────────────────────────────────── */}
+        <input
+          className="upload-tags-input"
+          placeholder="#tag1  #tag2  #tag3"
+          value={tags}
+          onChange={e => setTags(e.target.value)}
+        />
+
+        {uploading && <div className="upload-progress" style={{ marginBottom: 10 }}><div className="upload-progress-fill" style={{ width: `${progress}%` }} /></div>}
+
+        {/* ── Bottom action bar ─────────────────────────────── */}
+        <div className="upload-action-bar">
+          {/* Left: visibility (general only) + Pro toggle */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {postType === 'general' && (
+              <button
+                className={`upload-chip ${postVisibility === 'friends' ? 'active' : ''}`}
+                onClick={() => setPostVisibility(v => v === 'public' ? 'friends' : 'public')}
+                title={postVisibility === 'public' ? 'Public — click to restrict to friends' : 'Friends only — click to make public'}
+              >
+                <span style={{ display: 'flex', width: 13, height: 13 }}>{postVisibility === 'friends' ? <Icon.Lock /> : <Icon.Globe />}</span>
+                {postVisibility === 'friends' ? 'Friends' : 'Public'}
+              </button>
+            )}
+            <button
+              className={`upload-chip ${postType === 'pro' ? 'pro-active' : ''}`}
+              onClick={togglePro}
+              title={personas.length === 0 ? 'Add a discipline in your profile to unlock Pro Posts' : postType === 'pro' ? 'Pro Post — click to switch to general' : 'Make this a Pro Post'}
+            >
+              <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
+              Pro
+            </button>
           </div>
-        )}
 
-        {uploading && <div className="upload-progress" style={{ marginBottom: 12 }}><div className="upload-progress-fill" style={{ width: `${progress}%` }} /></div>}
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose} disabled={uploading}>Cancel</button>
-          <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSubmit} disabled={uploading}>
-            {uploading ? <><span className="spinner" /> Uploading…</> : 'Publish post'}
-          </button>
+          {/* Right: cancel + post */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={onClose} disabled={uploading}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={uploading}>
+              {uploading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Posting…</> : 'Post'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
