@@ -51,6 +51,9 @@ export default function AppShell() {
     if (saved) return saved === 'dark'
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(() =>
+    !localStorage.getItem('welcome_dismissed')
+  )
   // Online friends for right panel
   const [onlineFriends, setOnlineFriends] = useState<Profile[]>([])
 
@@ -241,6 +244,32 @@ export default function AppShell() {
 
       {/* MAIN */}
       <div className="main-content">
+        {/* Welcome banner — shown once after signup until dismissed */}
+        {showWelcomeBanner && profile && !profile.bio && !profile.role_title && (
+          <div className="welcome-banner">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="welcome-banner-title">Welcome, {profile.full_name?.split(' ')[0]} 👋</div>
+              <div className="welcome-banner-sub">
+                Tell people who you are. Add your job title, bio, or a link — it takes 30 seconds and helps others find and connect with you.
+                You can always do it later from <strong>Edit profile</strong>.
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ marginTop: 10 }}
+                onClick={() => { navigate('/profile'); setShowWelcomeBanner(false); localStorage.setItem('welcome_dismissed', '1') }}
+              >
+                Complete your profile
+              </button>
+            </div>
+            <button
+              className="welcome-banner-close"
+              onClick={() => { setShowWelcomeBanner(false); localStorage.setItem('welcome_dismissed', '1') }}
+              title="Dismiss"
+            >
+              <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.X /></span>
+            </button>
+          </div>
+        )}
         <Routes>
           <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
           <Route path="/explore"           element={<ExplorePage />} />

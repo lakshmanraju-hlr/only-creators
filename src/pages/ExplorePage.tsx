@@ -110,7 +110,8 @@ export default function ExplorePage() {
 
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
-  const canCreateGroup = !!profile
+  // Only Pro users in this discipline can create groups
+  const canCreateGroup = !!(profile && selectedDiscipline && myDisciplines.has(selectedDiscipline))
 
   if (selectedDiscipline) {
     const meta = getProfMeta(selectedDiscipline)

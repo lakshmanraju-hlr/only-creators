@@ -206,7 +206,7 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div style={{ flex:1, minWidth:0 }}>
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
-            {authorRoleTitle && <span className="pill pill-other">{authorRoleTitle}</span>}
+            {authorRoleTitle && <span className="post-author-role">{authorRoleTitle}</span>}
             {(author?.verification_count ?? 0) > 0 && (
               <span className="peer-verified-badge" title={`Verified by ${author!.verification_count} peer${author!.verification_count === 1 ? '' : 's'}`}>
                 ◈ {author!.verification_count}
