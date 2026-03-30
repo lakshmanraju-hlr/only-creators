@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { supabase, ContentType, Group, Profile, DisciplinePersona, getProfMeta } from '@/lib/supabase'
+import { supabase, ContentType, Group, Profile, getProfMeta, PROFESSIONS, Profession } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { suggestGroup } from '@/lib/groupCategorization'
@@ -16,13 +16,15 @@ const CONTENT_TYPES: { type: ContentType; icon: React.ReactNode; label: string; 
   { type: 'poem',     icon: <Icon.PenLine />,  label: 'Poem' },
 ]
 
+const ALL_DISCIPLINES = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
+
 export default function UploadModal({ onClose, defaultGroup }: Props) {
   const { profile } = useAuth()
 
   // Always default to general — Pro is an explicit opt-in
   const [postType, setPostType] = useState<'general' | 'pro'>('general')
-  const [selectedPersona, setSelectedPersona] = useState<DisciplinePersona | null>(null)
-  const [personas, setPersonas] = useState<DisciplinePersona[]>([])
+  // The chosen discipline key for a Pro post (any discipline, not limited to existing personas)
+  const [proDiscipline, setProDiscipline] = useState<string | null>(null)
 
   const [contentType, setContentType] = useState<ContentType>('text')
   const [caption, setCaption] = useState('')
@@ -50,30 +52,10 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
   // Auto-focus textarea on open
   useEffect(() => { captionRef.current?.focus() }, [])
 
-  // Load user's active discipline personas
+  // Load groups for the selected Pro discipline
   useEffect(() => {
-    if (!profile) return
-    supabase.from('discipline_personas')
-      .select('*')
-      .eq('user_id', profile.id)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        const list = (data || []) as DisciplinePersona[]
-        setPersonas(list)
-        // Pre-select primary persona (but don't switch to Pro mode)
-        if (list.length > 0) {
-          const primary = list.find(p => p.discipline === profile.profession) ?? list[0]
-          setSelectedPersona(primary)
-        }
-      })
-  }, [profile?.id])
-
-  // Load groups for the selected persona's discipline (only relevant in Pro mode)
-  useEffect(() => {
-    if (postType !== 'pro') return
-    const discipline = selectedPersona?.discipline ?? profile?.profession
-    if (!discipline) return
-    supabase.from('groups').select('*').eq('discipline', discipline).order('post_count', { ascending: false })
+    if (postType !== 'pro' || !proDiscipline) { setAvailableGroups([]); return }
+    supabase.from('groups').select('*').eq('discipline', proDiscipline).order('post_count', { ascending: false })
       .then(({ data }) => {
         if (!data) return
         const list = data as Group[]
@@ -83,9 +65,9 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
           setAvailableGroups(list)
         }
       })
-  }, [postType, selectedPersona?.discipline, profile?.profession])
+  }, [postType, proDiscipline])
 
-  // Clear groups when switching back to general (unless defaultGroup)
+  // Clear groups when switching back to general
   useEffect(() => {
     if (postType === 'general' && !defaultGroup) {
       setAvailableGroups([])
@@ -94,11 +76,11 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     }
   }, [postType])
 
-  // Group suggestion (only when no defaultGroup, in Pro mode)
+  // Group suggestion
   useEffect(() => {
-    if (defaultGroup || postType !== 'pro' || availableGroups.length === 0 || !selectedPersona) return
+    if (defaultGroup || postType !== 'pro' || availableGroups.length === 0 || !proDiscipline) return
     const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
-    const suggestion = suggestGroup(caption, tagArray, selectedPersona.discipline, availableGroups)
+    const suggestion = suggestGroup(caption, tagArray, proDiscipline, availableGroups)
     setGroupSuggestion(suggestion)
     if (suggestion && !selectedGroup) setSelectedGroup(suggestion)
   }, [caption, tags, availableGroups, postType])
@@ -153,10 +135,6 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
 
   function togglePro() {
     if (postType === 'pro') { setPostType('general'); return }
-    if (personas.length === 0) {
-      toast('Add a discipline in your profile first to make Pro Posts', { icon: '💡' })
-      return
-    }
     setPostType('pro')
   }
 
@@ -168,7 +146,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     if (needsFile && !file) return toast.error('Please select a file')
     if (contentType === 'poem' && !poemText.trim()) return toast.error('Please write your poem')
     if (!caption.trim() && contentType === 'text') return toast.error('Please write something')
-    if (postType === 'pro' && !selectedPersona) return toast.error('Select a discipline for your Pro Post')
+    if (postType === 'pro' && !proDiscipline) return toast.error('Choose a discipline for your Pro post')
 
     setUploading(true); setProgress(10)
     let mediaUrl = '', mediaPath = ''
@@ -183,8 +161,16 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
       mediaUrl = data.publicUrl; mediaPath = path
     }
     setProgress(85)
-    const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
 
+    // Auto-create the discipline persona on first Pro post in that discipline
+    if (postType === 'pro' && proDiscipline) {
+      await supabase.from('discipline_personas').upsert(
+        { user_id: profile.id, discipline: proDiscipline, level: 'newcomer' },
+        { onConflict: 'user_id,discipline', ignoreDuplicates: true }
+      )
+    }
+
+    const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
     const { error } = await supabase.from('posts').insert({
       user_id: profile.id,
       content_type: contentType,
@@ -195,7 +181,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
       tags: tagArray,
       post_type: postType,
       is_pro_post: postType === 'pro',
-      persona_discipline: postType === 'pro' ? selectedPersona?.discipline ?? null : null,
+      persona_discipline: postType === 'pro' ? proDiscipline : null,
       visibility: postType === 'pro' ? 'public' : postVisibility,
       group_id: selectedGroup?.id ?? null,
     })
@@ -281,28 +267,25 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
         </div>
 
         {/* ── Pro expansion (only when Pro mode active) ─────── */}
-        {postType === 'pro' && personas.length > 0 && (
+        {postType === 'pro' && (
           <div className="upload-pro-section">
             <div className="upload-pro-section-label">
               <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
-              Posting as
+              Which discipline is this post for?
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {personas.map(p => {
-                const meta = getProfMeta(p.discipline)
-                return (
-                  <button
-                    key={p.id}
-                    className={`upload-vis-btn ${selectedPersona?.id === p.id ? 'active' : ''}`}
-                    onClick={() => setSelectedPersona(p)}
-                  >
-                    {meta?.icon} {meta?.label ?? p.discipline}
-                  </button>
-                )
-              })}
+              {ALL_DISCIPLINES.map(([key, val]) => (
+                <button
+                  key={key}
+                  className={`upload-vis-btn ${proDiscipline === key ? 'active' : ''}`}
+                  onClick={() => { setProDiscipline(key); setSelectedGroup(null); setGroupSuggestion(null) }}
+                >
+                  {val.icon} {val.label}
+                </button>
+              ))}
             </div>
 
-            {availableGroups.length > 0 && (
+            {proDiscipline && availableGroups.length > 0 && (
               <div style={{ marginTop: 10 }}>
                 <div className="upload-pro-section-label">
                   <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Friends /></span>
@@ -336,7 +319,6 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
 
         {/* ── Bottom action bar ─────────────────────────────── */}
         <div className="upload-action-bar">
-          {/* Left: visibility (general only) + Pro toggle */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {postType === 'general' && (
               <button
@@ -351,14 +333,13 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
             <button
               className={`upload-chip ${postType === 'pro' ? 'pro-active' : ''}`}
               onClick={togglePro}
-              title={personas.length === 0 ? 'Add a discipline in your profile to unlock Pro Posts' : postType === 'pro' ? 'Pro Post — click to switch to general' : 'Make this a Pro Post'}
+              title={postType === 'pro' ? 'Pro Post — click to switch to general' : 'Make this a Pro Post for a specific discipline'}
             >
               <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
               Pro
             </button>
           </div>
 
-          {/* Right: cancel + post */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-ghost btn-sm" onClick={onClose} disabled={uploading}>Cancel</button>
             <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={uploading}>

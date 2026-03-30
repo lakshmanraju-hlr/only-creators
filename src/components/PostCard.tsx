@@ -64,9 +64,8 @@ export default function PostCard({ post, onUpdated }: Props) {
   }
 
   const author = post.profiles
-  const profMeta = getProfMeta(author?.profession)
-  // Show role_title if set, else fall back to discipline label
-  const authorLabel = (author as any)?.role_title || profMeta?.label || null
+  // Only show a pill if the user has explicitly set a role_title — never auto-show discipline on general posts
+  const authorRoleTitle = (author as any)?.role_title || null
   const myDiscipline = getCanonicalDiscipline(profile?.profession)
   const authorDiscipline = getCanonicalDiscipline(author?.profession)
   const canProUpvote = !!(post.is_pro_post && myDiscipline && authorDiscipline && myDiscipline === authorDiscipline && profile?.id !== post.user_id)
@@ -196,7 +195,7 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div style={{ flex:1, minWidth:0 }}>
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
-            {authorLabel && <span className={'pill ' + (profMeta ? 'pill-' + profMeta.pillClass : 'pill-other')}>{authorLabel}</span>}
+            {authorRoleTitle && <span className="pill pill-other">{authorRoleTitle}</span>}
             {(author?.verification_count ?? 0) > 0 && (
               <span className="peer-verified-badge" title={`Verified by ${author!.verification_count} peer${author!.verification_count === 1 ? '' : 's'}`}>
                 ◈ {author!.verification_count}

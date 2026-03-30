@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase, Post, Group, Profile, getCanonicalDiscipline, DisciplinePersona } from '@/lib/supabase'
+import { supabase, Post, Group } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
@@ -19,15 +19,12 @@ export default function GroupPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [userPersonaDisciplines, setUserPersonaDisciplines] = useState<string[]>([])
-  // Store group ID in a ref so reloadPosts never has a stale closure
   const groupIdRef = useRef<string | null>(null)
   const groupRef = useRef<Group | null>(null)
 
   const reloadPosts = useCallback(async () => {
     const gid = groupIdRef.current
     if (!gid) return
-    // Fetch group separately so we can attach it to each post (avoids FK join issues)
     const { data, error } = await supabase.from('posts')
       .select('*, profiles(*)')
       .eq('group_id', gid)
@@ -36,7 +33,6 @@ export default function GroupPage() {
     if (error) console.error('[GroupPage] reloadPosts error:', error)
     const g = groupRef.current
     setPosts(((data || []) as Post[]).map(p => ({ ...p, group: g ?? undefined })))
-    // Refresh group meta (post count + real member count)
     const [gRes, mRes] = await Promise.all([
       supabase.from('groups').select('*').eq('id', gid).single(),
       supabase.from('group_members').select('user_id', { count: 'exact', head: true }).eq('group_id', gid),
@@ -58,7 +54,7 @@ export default function GroupPage() {
       groupIdRef.current = gData.id
       groupRef.current = gData as Group
 
-      const [postsRes, memberRes, countRes, personasRes] = await Promise.all([
+      const [postsRes, memberRes, countRes] = await Promise.all([
         supabase.from('posts')
           .select('*, profiles(*)')
           .eq('group_id', gData.id)
@@ -68,17 +64,10 @@ export default function GroupPage() {
           ? supabase.from('group_members').select('user_id').eq('group_id', gData.id).eq('user_id', profile.id).maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from('group_members').select('user_id', { count: 'exact', head: true }).eq('group_id', gData.id),
-        profile
-          ? supabase.from('discipline_personas').select('discipline').eq('user_id', profile.id)
-          : Promise.resolve({ data: [] }),
       ])
       if (postsRes.error) console.error('[GroupPage] load posts error:', postsRes.error)
-      // Inject group onto each post so PostCard group chip works without FK join
       setPosts(((postsRes.data || []) as Post[]).map(p => ({ ...p, group: gData as Group })))
       setIsMember(!!memberRes.data)
-      // Track all disciplines the user has activated personas for
-      setUserPersonaDisciplines(((personasRes.data || []) as Pick<DisciplinePersona, 'discipline'>[]).map(p => p.discipline))
-      // Use real member count instead of potentially stale trigger value
       if (countRes.count !== null) {
         setGroup(g => g ? { ...g, member_count: countRes.count! } : g)
       }
@@ -87,7 +76,6 @@ export default function GroupPage() {
     load()
   }, [slug, profile?.id])
 
-  // Real-time: auto-refresh when a new post is added to this group
   useEffect(() => {
     if (!group?.id) return
     const ch = supabase.channel('group-posts-' + group.id)
@@ -99,10 +87,6 @@ export default function GroupPage() {
 
   async function toggleMembership() {
     if (!profile || !group) return
-    if (!isSameDiscipline) {
-      toast.error(`Only ${group.discipline} creators can join this group`)
-      return
-    }
     setJoining(true)
     if (isMember) {
       const { error } = await supabase.from('group_members').delete().match({ group_id: group.id, user_id: profile.id })
@@ -133,10 +117,6 @@ export default function GroupPage() {
 
   const isCreator = !!(group && profile && group.created_by === profile.id)
   const canDelete = isCreator && !group?.is_seeded
-
-  // Discipline gate: user may join/post if they have an active persona for this group's discipline
-  const groupDiscipline = getCanonicalDiscipline(group?.discipline)
-  const isSameDiscipline = !!(groupDiscipline && userPersonaDisciplines.some(d => getCanonicalDiscipline(d) === groupDiscipline))
 
   function initials(n: string | undefined) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
@@ -170,15 +150,15 @@ export default function GroupPage() {
             </div>
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
-            {/* Post in group — only same-discipline members/creator */}
-            {isSameDiscipline && (isMember || isCreator) && (
+            {/* Any logged-in member/creator can post here */}
+            {profile && (isMember || isCreator) && (
               <button className="btn btn-primary btn-sm" style={{ gap:5 }} onClick={() => setShowUpload(true)}>
                 <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
                 Post here
               </button>
             )}
-            {/* Join / Leave — only same discipline, not shown to creator */}
-            {profile && !isCreator && isSameDiscipline && (
+            {/* Any logged-in user can join/leave — not shown to creator */}
+            {profile && !isCreator && (
               <button
                 className={isMember ? 'btn btn-ghost btn-sm' : 'btn btn-sm'}
                 style={isMember ? { color:'var(--color-text-2)' } : { background:'var(--color-primary)', color:'#fff' }}
@@ -214,28 +194,10 @@ export default function GroupPage() {
           </div>
         )}
 
-        {/* Creator badge */}
         {isCreator && (
           <div style={{ marginTop:10, fontSize:11, color:'var(--color-primary)', fontWeight:600, display:'flex', alignItems:'center', gap:5 }}>
             <span style={{ display:'flex', width:11, height:11 }}><Icon.Award /></span>
             You created this group
-          </div>
-        )}
-
-        {/* Out-of-discipline notice */}
-        {profile && !isCreator && !isSameDiscipline && (
-          <div style={{ marginTop:10, fontSize:11, color:'var(--color-text-3)', display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
-            <span style={{ display:'flex', width:11, height:11, flexShrink:0 }}><Icon.Info /></span>
-            This group is for <strong style={{ color:'var(--color-text-2)', margin:'0 3px' }}>{group.discipline}</strong> creators.
-            Add a <strong style={{ color:'var(--color-text-2)', margin:'0 3px' }}>{group.discipline}</strong> persona in your
-            <button
-              className="btn btn-ghost btn-xs"
-              style={{ padding:'0 4px', height:'auto', fontSize:11, color:'var(--color-primary)', display:'inline' }}
-              onClick={() => navigate('/profile')}
-            >
-              profile
-            </button>
-            to join and post here.
           </div>
         )}
       </div>
@@ -244,23 +206,17 @@ export default function GroupPage() {
         {posts.length === 0 ? (
           <div className="empty-state">
             <div className="empty-title">No posts in this group yet</div>
-            {isSameDiscipline && (isMember || isCreator) ? (
+            {profile && (isMember || isCreator) ? (
               <div style={{ marginTop:12 }}>
                 <button className="btn btn-primary btn-sm" onClick={() => setShowUpload(true)}>Be the first to post</button>
               </div>
-            ) : isSameDiscipline ? (
+            ) : profile ? (
               <div className="empty-sub">Join the group to post here</div>
-            ) : (
-              <div className="empty-sub">Add a {group.discipline} persona in your profile to post here</div>
-            )}
+            ) : null}
           </div>
         ) : (
           posts.map(p => (
-            <PostCard
-              key={p.id}
-              post={p}
-              onUpdated={reloadPosts}
-            />
+            <PostCard key={p.id} post={p} onUpdated={reloadPosts} />
           ))
         )}
       </div>
@@ -269,7 +225,6 @@ export default function GroupPage() {
         <UploadModal
           onClose={() => {
             setShowUpload(false)
-            // Small delay so Supabase write propagates before we SELECT
             setTimeout(() => reloadPosts(), 600)
           }}
           defaultGroup={group}

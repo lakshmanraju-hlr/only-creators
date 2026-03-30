@@ -1,7 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
-import { getProfMeta, getCanonicalDiscipline, supabase, Profile } from '@/lib/supabase'
+import { getCanonicalDiscipline, supabase, Profile } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import FeedPage from '@/pages/FeedPage'
 import ExplorePage from '@/pages/ExplorePage'
@@ -88,7 +88,6 @@ export default function AppShell() {
   }, [])
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
-  const profMeta = getProfMeta(profile?.profession)
   const myCanonical = getCanonicalDiscipline(profile?.profession)
 
   const navItems = [
@@ -192,7 +191,7 @@ export default function AppShell() {
             </div>
             <div style={{ flex:1, minWidth:0, textAlign:'left' }}>
               <div className="sidebar-name">{profile?.full_name}</div>
-              <div className="sidebar-role">{profile?.role_title || (profMeta ? profMeta.label : 'General account')}</div>
+              <div className="sidebar-role">{profile?.role_title || 'General account'}</div>
             </div>
           </button>
           <button className="btn btn-ghost btn-sm btn-full" style={{ marginTop:6, gap:6 }} onClick={signOut}>
