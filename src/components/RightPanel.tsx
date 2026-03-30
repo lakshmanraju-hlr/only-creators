@@ -209,8 +209,6 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
           </div>
         </div>
       )}
-
-}
     </>
   )
 }
