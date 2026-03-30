@@ -5,6 +5,7 @@ import { supabase, Profile, Post, getProfMeta, getCanonicalDiscipline, Disciplin
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
 import SocialButton from '@/components/SocialButton'
+import UploadModal from '@/components/UploadModal'
 import { Icon } from '@/lib/icons'
 
 export default function ProfilePage() {
@@ -21,6 +22,7 @@ export default function ProfilePage() {
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
   const [avatarLightbox, setAvatarLightbox] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [showUpload, setShowUpload] = useState(false)
 
   const isOwnProfile = !username || profile?.id === myProfile?.id
   const [hasVerified, setHasVerified] = useState(false)
@@ -234,7 +236,12 @@ export default function ProfilePage() {
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {isOwnProfile ? (
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowEditModal(true)}>Edit profile</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary btn-sm" style={{ gap: 5 }} onClick={() => setShowUpload(true)}>
+                  <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Plus /></span> New post
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowEditModal(true)}>Edit profile</button>
+              </div>
             ) : (
               <>
                 <button className="btn btn-ghost btn-sm" style={{ gap: 6 }} onClick={() => navigate('/messages?with=' + profile.id)}>
@@ -429,6 +436,24 @@ export default function ProfilePage() {
           profile={profile}
           onClose={() => setShowEditModal(false)}
           onSaved={async () => { await refreshProfile(); setShowEditModal(false) }}
+        />
+      )}
+
+      {showUpload && (
+        <UploadModal
+          onClose={() => {
+            setShowUpload(false)
+            // Reload posts after upload
+            if (myProfile) {
+              supabase.from('posts')
+                .select('id, user_id, content_type, caption, poem_text, media_url, media_path, tags, like_count, comment_count, share_count, pro_upvote_count, is_pro_post, post_type, persona_discipline, visibility, group_id, group:group_id(id,name,slug), created_at')
+                .eq('user_id', myProfile.id)
+                .order('created_at', { ascending: false })
+                .then(({ data }) => {
+                  if (data) setPosts((data as any[]).map(p => ({ ...p, profiles: profile })) as Post[])
+                })
+            }
+          }}
         />
       )}
 

@@ -91,13 +91,18 @@ export default function ExplorePage() {
       // Include all alias professions that map to this discipline
       const members = getDisciplineMembers(selectedDiscipline!)
       if (view === 'posts') {
-        const { data: du } = await supabase.from('profiles').select('id').in('profession', members)
-        const uids = (du || []).map((u: any) => u.id)
-        if (uids.length === 0) { setPosts([]); setLoading(false); return }
-        const { data } = await supabase.from('posts').select('*, profiles(*), group:group_id(*)').in('user_id', uids).order('pro_upvote_count', { ascending: false }).limit(20)
+        const { data } = await supabase.from('posts')
+          .select('*, profiles(*), group:group_id(*)')
+          .eq('post_type', 'pro')
+          .in('persona_discipline', members)
+          .order('pro_upvote_count', { ascending: false })
+          .limit(20)
         setPosts((data || []) as Post[])
       } else if (view === 'creators') {
-        const { data } = await supabase.from('profiles').select('*').in('profession', members).order('follower_count', { ascending: false }).limit(30)
+        const { data: dp } = await supabase.from('discipline_personas').select('user_id').in('discipline', members)
+        const uids = [...new Set((dp || []).map((r: any) => r.user_id as string))]
+        if (uids.length === 0) { setCreators([]); setLoading(false); return }
+        const { data } = await supabase.from('profiles').select('*').in('id', uids).order('follower_count', { ascending: false }).limit(30)
         setCreators((data || []) as Profile[])
       } else {
         const { data } = await supabase.from('groups').select('*').in('discipline', members).order('post_count', { ascending: false })

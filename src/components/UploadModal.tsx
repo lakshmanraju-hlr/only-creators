@@ -291,15 +291,17 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
         {postType === 'pro' && (
           <div className="upload-pro-section">
             {personas.length === 0 && !overrideDiscipline ? (
-              <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
-                You haven't joined any discipline as a Pro yet.{' '}
+              <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.6, padding: '10px 12px', background: 'var(--color-primary-light)', borderRadius: 'var(--r-md)' }}>
+                <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--color-primary)' }}>No fields yet</div>
+                To make a Pro post, establish yourself in a field first —{' '}
                 <button
                   className="btn btn-ghost btn-xs"
-                  style={{ color: 'var(--color-primary)', padding: '0 2px', fontSize: 13, display: 'inline' }}
+                  style={{ color: 'var(--color-primary)', padding: '0 2px', fontSize: 13, display: 'inline', fontWeight: 600 }}
                   onClick={() => { onClose(); navigate('/explore') }}
                 >
-                  Browse fields →
+                  go to Explore
                 </button>
+                , find your field, and post there.
               </div>
             ) : overrideDiscipline && !selectedPersona ? (
               // First Pro post in this discipline — show it as pre-selected, no picker needed

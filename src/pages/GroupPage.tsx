@@ -235,6 +235,7 @@ export default function GroupPage() {
             setTimeout(() => reloadPosts(), 600)
           }}
           defaultGroup={group}
+          defaultDiscipline={group.discipline ?? undefined}
         />
       )}
     </div>
