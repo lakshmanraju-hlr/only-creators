@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { supabase, Profile, Post, getProfMeta, getCanonicalDiscipline, DisciplinePersona, PERSONA_LEVELS, PersonaLevel, PROFESSIONS, Profession, DISCIPLINE_ALIASES } from '@/lib/supabase'
+import { supabase, Profile, Post, getProfMeta, getCanonicalDiscipline, DisciplinePersona, PERSONA_LEVELS, PersonaLevel } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
 import SocialButton from '@/components/SocialButton'
@@ -19,7 +19,6 @@ export default function ProfilePage() {
   const [profileTab, setProfileTab] = useState<'personal' | 'pro' | 'disciplines'>('personal')
   const [gridView, setGridView] = useState(true)
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
-  const [showAddPersona, setShowAddPersona] = useState(false)
   const [avatarLightbox, setAvatarLightbox] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
 
@@ -290,7 +289,7 @@ export default function ProfilePage() {
           ◆ Pro Posts
         </button>
         <button className={'profile-tab ' + (profileTab === 'disciplines' ? 'active' : '')} onClick={() => { setProfileTab('disciplines'); setSelectedPost(null) }}>
-          Disciplines {personas.length > 0 && <span style={{ marginLeft: 4, background: 'var(--color-primary)', color: '#fff', borderRadius: 99, padding: '0 5px', fontSize: 10, fontWeight: 700 }}>{personas.length}</span>}
+          Fields {personas.length > 0 && <span style={{ marginLeft: 4, background: 'var(--color-primary)', color: '#fff', borderRadius: 99, padding: '0 5px', fontSize: 10, fontWeight: 700 }}>{personas.length}</span>}
         </button>
         {profileTab !== 'disciplines' && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
@@ -334,47 +333,24 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  {isOwnProfile && (
-                    <button
-                      className="btn btn-ghost btn-xs"
-                      onClick={() => setShowAddPersona(true)}
-                      style={{ flexShrink: 0, fontSize: 11 }}
-                    >
-                      Edit
-                    </button>
-                  )}
                 </div>
               </div>
             )
           })}
 
-          {isOwnProfile && (
-            <button
-              className="btn btn-ghost btn-sm btn-full"
-              style={{ gap: 6, marginTop: 4 }}
-              onClick={() => setShowAddPersona(true)}
-            >
-              <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.Plus /></span>
-              Add discipline
-            </button>
-          )}
-
           {personas.length === 0 && !isOwnProfile && (
             <div className="empty-state">
-              <div className="empty-title">No disciplines activated</div>
-              <div className="empty-sub">This creator hasn't activated any professional personas yet.</div>
+              <div className="empty-title">No fields yet</div>
+              <div className="empty-sub">This creator hasn't posted in any professional field yet.</div>
             </div>
           )}
 
           {personas.length === 0 && isOwnProfile && (
             <div className="empty-state">
-              <div className="empty-title">Activate your first discipline</div>
-              <div className="empty-sub" style={{ maxWidth: 320, margin: '8px auto 16px' }}>
-                Disciplines let you make Pro Posts, earn peer recognition, and build audiences within specific communities.
+              <div className="empty-title">No fields yet</div>
+              <div className="empty-sub" style={{ maxWidth: 320, margin: '8px auto 0' }}>
+                Post Pro content in a field to establish yourself there. Your professional details can be set from <strong>Edit profile</strong>.
               </div>
-              <button className="btn btn-primary btn-sm" onClick={() => setShowAddPersona(true)}>
-                <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.Plus /></span> Add discipline
-              </button>
             </div>
           )}
         </div>
@@ -456,18 +432,6 @@ export default function ProfilePage() {
         />
       )}
 
-      {showAddPersona && myProfile && (
-        <AddPersonaModal
-          userId={myProfile.id}
-          existing={personas}
-          onClose={() => setShowAddPersona(false)}
-          onSaved={async () => {
-            const { data } = await supabase.from('discipline_personas').select('*').eq('user_id', myProfile.id).order('created_at')
-            setPersonas((data || []) as DisciplinePersona[])
-            setShowAddPersona(false)
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -483,12 +447,36 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState(profile.avatar_url || '')
   const [saving, setSaving] = useState(false)
+  const [personas, setPersonas] = useState<DisciplinePersona[]>([])
+  const [personaEdits, setPersonaEdits] = useState<Record<string, { years_exp: string; bio: string; credentials: string }>>({})
+
+  useEffect(() => {
+    if (!myProfile) return
+    supabase.from('discipline_personas').select('*').eq('user_id', myProfile.id).order('post_count', { ascending: false })
+      .then(({ data }) => {
+        const list = (data || []) as DisciplinePersona[]
+        setPersonas(list)
+        const edits: Record<string, { years_exp: string; bio: string; credentials: string }> = {}
+        list.forEach(p => {
+          edits[p.id] = {
+            years_exp: p.years_exp != null ? String(p.years_exp) : '',
+            bio: p.bio ?? '',
+            credentials: p.credentials ?? '',
+          }
+        })
+        setPersonaEdits(edits)
+      })
+  }, [myProfile?.id])
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     if (!f) return
     setAvatarFile(f)
     setAvatarPreview(URL.createObjectURL(f))
+  }
+
+  function setPersonaField(id: string, field: 'years_exp' | 'bio' | 'credentials', value: string) {
+    setPersonaEdits(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
   }
 
   async function save() {
@@ -510,8 +498,21 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
       personal_profile_public: personalPublic,
       updated_at: new Date().toISOString(),
     }).eq('id', myProfile.id)
-    if (error) toast.error(error.message)
-    else { toast.success('Profile updated'); onSaved() }
+    if (error) { toast.error(error.message); setSaving(false); return }
+
+    // Save persona details
+    await Promise.all(personas.map(p => {
+      const edits = personaEdits[p.id]
+      if (!edits) return Promise.resolve()
+      return supabase.from('discipline_personas').update({
+        years_exp: edits.years_exp ? parseInt(edits.years_exp) : null,
+        bio: edits.bio || null,
+        credentials: edits.credentials || null,
+      }).eq('id', p.id)
+    }))
+
+    toast.success('Profile updated')
+    onSaved()
     setSaving(false)
   }
 
@@ -557,6 +558,37 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
           </div>
           <div className={`upload-toggle ${personalPublic ? 'on' : ''}`} />
         </div>
+
+        {personas.length > 0 && (
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Professional fields</div>
+            {personas.map(p => {
+              const meta = getProfMeta(p.discipline)
+              const edits = personaEdits[p.id] ?? { years_exp: '', bio: '', credentials: '' }
+              return (
+                <div key={p.id} style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--gray-50)', borderRadius: 'var(--r-lg)', border: '1px solid var(--color-border)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{meta?.icon ?? '✦'}</span> {meta?.label ?? p.discipline}
+                    <span style={{ fontWeight: 400, color: 'var(--color-text-3)', fontSize: 11 }}>· {p.post_count} Pro post{p.post_count !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="field" style={{ marginBottom: 8 }}>
+                    <label className="field-label" style={{ fontSize: 11 }}>Years of experience</label>
+                    <input className="field-input" type="number" min="0" max="60" placeholder="e.g. 5" value={edits.years_exp} onChange={e => setPersonaField(p.id, 'years_exp', e.target.value)} />
+                  </div>
+                  <div className="field" style={{ marginBottom: 8 }}>
+                    <label className="field-label" style={{ fontSize: 11 }}>Field bio <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></label>
+                    <textarea className="field-textarea" placeholder="Brief description of your work in this field…" value={edits.bio} onChange={e => setPersonaField(p.id, 'bio', e.target.value)} style={{ minHeight: 60 }} />
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label className="field-label" style={{ fontSize: 11 }}>Credentials / portfolio link <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></label>
+                    <input className="field-input" placeholder="e.g. MBBS, portfolio.com/yourwork" value={edits.credentials} onChange={e => setPersonaField(p.id, 'credentials', e.target.value)} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" style={{ flex: 2 }} onClick={save} disabled={saving}>
@@ -568,199 +600,3 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
   )
 }
 
-// ── Add Discipline Persona Modal ──────────────────────────────────
-const ALL_PROFESSIONS_LIST = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
-
-function AddPersonaModal({ userId, existing, onClose, onSaved }: {
-  userId: string
-  existing: DisciplinePersona[]
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<string | null>(null)
-  const [roleTitle, setRoleTitle] = useState('')
-  const [yearsExp, setYearsExp] = useState('')
-  const [bio, setBio] = useState('')
-  const [credentials, setCredentials] = useState('')
-  const [saving, setSaving] = useState('')
-  const [deleting, setDeleting] = useState<string | null>(null)
-  const [editingPersona, setEditingPersona] = useState<DisciplinePersona | null>(null)
-
-  const existingDisciplines = new Set(existing.map(p => p.discipline))
-  const searchTrimmed = search.trim().toLowerCase()
-
-  const filtered = ALL_PROFESSIONS_LIST.filter(([key, val]) =>
-    !existingDisciplines.has(key) &&
-    (searchTrimmed === '' ||
-      val.label.toLowerCase().includes(searchTrimmed) ||
-      key.toLowerCase().includes(searchTrimmed) ||
-      (DISCIPLINE_ALIASES[searchTrimmed] === key))
-  )
-
-  function startEdit(p: DisciplinePersona) {
-    setEditingPersona(p)
-    setSelected(p.discipline)
-    setRoleTitle(p.role_title ?? '')
-    setYearsExp(p.years_exp != null ? String(p.years_exp) : '')
-    setBio(p.bio ?? '')
-    setCredentials(p.credentials ?? '')
-  }
-
-  async function save() {
-    if (!selected) return
-    setSaving('saving')
-    if (editingPersona) {
-      const { error } = await supabase.from('discipline_personas').update({
-        role_title: roleTitle || null,
-        years_exp: yearsExp ? parseInt(yearsExp) : null,
-        bio: bio || null,
-        credentials: credentials || null,
-      }).eq('id', editingPersona.id)
-      if (error) { toast.error(error.message); setSaving(''); return }
-    } else {
-      const { error } = await supabase.from('discipline_personas').insert({
-        user_id: userId,
-        discipline: selected,
-        role_title: roleTitle || null,
-        years_exp: yearsExp ? parseInt(yearsExp) : null,
-        bio: bio || null,
-        credentials: credentials || null,
-        level: 'newcomer',
-      })
-      if (error) { toast.error(error.message); setSaving(''); return }
-      // Also update profile.profession if this is their first persona
-      const { data: prof } = await supabase.from('profiles').select('profession').eq('id', userId).single()
-      if (!prof?.profession) {
-        await supabase.from('profiles').update({ profession: selected, is_pro: true }).eq('id', userId)
-      }
-    }
-    setSaving('')
-    toast.success(editingPersona ? 'Discipline updated!' : 'Discipline activated!')
-    onSaved()
-  }
-
-  async function deletePersona(p: DisciplinePersona) {
-    setDeleting(p.id)
-    await supabase.from('discipline_personas').delete().eq('id', p.id)
-    setDeleting(null)
-    toast('Discipline removed')
-    onSaved()
-  }
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-title">{editingPersona ? 'Edit discipline' : 'Add discipline'}</div>
-          <button className="modal-close" onClick={onClose}><Icon.X /></button>
-        </div>
-
-        {/* Existing personas list (when not editing) */}
-        {!editingPersona && existing.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Your disciplines</div>
-            {existing.map(p => {
-              const meta = getProfMeta(p.discipline)
-              return (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
-                  <span style={{ fontSize: 18 }}>{meta?.icon ?? '✦'}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{meta?.label ?? p.discipline}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{p.level} · {p.post_count} pro posts</div>
-                  </div>
-                  <button className="btn btn-ghost btn-xs" onClick={() => startEdit(p)}>Edit</button>
-                  <button
-                    className="btn btn-ghost btn-xs"
-                    style={{ color: 'var(--red-500)' }}
-                    onClick={() => deletePersona(p)}
-                    disabled={deleting === p.id}
-                  >
-                    {deleting === p.id ? <span className="spinner" /> : <span style={{ display: 'flex', width: 12, height: 12 }}><Icon.Trash /></span>}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Select new discipline */}
-        {!editingPersona && (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-              {existing.length > 0 ? 'Add another' : 'Choose your discipline'}
-            </div>
-            {!selected ? (
-              <>
-                <input
-                  className="field-input"
-                  placeholder="Search disciplines…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  autoFocus
-                  style={{ marginBottom: 10 }}
-                />
-                <div className="prof-suggestions">
-                  {filtered.map(([key, val]) => (
-                    <button key={key} type="button" className="prof-suggestion-pill" onClick={() => setSelected(key)}>
-                      {val.icon} {val.label}
-                    </button>
-                  ))}
-                  {filtered.length === 0 && searchTrimmed.length >= 2 && (
-                    <button type="button" className="prof-other-btn" style={{ width: '100%' }} onClick={() => setSelected(searchTrimmed)}>
-                      <span style={{ display: 'flex', width: 12, height: 12 }}><Icon.Plus /></span>
-                      Add "{search.trim()}"
-                    </button>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span className="prof-chip">
-                  {getProfMeta(selected)?.label ?? selected}
-                  <button type="button" className="prof-chip-remove" onClick={() => setSelected(null)}><Icon.X /></button>
-                </span>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Persona details form */}
-        {(selected || editingPersona) && (
-          <>
-            <div className="field" style={{ marginTop: 8 }}>
-              <label className="field-label">Role / title <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></label>
-              <input className="field-input" placeholder="e.g. Street Photographer, Cardiologist" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label className="field-label">Years of experience</label>
-                <input className="field-input" type="number" min="0" max="60" placeholder="e.g. 5" value={yearsExp} onChange={e => setYearsExp(e.target.value)} />
-              </div>
-            </div>
-            <div className="field">
-              <label className="field-label">Discipline bio <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></label>
-              <textarea className="field-textarea" placeholder="Brief description of your work in this field…" value={bio} onChange={e => setBio(e.target.value)} style={{ minHeight: 70 }} />
-            </div>
-            <div className="field">
-              <label className="field-label">Credentials / portfolio link <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></label>
-              <input className="field-input" placeholder="e.g. MBBS, portfolio.com/yourwork" value={credentials} onChange={e => setCredentials(e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setEditingPersona(null); setSelected(null); setRoleTitle(''); setYearsExp(''); setBio(''); setCredentials('') }}>
-                {editingPersona ? 'Cancel edit' : 'Back'}
-              </button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={save} disabled={saving === 'saving'}>
-                {saving === 'saving' ? <span className="spinner" /> : editingPersona ? 'Save changes' : 'Activate discipline'}
-              </button>
-            </div>
-          </>
-        )}
-
-        {!selected && !editingPersona && (
-          <button className="btn btn-ghost btn-sm btn-full" style={{ marginTop: 8 }} onClick={onClose}>Done</button>
-        )}
-      </div>
-    </div>
-  )
-}

@@ -160,7 +160,7 @@ export default function ExplorePage() {
           <div className="discipline-joined-badge">
             <span style={{ display:'flex', width:13, height:13, color:'var(--amber-500)' }}><Icon.Award /></span>
             <span>You're a {meta?.label ?? selectedDiscipline}</span>
-            <span style={{ color:'var(--color-text-3)', fontWeight:400 }}>· Post Pro content to grow your standing</span>
+            <span style={{ color:'var(--color-text-3)', fontWeight:400 }}>· Post Pro content to grow your standing in this field</span>
             <button
               className="btn btn-ghost btn-xs"
               style={{ marginLeft:'auto', color:'var(--color-text-3)', fontSize:11 }}
@@ -248,8 +248,8 @@ export default function ExplorePage() {
 
   return (
     <div style={{ maxWidth:820, margin:'0 auto', padding:'20px 20px' }}>
-      <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.4px', marginBottom:4 }}>Explore disciplines</div>
-      <div style={{ fontSize:13.5, color:'var(--color-text-3)', marginBottom:24 }}>Discover verified creators across every creative field</div>
+      <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.4px', marginBottom:4 }}>Explore fields</div>
+      <div style={{ fontSize:13.5, color:'var(--color-text-3)', marginBottom:24 }}>Discover verified creators across every professional field</div>
       <div className="explore-grid">
         {DISCIPLINES.map(d => (
           <div key={d.key} className="explore-card" onClick={() => setSearchParams({ discipline: d.key })}>

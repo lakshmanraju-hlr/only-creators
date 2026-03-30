@@ -178,7 +178,7 @@ export default function AppShell() {
         <div className="nav-section" style={{ flex:1, overflowY:'auto', minHeight:0 }}>
           {proDiscs.length > 0 && (
             <>
-              <div className="nav-label">My disciplines</div>
+              <div className="nav-label">My fields</div>
               {proDiscs.map(d => (
                 <button
                   key={d.key}
@@ -194,7 +194,7 @@ export default function AppShell() {
               <div className="nav-label">Explore</div>
             </>
           )}
-          {!proDiscs.length && <div className="nav-label">Disciplines</div>}
+          {!proDiscs.length && <div className="nav-label">Fields</div>}
           {otherDiscs.map(d => (
             <button
               key={d.key}

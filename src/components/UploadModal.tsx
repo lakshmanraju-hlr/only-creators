@@ -167,7 +167,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     if (contentType === 'poem' && !poemText.trim()) return toast.error('Please write your poem')
     if (!caption.trim() && contentType === 'text') return toast.error('Please write something')
     const effectiveDiscipline = selectedPersona?.discipline ?? overrideDiscipline
-    if (postType === 'pro' && !effectiveDiscipline) return toast.error('Choose a discipline for your Pro post')
+    if (postType === 'pro' && !effectiveDiscipline) return toast.error('Choose a field for your Pro post')
 
     setUploading(true); setProgress(10)
     let mediaUrl = '', mediaPath = ''
@@ -298,7 +298,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                   style={{ color: 'var(--color-primary)', padding: '0 2px', fontSize: 13, display: 'inline' }}
                   onClick={() => { onClose(); navigate('/explore') }}
                 >
-                  Browse disciplines →
+                  Browse fields →
                 </button>
               </div>
             ) : overrideDiscipline && !selectedPersona ? (
