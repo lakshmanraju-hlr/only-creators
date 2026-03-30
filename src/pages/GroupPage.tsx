@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase, Post, Group, Profile, getCanonicalDiscipline } from '@/lib/supabase'
+import { supabase, Post, Group, Profile, getCanonicalDiscipline, DisciplinePersona } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
@@ -19,6 +19,7 @@ export default function GroupPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [userPersonaDisciplines, setUserPersonaDisciplines] = useState<string[]>([])
   // Store group ID in a ref so reloadPosts never has a stale closure
   const groupIdRef = useRef<string | null>(null)
   const groupRef = useRef<Group | null>(null)
@@ -57,7 +58,7 @@ export default function GroupPage() {
       groupIdRef.current = gData.id
       groupRef.current = gData as Group
 
-      const [postsRes, memberRes, countRes] = await Promise.all([
+      const [postsRes, memberRes, countRes, personasRes] = await Promise.all([
         supabase.from('posts')
           .select('*, profiles(*)')
           .eq('group_id', gData.id)
@@ -67,11 +68,16 @@ export default function GroupPage() {
           ? supabase.from('group_members').select('user_id').eq('group_id', gData.id).eq('user_id', profile.id).maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from('group_members').select('user_id', { count: 'exact', head: true }).eq('group_id', gData.id),
+        profile
+          ? supabase.from('discipline_personas').select('discipline').eq('user_id', profile.id)
+          : Promise.resolve({ data: [] }),
       ])
       if (postsRes.error) console.error('[GroupPage] load posts error:', postsRes.error)
       // Inject group onto each post so PostCard group chip works without FK join
       setPosts(((postsRes.data || []) as Post[]).map(p => ({ ...p, group: gData as Group })))
       setIsMember(!!memberRes.data)
+      // Track all disciplines the user has activated personas for
+      setUserPersonaDisciplines(((personasRes.data || []) as Pick<DisciplinePersona, 'discipline'>[]).map(p => p.discipline))
       // Use real member count instead of potentially stale trigger value
       if (countRes.count !== null) {
         setGroup(g => g ? { ...g, member_count: countRes.count! } : g)
@@ -128,10 +134,9 @@ export default function GroupPage() {
   const isCreator = !!(group && profile && group.created_by === profile.id)
   const canDelete = isCreator && !group?.is_seeded
 
-  // Discipline gate: user may only join/post in groups matching their own discipline
-  const userDiscipline = getCanonicalDiscipline(profile?.profession)
+  // Discipline gate: user may join/post if they have an active persona for this group's discipline
   const groupDiscipline = getCanonicalDiscipline(group?.discipline)
-  const isSameDiscipline = !!(userDiscipline && groupDiscipline && userDiscipline === groupDiscipline)
+  const isSameDiscipline = !!(groupDiscipline && userPersonaDisciplines.some(d => getCanonicalDiscipline(d) === groupDiscipline))
 
   function initials(n: string | undefined) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
@@ -219,9 +224,18 @@ export default function GroupPage() {
 
         {/* Out-of-discipline notice */}
         {profile && !isCreator && !isSameDiscipline && (
-          <div style={{ marginTop:10, fontSize:11, color:'var(--color-text-3)', display:'flex', alignItems:'center', gap:5 }}>
-            <span style={{ display:'flex', width:11, height:11 }}><Icon.Info /></span>
-            This group is for <strong style={{ color:'var(--color-text-2)', marginLeft:3 }}>{group.discipline}</strong>&nbsp;creators. You can view posts but not join or post here.
+          <div style={{ marginTop:10, fontSize:11, color:'var(--color-text-3)', display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+            <span style={{ display:'flex', width:11, height:11, flexShrink:0 }}><Icon.Info /></span>
+            This group is for <strong style={{ color:'var(--color-text-2)', margin:'0 3px' }}>{group.discipline}</strong> creators.
+            Add a <strong style={{ color:'var(--color-text-2)', margin:'0 3px' }}>{group.discipline}</strong> persona in your
+            <button
+              className="btn btn-ghost btn-xs"
+              style={{ padding:'0 4px', height:'auto', fontSize:11, color:'var(--color-primary)', display:'inline' }}
+              onClick={() => navigate('/profile')}
+            >
+              profile
+            </button>
+            to join and post here.
           </div>
         )}
       </div>
@@ -237,7 +251,7 @@ export default function GroupPage() {
             ) : isSameDiscipline ? (
               <div className="empty-sub">Join the group to post here</div>
             ) : (
-              <div className="empty-sub">Only {group.discipline} creators can post here</div>
+              <div className="empty-sub">Add a {group.discipline} persona in your profile to post here</div>
             )}
           </div>
         ) : (
