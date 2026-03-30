@@ -144,8 +144,6 @@ export default function ProfilePage() {
 
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
-  const profMeta = getProfMeta(profile?.profession)
-
   // Grid cell: render appropriate thumbnail for each content type
   function GridCell({ post, onDelete }: { post: Post; onDelete?: () => void }) {
     const [hovered, setHovered] = useState(false)
@@ -229,10 +227,10 @@ export default function ProfilePage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="profile-name">{profile.full_name}</div>
             <div className="profile-handle">@{profile.username}</div>
-            {profMeta && (
-              <span className={'pill pill-' + profMeta.pillClass} style={{ marginTop: 6, display: 'inline-flex' }}>
-                {profMeta.label}
-              </span>
+            {profile.role_title && (
+              <div style={{ marginTop: 4, fontSize: 13.5, color: 'var(--color-text-2)', fontWeight: 500 }}>
+                {profile.role_title}
+              </div>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>

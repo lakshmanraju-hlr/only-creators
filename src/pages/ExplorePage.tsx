@@ -50,6 +50,29 @@ export default function ExplorePage() {
   )
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [customDisciplines, setCustomDisciplines] = useState<string[]>([])
+  // Which disciplines the user has already joined as Pro
+  const [myDisciplines, setMyDisciplines] = useState<Set<string>>(new Set())
+  const [joining, setJoining] = useState(false)
+
+  // Load user's Pro disciplines
+  useEffect(() => {
+    if (!profile) return
+    supabase.from('discipline_personas').select('discipline').eq('user_id', profile.id)
+      .then(({ data }) => {
+        setMyDisciplines(new Set((data || []).map((r: any) => r.discipline as string)))
+      })
+  }, [profile?.id])
+
+  async function joinDiscipline(discipline: string) {
+    if (!profile) return
+    setJoining(true)
+    await supabase.from('discipline_personas').upsert(
+      { user_id: profile.id, discipline, level: 'newcomer' },
+      { onConflict: 'user_id,discipline', ignoreDuplicates: true }
+    )
+    setMyDisciplines(prev => new Set([...prev, discipline]))
+    setJoining(false)
+  }
 
   // Load any user-generated disciplines not in the predefined set
   useEffect(() => {
@@ -112,6 +135,38 @@ export default function ExplorePage() {
           <div className={`feed-tab ${view === 'creators' ? 'active' : ''}`} onClick={() => setView('creators')}>Creators</div>
           <div className={`feed-tab ${view === 'groups' ? 'active' : ''}`} onClick={() => setView('groups')}>Groups</div>
         </div>
+
+        {/* Join discipline banner — shown when user hasn't joined this discipline yet */}
+        {profile && !myDisciplines.has(selectedDiscipline) && (
+          <div className="discipline-join-banner">
+            <div className="discipline-join-banner-icon">
+              {disc && <span style={{ display:'flex', width:22, height:22, color:'var(--color-primary)' }}><disc.Icon /></span>}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div className="discipline-join-banner-title">
+                Become a {meta?.label ?? selectedDiscipline} on Only Creators
+              </div>
+              <div className="discipline-join-banner-sub">
+                Share your work with fellow professionals. Your first Pro post makes you a Newcomer.
+              </div>
+            </div>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ flexShrink:0 }}
+              onClick={() => joinDiscipline(selectedDiscipline)}
+              disabled={joining}
+            >
+              {joining ? <span className="spinner" /> : 'Join discipline'}
+            </button>
+          </div>
+        )}
+        {profile && myDisciplines.has(selectedDiscipline) && (
+          <div className="discipline-joined-badge">
+            <span style={{ display:'flex', width:13, height:13, color:'var(--amber-500)' }}><Icon.Award /></span>
+            You're a {meta?.label ?? selectedDiscipline} · <span style={{ color:'var(--color-text-3)', fontWeight:400 }}>Post Pro content to grow your standing</span>
+          </div>
+        )}
+
         {loading ? (
           <div className="loading-center"><div className="spinner" /></div>
         ) : view === 'posts' ? (

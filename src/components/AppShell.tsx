@@ -63,9 +63,16 @@ export default function AppShell() {
 
   useEffect(() => {
     if (!profile) return
-    // Load user's Pro personas (sorted by post_count desc — most active discipline first)
-    supabase.from('discipline_personas').select('*').eq('user_id', profile.id).order('post_count', { ascending: false })
-      .then(({ data }) => setMyPersonas((data || []) as DisciplinePersona[]))
+    function loadPersonas() {
+      supabase.from('discipline_personas').select('*').eq('user_id', profile!.id).order('post_count', { ascending: false })
+        .then(({ data }) => setMyPersonas((data || []) as DisciplinePersona[]))
+    }
+    loadPersonas()
+    // Refresh sidebar disciplines in realtime when user joins/posts in a new discipline
+    const ch = supabase.channel('my-personas')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_personas', filter: 'user_id=eq.' + profile.id }, loadPersonas)
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
   }, [profile?.id])
 
   useEffect(() => {

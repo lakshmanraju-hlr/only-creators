@@ -493,7 +493,37 @@ img { display: block; max-width: 100%; }
 }
 [data-theme="dark"] .discipline-mine-dot { color: var(--amber-400); }
 [data-theme="dark"] .nav-item-mine { background: rgba(120,53,15,0.2) !important; color: var(--amber-400) !important; }
-[data-theme="dark"] .discipline-mine-dot { background: var(--amber-400); }
+
+/* ── Discipline join banner (ExplorePage) ── */
+.discipline-join-banner {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px; border-radius: var(--r-xl);
+  background: var(--color-primary-light);
+  border: 1.5px solid var(--blue-200);
+  margin-bottom: 18px;
+}
+.discipline-join-banner-icon {
+  width: 44px; height: 44px; border-radius: var(--r-lg);
+  background: white; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; box-shadow: var(--shadow-xs);
+}
+.discipline-join-banner-title {
+  font-size: 14px; font-weight: 600; color: var(--color-text); margin-bottom: 2px;
+}
+.discipline-join-banner-sub {
+  font-size: 12px; color: var(--color-text-2); line-height: 1.5;
+}
+[data-theme="dark"] .discipline-join-banner { background: rgba(37,99,235,0.1); border-color: rgba(96,165,250,0.3); }
+[data-theme="dark"] .discipline-join-banner-icon { background: var(--gray-800); }
+
+.discipline-joined-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; color: var(--amber-600);
+  padding: 8px 12px; border-radius: var(--r-lg);
+  background: var(--amber-50); border: 1px solid var(--amber-200);
+  margin-bottom: 16px;
+}
+[data-theme="dark"] .discipline-joined-badge { background: #1c1200; border-color: #78350f; color: var(--amber-400); }
 .sug-av { width: 34px; height: 34px; border-radius: 50%; background: var(--blue-100); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--blue-700); flex-shrink: 0; overflow: hidden; }
 .sug-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .sug-name { font-size: 13px; font-weight: 500; }
