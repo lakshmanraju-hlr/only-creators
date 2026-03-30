@@ -45,7 +45,9 @@ export default function ExplorePage() {
   const [creators, setCreators] = useState<Profile[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(false)
-  const [view, setView] = useState<'posts' | 'creators' | 'groups'>('posts')
+  const [view, setView] = useState<'posts' | 'creators' | 'groups'>(
+    (searchParams.get('view') as 'posts' | 'creators' | 'groups') || 'groups'
+  )
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [customDisciplines, setCustomDisciplines] = useState<string[]>([])
 
@@ -86,11 +88,7 @@ export default function ExplorePage() {
 
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
-  // User can create a group if their profession (or its canonical) matches the selected discipline
-  const canCreateGroup = !!(profile?.profession && selectedDiscipline && (
-    profile.profession === selectedDiscipline ||
-    getCanonicalDiscipline(profile.profession) === selectedDiscipline
-  ))
+  const canCreateGroup = !!profile
 
   if (selectedDiscipline) {
     const meta = getProfMeta(selectedDiscipline)

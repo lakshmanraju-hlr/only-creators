@@ -1,7 +1,7 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
-import { getCanonicalDiscipline, supabase, Profile } from '@/lib/supabase'
+import { supabase, Profile, DisciplinePersona } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import FeedPage from '@/pages/FeedPage'
 import ExplorePage from '@/pages/ExplorePage'
@@ -45,6 +45,7 @@ export default function AppShell() {
   const [showSearch, setShowSearch] = useState(false)
   const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const [myPersonas, setMyPersonas] = useState<DisciplinePersona[]>([])
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme')
     if (saved) return saved === 'dark'
@@ -59,6 +60,13 @@ export default function AppShell() {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
+
+  useEffect(() => {
+    if (!profile) return
+    // Load user's Pro personas (sorted by post_count desc — most active discipline first)
+    supabase.from('discipline_personas').select('*').eq('user_id', profile.id).order('post_count', { ascending: false })
+      .then(({ data }) => setMyPersonas((data || []) as DisciplinePersona[]))
+  }, [profile?.id])
 
   useEffect(() => {
     if (!profile) return
@@ -88,7 +96,6 @@ export default function AppShell() {
   }, [])
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
-  const myCanonical = getCanonicalDiscipline(profile?.profession)
 
   const navItems = [
     { path: '/',              icon: <Icon.Feed />,          label: 'Feed' },
@@ -99,14 +106,13 @@ export default function AppShell() {
     { path: '/profile',       icon: <Icon.Profile />,       label: 'Profile' },
   ]
 
-  // Sort disciplines: user's own first, then the rest
-  const sortedDisciplines = [...ALL_DISCIPLINES].sort((a, b) => {
-    const aIsMine = a.key === myCanonical
-    const bIsMine = b.key === myCanonical
-    if (aIsMine && !bIsMine) return -1
-    if (!aIsMine && bIsMine) return 1
-    return 0
-  })
+  // Disciplines the user is Pro in (ordered by post_count — most active first)
+  const myPersonaDisciplineKeys = new Set(myPersonas.map(p => p.discipline))
+  // Pro disciplines first (in activity order), then the rest in their original order
+  const proDiscs = myPersonas
+    .map(p => ALL_DISCIPLINES.find(d => d.key === p.discipline))
+    .filter(Boolean) as typeof ALL_DISCIPLINES[number][]
+  const otherDiscs = ALL_DISCIPLINES.filter(d => !myPersonaDisciplineKeys.has(d.key))
 
   return (
     <div className="app-shell">
@@ -158,24 +164,37 @@ export default function AppShell() {
 
         <div className="nav-divider" />
 
-        {/* Disciplines section — user's own discipline pinned at top */}
+        {/* Disciplines section */}
         <div className="nav-section" style={{ flex:1, overflowY:'auto', minHeight:0 }}>
-          <div className="nav-label">Disciplines</div>
-          {sortedDisciplines.map(d => {
-            const isMine = d.key === myCanonical
-            return (
-              <button
-                key={d.key}
-                className={'nav-item ' + (isMine ? 'nav-item-mine' : '')}
-                onClick={() => navigate('/explore?discipline=' + d.key)}
-                title={isMine ? 'Your discipline' : d.label}
-              >
-                <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
-                <span style={{ flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</span>
-                {isMine && <span className="discipline-mine-dot" />}
-              </button>
-            )
-          })}
+          {proDiscs.length > 0 && (
+            <>
+              <div className="nav-label">My disciplines</div>
+              {proDiscs.map(d => (
+                <button
+                  key={d.key}
+                  className={'nav-item nav-item-mine ' + (path.includes('discipline=' + d.key) ? 'active' : '')}
+                  onClick={() => navigate('/explore?discipline=' + d.key + '&view=groups')}
+                >
+                  <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
+                  <span style={{ flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</span>
+                  <span className="discipline-pro-dot" title="Pro">◆</span>
+                </button>
+              ))}
+              <div className="nav-divider" style={{ margin:'6px 0' }} />
+              <div className="nav-label">Explore</div>
+            </>
+          )}
+          {!proDiscs.length && <div className="nav-label">Disciplines</div>}
+          {otherDiscs.map(d => (
+            <button
+              key={d.key}
+              className={'nav-item ' + (path.includes('discipline=' + d.key) ? 'active' : '')}
+              onClick={() => navigate('/explore?discipline=' + d.key + '&view=groups')}
+            >
+              <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
+              <span style={{ flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</span>
+            </button>
+          ))}
         </div>
 
         <div className="nav-divider" />

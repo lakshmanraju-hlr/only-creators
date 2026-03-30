@@ -489,9 +489,9 @@ img { display: block; max-width: 100%; }
 }
 .nav-item-mine:hover { background: color-mix(in srgb, var(--color-primary) 15%, transparent) !important; }
 .discipline-mine-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--color-primary); flex-shrink: 0;
+  font-size: 9px; color: var(--amber-500); flex-shrink: 0; line-height: 1;
 }
+[data-theme="dark"] .discipline-mine-dot { color: var(--amber-400); }
 [data-theme="dark"] .nav-item-mine { background: rgba(120,53,15,0.2) !important; color: var(--amber-400) !important; }
 [data-theme="dark"] .discipline-mine-dot { background: var(--amber-400); }
 .sug-av { width: 34px; height: 34px; border-radius: 50%; background: var(--blue-100); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--blue-700); flex-shrink: 0; overflow: hidden; }

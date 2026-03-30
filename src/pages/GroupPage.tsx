@@ -97,6 +97,13 @@ export default function GroupPage() {
     } else {
       const { error } = await supabase.from('group_members').insert({ group_id: group.id, user_id: profile.id })
       if (error) { toast.error(error.message); setJoining(false); return }
+      // Auto-create a discipline persona when joining a group — unlocks Pro posting in that discipline
+      if (group.discipline) {
+        await supabase.from('discipline_personas').upsert(
+          { user_id: profile.id, discipline: group.discipline, level: 'newcomer' },
+          { onConflict: 'user_id,discipline', ignoreDuplicates: true }
+        )
+      }
       setIsMember(true)
       setGroup(g => g ? { ...g, member_count: g.member_count + 1 } : g)
       toast.success('Joined ' + group.name + '!')

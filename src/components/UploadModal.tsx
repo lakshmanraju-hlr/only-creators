@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { supabase, ContentType, Group, Profile, getProfMeta, PROFESSIONS, Profession } from '@/lib/supabase'
+import { supabase, ContentType, Group, Profile, DisciplinePersona, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { suggestGroup } from '@/lib/groupCategorization'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 interface Props { onClose: () => void; defaultGroup?: Group }
@@ -16,15 +17,14 @@ const CONTENT_TYPES: { type: ContentType; icon: React.ReactNode; label: string; 
   { type: 'poem',     icon: <Icon.PenLine />,  label: 'Poem' },
 ]
 
-const ALL_DISCIPLINES = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
-
 export default function UploadModal({ onClose, defaultGroup }: Props) {
   const { profile } = useAuth()
+  const navigate = useNavigate()
 
   // Always default to general — Pro is an explicit opt-in
   const [postType, setPostType] = useState<'general' | 'pro'>('general')
-  // The chosen discipline key for a Pro post (any discipline, not limited to existing personas)
-  const [proDiscipline, setProDiscipline] = useState<string | null>(null)
+  const [personas, setPersonas] = useState<DisciplinePersona[]>([])
+  const [selectedPersona, setSelectedPersona] = useState<DisciplinePersona | null>(null)
 
   const [contentType, setContentType] = useState<ContentType>('text')
   const [caption, setCaption] = useState('')
@@ -52,10 +52,21 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
   // Auto-focus textarea on open
   useEffect(() => { captionRef.current?.focus() }, [])
 
-  // Load groups for the selected Pro discipline
+  // Load user's existing Pro personas
   useEffect(() => {
-    if (postType !== 'pro' || !proDiscipline) { setAvailableGroups([]); return }
-    supabase.from('groups').select('*').eq('discipline', proDiscipline).order('post_count', { ascending: false })
+    if (!profile) return
+    supabase.from('discipline_personas').select('*').eq('user_id', profile.id).order('post_count', { ascending: false })
+      .then(({ data }) => {
+        const list = (data || []) as DisciplinePersona[]
+        setPersonas(list)
+        if (list.length > 0) setSelectedPersona(list[0])
+      })
+  }, [profile?.id])
+
+  // Load groups for the selected Pro persona's discipline
+  useEffect(() => {
+    if (postType !== 'pro' || !selectedPersona) { setAvailableGroups([]); return }
+    supabase.from('groups').select('*').eq('discipline', selectedPersona.discipline).order('post_count', { ascending: false })
       .then(({ data }) => {
         if (!data) return
         const list = data as Group[]
@@ -65,7 +76,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
           setAvailableGroups(list)
         }
       })
-  }, [postType, proDiscipline])
+  }, [postType, selectedPersona?.discipline])
 
   // Clear groups when switching back to general
   useEffect(() => {
@@ -78,9 +89,9 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
 
   // Group suggestion
   useEffect(() => {
-    if (defaultGroup || postType !== 'pro' || availableGroups.length === 0 || !proDiscipline) return
+    if (defaultGroup || postType !== 'pro' || availableGroups.length === 0 || !selectedPersona) return
     const tagArray = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
-    const suggestion = suggestGroup(caption, tagArray, proDiscipline, availableGroups)
+    const suggestion = suggestGroup(caption, tagArray, selectedPersona.discipline, availableGroups)
     setGroupSuggestion(suggestion)
     if (suggestion && !selectedGroup) setSelectedGroup(suggestion)
   }, [caption, tags, availableGroups, postType])
@@ -146,7 +157,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     if (needsFile && !file) return toast.error('Please select a file')
     if (contentType === 'poem' && !poemText.trim()) return toast.error('Please write your poem')
     if (!caption.trim() && contentType === 'text') return toast.error('Please write something')
-    if (postType === 'pro' && !proDiscipline) return toast.error('Choose a discipline for your Pro post')
+    if (postType === 'pro' && !selectedPersona) return toast.error('Choose a discipline for your Pro post')
 
     setUploading(true); setProgress(10)
     let mediaUrl = '', mediaPath = ''
@@ -162,10 +173,10 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
     }
     setProgress(85)
 
-    // Auto-create the discipline persona on first Pro post in that discipline
-    if (postType === 'pro' && proDiscipline) {
+    // Auto-create persona record on first Pro post in a discipline
+    if (postType === 'pro' && selectedPersona) {
       await supabase.from('discipline_personas').upsert(
-        { user_id: profile.id, discipline: proDiscipline, level: 'newcomer' },
+        { user_id: profile.id, discipline: selectedPersona.discipline, level: 'newcomer' },
         { onConflict: 'user_id,discipline', ignoreDuplicates: true }
       )
     }
@@ -181,7 +192,7 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
       tags: tagArray,
       post_type: postType,
       is_pro_post: postType === 'pro',
-      persona_discipline: postType === 'pro' ? proDiscipline : null,
+      persona_discipline: postType === 'pro' ? selectedPersona?.discipline ?? null : null,
       visibility: postType === 'pro' ? 'public' : postVisibility,
       group_id: selectedGroup?.id ?? null,
     })
@@ -269,40 +280,58 @@ export default function UploadModal({ onClose, defaultGroup }: Props) {
         {/* ── Pro expansion (only when Pro mode active) ─────── */}
         {postType === 'pro' && (
           <div className="upload-pro-section">
-            <div className="upload-pro-section-label">
-              <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
-              Which discipline is this post for?
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {ALL_DISCIPLINES.map(([key, val]) => (
+            {personas.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                You haven't joined any discipline as a Pro yet.{' '}
                 <button
-                  key={key}
-                  className={`upload-vis-btn ${proDiscipline === key ? 'active' : ''}`}
-                  onClick={() => { setProDiscipline(key); setSelectedGroup(null); setGroupSuggestion(null) }}
+                  className="btn btn-ghost btn-xs"
+                  style={{ color: 'var(--color-primary)', padding: '0 2px', fontSize: 13, display: 'inline' }}
+                  onClick={() => { onClose(); navigate('/explore') }}
                 >
-                  {val.icon} {val.label}
+                  Browse disciplines →
                 </button>
-              ))}
-            </div>
-
-            {proDiscipline && availableGroups.length > 0 && (
-              <div style={{ marginTop: 10 }}>
+              </div>
+            ) : (
+              <>
                 <div className="upload-pro-section-label">
-                  <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Friends /></span>
-                  Community group
-                  {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
-                    <span style={{ fontSize: 10, color: 'var(--color-primary)', marginLeft: 6, fontWeight: 500 }}>suggested</span>
-                  )}
+                  <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
+                  Posting as
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  <button className={`upload-vis-btn ${!selectedGroup ? 'active' : ''}`} onClick={() => setSelectedGroup(null)}>None</button>
-                  {availableGroups.map(g => (
-                    <button key={g.id} className={`upload-vis-btn ${selectedGroup?.id === g.id ? 'active' : ''}`} onClick={() => setSelectedGroup(g)}>
-                      {g.name}
-                    </button>
-                  ))}
+                  {personas.map(p => {
+                    const meta = getProfMeta(p.discipline)
+                    return (
+                      <button
+                        key={p.id}
+                        className={`upload-vis-btn ${selectedPersona?.id === p.id ? 'active' : ''}`}
+                        onClick={() => { setSelectedPersona(p); setSelectedGroup(null); setGroupSuggestion(null) }}
+                      >
+                        {meta?.icon} {meta?.label ?? p.discipline}
+                      </button>
+                    )
+                  })}
                 </div>
-              </div>
+
+                {availableGroups.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div className="upload-pro-section-label">
+                      <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Friends /></span>
+                      Community group
+                      {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
+                        <span style={{ fontSize: 10, color: 'var(--color-primary)', marginLeft: 6, fontWeight: 500 }}>suggested</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      <button className={`upload-vis-btn ${!selectedGroup ? 'active' : ''}`} onClick={() => setSelectedGroup(null)}>None</button>
+                      {availableGroups.map(g => (
+                        <button key={g.id} className={`upload-vis-btn ${selectedGroup?.id === g.id ? 'active' : ''}`} onClick={() => setSelectedGroup(g)}>
+                          {g.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
