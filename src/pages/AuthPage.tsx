@@ -61,16 +61,12 @@ export default function AuthPage() {
     if (discipline) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        // Store their primary field of interest — NOT Pro status.
+        // Pro status in a field is earned only by making the first Pro post there.
         await supabase.from('profiles').update({
           profession: discipline,
           professions: [discipline],
-          is_pro: true,
         }).eq('id', user.id)
-        await supabase.from('discipline_personas').upsert({
-          user_id: user.id,
-          discipline,
-          level: 'newcomer',
-        }, { onConflict: 'user_id,discipline', ignoreDuplicates: true })
       }
     }
     toast.success('Welcome!')

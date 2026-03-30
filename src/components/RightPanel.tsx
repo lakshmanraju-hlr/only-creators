@@ -210,26 +210,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
         </div>
       )}
 
-      {/* Pro Status */}
-      {profile?.profession && (() => { const pm = getProfMeta(profile.profession); return pm ? (
-        <div className="rp-section">
-          <div className="rp-heading">Your Pro Status</div>
-          <div style={{ background:'var(--color-pro-light)', border:'1px solid var(--color-pro-border)', borderRadius:'var(--r-lg)', padding:14 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-              <span style={{ display:'flex', width:16, height:16, color:'var(--color-pro)' }}><Icon.Award /></span>
-              <span style={{ fontSize:13, fontWeight:600, color:'var(--amber-600)' }}>{pm.label}</span>
-            </div>
-            <div style={{ fontSize:12, color:'var(--gray-600)', lineHeight:1.7 }}>
-              Your Pro Upvotes carry peer authority. Only other verified {pm.label}s receive them.
-            </div>
-            {(profile as any).verification_count > 0 && (
-              <div style={{ marginTop:8, fontSize:12, color:'var(--color-pro)', fontWeight:600 }}>
-                ◈ Verified by {(profile as any).verification_count} peer{(profile as any).verification_count === 1 ? '' : 's'}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : null })()}
+}
     </>
   )
 }

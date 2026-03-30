@@ -31,7 +31,6 @@ function discoveryScore(post: Post, now: number): number {
 export default function FeedPage({ onPost }: Props) {
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const profMeta = getProfMeta(profile?.profession)
   const [tab, setTab] = useState<FeedTab>('all')
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -223,12 +222,10 @@ export default function FeedPage({ onPost }: Props) {
         fresh.forEach(p => { seen.add(p.id); items.push(p) })
       }
 
-      const primaryLabel = myCanonical && profMeta
-        ? `From ${profMeta.label}`
-        : primaryDisciplines.length > 0 ? 'From your disciplines' : 'Top posts'
+      const primaryLabel = primaryDisciplines.length > 0 ? 'From your fields' : 'Top posts'
 
       addSection(primaryLabel, sortedPrimary, 12)
-      addSection('Trending across disciplines', sortedDiscovery, 8)
+      addSection('Trending across fields', sortedDiscovery, 8)
       if (sortedViral.length > 0) addSection('Highly upvoted — Promoted', sortedViral, 5)
 
       // If the feed is very sparse (new platform), fall back to a global mix
@@ -308,22 +305,14 @@ export default function FeedPage({ onPost }: Props) {
             Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, <strong>{profile?.full_name?.split(' ')[0] || 'Creator'}</strong>
           </div>
           <div className="feed-hero-sub">
-            {profMeta
-              ? <>Your <span className="feed-hero-discipline">{profMeta.icon} {profMeta.label}</span> community is active. Share your work — peers are watching.</>
-              : <>Welcome to Only Creators — where professionals recognize each other.</>}
+            Explore, create, and connect across professional fields.
           </div>
         </div>
         <div className="feed-hero-actions">
-          {profMeta && (
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{ gap:5, fontSize:12 }}
-              onClick={() => navigate('/explore?discipline=' + profile?.profession)}
-            >
-              <span style={{ display:'flex', width:13, height:13 }}><Icon.Explore /></span>
-              Browse {profMeta.label}
-            </button>
-          )}
+          <button className="btn btn-ghost btn-sm" style={{ gap:5, fontSize:12 }} onClick={() => navigate('/explore')}>
+            <span style={{ display:'flex', width:13, height:13 }}><Icon.Explore /></span>
+            Explore fields
+          </button>
           <button className="btn btn-primary btn-sm" style={{ gap:5 }} onClick={onPost}>
             <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
             New post
