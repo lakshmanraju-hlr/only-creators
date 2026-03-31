@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { supabase, Profile, getProfMeta } from '@/lib/supabase'
+import { supabase, Profile } from '@/lib/supabase'
 import { getPendingRequests, acceptFriendRequest, declineFriendRequest, getFriends } from '@/lib/friends'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -86,7 +86,6 @@ export default function FriendsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {requests.map(req => {
               const sender = req.sender
-              const prof = getProfMeta(sender?.profession)
               return (
                 <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--gray-0)', border: '1px solid var(--color-border)', borderRadius: 'var(--r-xl)', padding: '16px 18px' }}>
                   <div className="post-avatar" style={{ width: 46, height: 46, fontSize: 16, flexShrink: 0, cursor: 'pointer' }}
@@ -96,7 +95,7 @@ export default function FriendsPage() {
                   <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => sender?.username && navigate('/profile/' + sender.username)}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{sender?.full_name}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{sender?.username}</div>
-                    {prof && <span className={'pill pill-' + prof.pillClass} style={{ marginTop: 4, display: 'inline-flex' }}>{prof.label}</span>}
+                    {(sender as any)?.role_title && <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginTop: 2 }}>{(sender as any).role_title}</div>}
                     <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>{formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -118,7 +117,6 @@ export default function FriendsPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {friends.map(f => {
-              const prof = getProfMeta(f.profession)
               return (
                 <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--gray-0)', border: '1px solid var(--color-border)', borderRadius: 'var(--r-xl)', padding: '14px 18px' }}>
                   <div className="post-avatar" style={{ width: 42, height: 42, fontSize: 14, flexShrink: 0, cursor: 'pointer' }}
@@ -128,7 +126,7 @@ export default function FriendsPage() {
                   <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate('/profile/' + f.username)}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{f.full_name}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{f.username}</div>
-                    {prof && <span className={'pill pill-' + prof.pillClass} style={{ marginTop: 3, display: 'inline-flex' }}>{prof.label}</span>}
+                    {(f as any).role_title && <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginTop: 2 }}>{(f as any).role_title}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => navigate('/messages?with=' + f.id)}>

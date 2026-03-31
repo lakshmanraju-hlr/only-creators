@@ -183,7 +183,7 @@ export default function AppShell() {
                 <button
                   key={d.key}
                   className={'nav-item nav-item-mine ' + (path.includes('discipline=' + d.key) ? 'active' : '')}
-                  onClick={() => navigate('/explore?discipline=' + d.key + '&view=groups')}
+                  onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
                 >
                   <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
                   <span style={{ flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</span>
@@ -199,7 +199,7 @@ export default function AppShell() {
             <button
               key={d.key}
               className={'nav-item ' + (path.includes('discipline=' + d.key) ? 'active' : '')}
-              onClick={() => navigate('/explore?discipline=' + d.key + '&view=groups')}
+              onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
             >
               <span style={{ display:'flex', width:16, height:16 }}>{d.icon}</span>
               <span style={{ flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</span>

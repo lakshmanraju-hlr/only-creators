@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, Profile, Group, getProfMeta, getCanonicalDiscipline } from '@/lib/supabase'
+import { supabase, Profile, Group, getCanonicalDiscipline } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
@@ -34,7 +34,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
       if (friendIds.length > 0) {
         const { data: friendProfiles } = await supabase
           .from('profiles')
-          .select('id,username,full_name,avatar_url,profession,is_pro,verification_count')
+          .select('id,username,full_name,avatar_url,profession,role_title,is_pro,verification_count')
           .in('id', friendIds)
           .limit(20)
         const fp = (friendProfiles || []) as Profile[]
@@ -55,7 +55,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
       // Load suggested (not already followed or friended)
       const { data } = await supabase
         .from('profiles')
-        .select('id,username,full_name,avatar_url,profession,is_pro,follower_count')
+        .select('id,username,full_name,avatar_url,profession,role_title,is_pro,follower_count')
         .neq('id', profile!.id)
         .order('follower_count', { ascending: false })
         .limit(10)
@@ -116,7 +116,6 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
           <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
             {sortedFriends.map(f => {
               const isActive = activeIds.has(f.id)
-              const prof = getProfMeta(f.profession)
               return (
                 <div
                   key={f.id}
@@ -132,7 +131,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:12.5, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.full_name}</div>
-                    {prof && <div style={{ fontSize:10, color:'var(--color-text-3)' }}>{prof.label}</div>}
+                    {(f as any).role_title && <div style={{ fontSize:10, color:'var(--color-text-3)' }}>{(f as any).role_title}</div>}
                   </div>
                   <span style={{ display:'flex', width:12, height:12, color:'var(--color-text-3)', flexShrink:0 }}><Icon.MessageCircle /></span>
                 </div>
@@ -154,7 +153,6 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
         <div className="rp-section">
           <div className="rp-heading">Suggested creators</div>
           {suggested.map(c => {
-            const p = getProfMeta(c.profession)
             return (
               <div key={c.id} className="sug-user">
                 <div className="sug-av" style={{ cursor:'pointer' }} onClick={() => navigate(`/profile/${c.username}`)}>
@@ -162,7 +160,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
                 </div>
                 <div style={{ flex:1, minWidth:0, cursor:'pointer' }} onClick={() => navigate(`/profile/${c.username}`)}>
                   <div className="sug-name">{c.full_name}</div>
-                  <div className="sug-role">{p ? p.label : 'Creator'}</div>
+                  {(c as any).role_title && <div className="sug-role">{(c as any).role_title}</div>}
                 </div>
                 <button className={`follow-btn ${following.has(c.id) ? 'following' : ''}`} onClick={() => toggleFollow(c.id, c.full_name)}>
                   {following.has(c.id) ? 'Following' : 'Follow'}

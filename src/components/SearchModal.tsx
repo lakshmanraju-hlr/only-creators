@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, Profile, getProfMeta } from '@/lib/supabase'
+import { supabase, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriendStatus, sendFriendRequest, acceptFriendRequest, declineFriendRequest } from '@/lib/friends'
 import toast from 'react-hot-toast'
@@ -31,7 +31,7 @@ export default function SearchModal({ onClose }: Props) {
     setLoading(true)
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, full_name, avatar_url, profession, is_pro, follower_count, friend_count')
+      .select('id, username, full_name, avatar_url, profession, role_title, is_pro, follower_count, friend_count')
       .or(`username.ilike.%${q}%,full_name.ilike.%${q}%`)
       .neq('id', me?.id || '')
       .limit(10)
@@ -135,7 +135,6 @@ export default function SearchModal({ onClose }: Props) {
             </div>
           ) : (
             results.map((p, i) => {
-              const prof = getProfMeta(p.profession)
               const status = friendStatuses[p.id] || 'none'
               const btn = friendBtn[status]
               return (
@@ -167,10 +166,8 @@ export default function SearchModal({ onClose }: Props) {
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{p.username}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                      {prof && (
-                        <span className={`pill pill-${prof.pillClass}`} style={{ fontSize: 10 }}>
-                          {prof.icon} {prof.label}
-                        </span>
+                      {(p as any).role_title && (
+                        <span style={{ fontSize: 12, color: 'var(--color-text-2)' }}>{(p as any).role_title}</span>
                       )}
                       <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                         {p.follower_count} followers

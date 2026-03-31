@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
-import { supabase, Post, Comment, getProfMeta, getCanonicalDiscipline, Profile } from '@/lib/supabase'
+import { supabase, Post, Comment, getCanonicalDiscipline, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
@@ -207,22 +207,9 @@ export default function PostCard({ post, onUpdated }: Props) {
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
             {authorRoleTitle && <span className="post-author-role">{authorRoleTitle}</span>}
-            {(author?.verification_count ?? 0) > 0 && (
-              <span className="peer-verified-badge" title={`Verified by ${author!.verification_count} peer${author!.verification_count === 1 ? '' : 's'}`}>
-                ◈ {author!.verification_count}
-              </span>
-            )}
           </div>
           <div className="post-time" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span>@{author?.username} · {timeAgo}</span>
-            {post.post_type === 'pro' && post.persona_discipline ? (() => {
-              const pm = getProfMeta(post.persona_discipline)
-              return (
-                <span className="post-type-badge pro" title={`Pro Post — ${pm?.label ?? post.persona_discipline}`}>
-                  ◆ {pm?.label ?? post.persona_discipline}
-                </span>
-              )
-            })() : post.post_type === 'general' ? null : null}
           </div>
         </div>
         <div style={{ position: 'relative' }} ref={menuRef}>
@@ -382,7 +369,6 @@ export default function PostCard({ post, onUpdated }: Props) {
               {allUpvoters.length === 0 ? (
                 <div style={{ padding:'20px 0', textAlign:'center' }}><div className="spinner" /></div>
               ) : allUpvoters.map(u => {
-                const pm = getProfMeta(u.profession)
                 return (
                   <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
                     <div className="post-avatar" style={{ width:38, height:38, fontSize:13, flexShrink:0, cursor:'pointer' }}
@@ -391,11 +377,8 @@ export default function PostCard({ post, onUpdated }: Props) {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:600, fontSize:13.5, cursor:'pointer' }} onClick={() => { setShowUpvoterDialog(false); navigate('/profile/' + u.username) }}>{u.full_name}</div>
-                      <div style={{ fontSize:12, color:'var(--color-text-3)' }}>
-                        @{u.username}{pm ? ` · ${pm.label}` : ''}
-                      </div>
+                      <div style={{ fontSize:12, color:'var(--color-text-3)' }}>@{u.username}</div>
                     </div>
-                    <span style={{ fontSize:13, color:'var(--color-pro)' }}>◆</span>
                   </div>
                 )
               })}
@@ -426,7 +409,6 @@ export default function PostCard({ post, onUpdated }: Props) {
                 <div className="comment-bubble" style={{ flex:1, minWidth:0 }}>
                   <div className="comment-author" onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}>
                     @{c.profiles?.username}
-                    {isPro && <span className="comment-pro-badge">◆ Pro</span>}
                   </div>
                   <div className="comment-text">
                     {c.body.split(' ').map((w: string, i: number) =>

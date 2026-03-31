@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, Post, Profile, getProfMeta, getCanonicalDiscipline, PROFESSIONS } from '@/lib/supabase'
+import { supabase, Post, Profile, getCanonicalDiscipline, PROFESSIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriends } from '@/lib/friends'
 import PostCard from '@/components/PostCard'
@@ -59,7 +59,7 @@ export default function FeedPage({ onPost }: Props) {
     const uids = [...new Set(rawPosts.map((p: any) => p.user_id))]
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id,username,full_name,avatar_url,profession,is_pro,verification_count')
+      .select('id,username,full_name,avatar_url,profession,role_title,is_pro,verification_count')
       .in('id', uids)
     const profileMap: Record<string, Profile> = {}
     ;(profilesData || []).forEach((p: any) => { profileMap[p.id] = p })

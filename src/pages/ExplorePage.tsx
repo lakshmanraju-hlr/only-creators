@@ -47,7 +47,7 @@ export default function ExplorePage() {
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'posts' | 'creators' | 'groups'>(
-    (searchParams.get('view') as 'posts' | 'creators' | 'groups') || 'groups'
+    (searchParams.get('view') as 'posts' | 'creators' | 'groups') || 'posts'
   )
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [customDisciplines, setCustomDisciplines] = useState<string[]>([])
@@ -91,9 +91,9 @@ export default function ExplorePage() {
       // Include all alias professions that map to this discipline
       const members = getDisciplineMembers(selectedDiscipline!)
       if (view === 'posts') {
+        // Filter directly by persona_discipline — set on any Pro post tagged to this field
         const { data } = await supabase.from('posts')
-          .select('*, profiles(*), group:group_id(*)')
-          .eq('post_type', 'pro')
+          .select('*, profiles!user_id(*), group:group_id(*)')
           .in('persona_discipline', members)
           .order('pro_upvote_count', { ascending: false })
           .limit(20)
