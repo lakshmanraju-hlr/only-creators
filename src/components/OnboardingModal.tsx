@@ -18,7 +18,7 @@ const STEPS = [
     key: 'explore',
     icon: '🔭',
     title: 'Explore professional fields',
-    sub: 'Browse Photography, Music, Medicine, Technology and 15+ other disciplines. Find creators who share your craft and follow their work.',
+    sub: 'Browse Photography, Music, Medicine, Technology and 15+ other fields. Find creators who share your craft and follow their work.',
   },
   {
     key: 'post',

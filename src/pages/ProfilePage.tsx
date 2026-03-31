@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [profileTab, setProfileTab] = useState<'personal' | 'pro' | 'disciplines'>('personal')
+  const [profileTab, setProfileTab] = useState<'personal' | 'pro'>('personal')
   const [gridView, setGridView] = useState(true)
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
   const [avatarLightbox, setAvatarLightbox] = useState(false)
@@ -63,8 +63,6 @@ export default function ProfilePage() {
         .from('discipline_personas').select('*').eq('user_id', profileData.id).order('created_at')
       setPersonas((personaData || []) as DisciplinePersona[])
 
-      if (profileTab === 'disciplines') { setLoading(false); return }
-
       let postsQuery = supabase
         .from('posts')
         .select('id, user_id, content_type, caption, poem_text, media_url, media_path, tags, like_count, comment_count, share_count, pro_upvote_count, is_pro_post, post_type, persona_discipline, visibility, group_id, group:group_id(id,name,slug), created_at')
@@ -73,9 +71,9 @@ export default function ProfilePage() {
 
       if (profileTab === 'pro') {
         postsQuery = postsQuery.eq('post_type', 'pro')
-      } else if (!isOwn) {
-        // For others' personal profiles, only show public posts
-        postsQuery = postsQuery.eq('visibility', 'public')
+      } else {
+        postsQuery = postsQuery.neq('post_type', 'pro')
+        if (!isOwn) postsQuery = postsQuery.eq('visibility', 'public')
       }
 
       const { data: postsData } = await postsQuery
@@ -246,11 +244,8 @@ export default function ProfilePage() {
             />
             <div
               className="profile-big-av"
-              style={{ cursor: isOwnProfile ? 'pointer' : profile.avatar_url ? 'zoom-in' : 'default' }}
-              onClick={() => {
-                if (isOwnProfile) avatarInputRef.current?.click()
-                else if (profile.avatar_url) setAvatarLightbox(true)
-              }}
+              style={{ cursor: profile.avatar_url ? 'zoom-in' : 'default' }}
+              onClick={() => { if (profile.avatar_url) setAvatarLightbox(true) }}
             >
               {uploadingAvatar
                 ? <div className="spinner" />
@@ -298,7 +293,7 @@ export default function ProfilePage() {
                     className={`btn btn-sm ${hasVerified ? 'btn-gold' : 'btn-ghost'}`}
                     onClick={toggleVerify}
                     disabled={verifying}
-                    title={hasVerified ? 'Remove peer verification' : 'Verify as a peer in your discipline'}
+                    title={hasVerified ? 'Remove peer verification' : 'Verify as a peer in your field'}
                     style={{ gap: 5 }}
                   >
                     <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
@@ -315,6 +310,22 @@ export default function ProfilePage() {
             <span style={{ display: 'flex', width: 12, height: 12 }}><Icon.Globe /></span>
             {profile.website.replace(/^https?:\/\//, '')}
           </a>
+        )}
+        {/* Fields the user is active in */}
+        {personas.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+            {personas.map(p => {
+              const meta = getProfMeta(p.discipline)
+              const level = PERSONA_LEVELS[p.level as PersonaLevel] ?? PERSONA_LEVELS.newcomer
+              return (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'var(--color-primary-light)', borderRadius: 999, fontSize: 12.5, color: 'var(--color-primary)', fontWeight: 500, border: '1px solid var(--color-primary-light)' }}>
+                  <span>{meta?.icon ?? '✦'}</span>
+                  <span>{meta?.label ?? p.discipline}</span>
+                  <span className={`persona-level-badge ${p.level}`} style={{ marginLeft: 2 }}>{level.label}</span>
+                </div>
+              )
+            })}
+          </div>
         )}
         <div className="profile-stats">
           <div><div className="p-stat-num">{profile.post_count}</div><div className="p-stat-label">Posts</div></div>
@@ -340,73 +351,11 @@ export default function ProfilePage() {
         <button className={'profile-tab ' + (profileTab === 'pro' ? 'active' : '')} onClick={() => { setProfileTab('pro'); setSelectedPost(null) }}>
           ◆ Pro Posts
         </button>
-        <button className={'profile-tab ' + (profileTab === 'disciplines' ? 'active' : '')} onClick={() => { setProfileTab('disciplines'); setSelectedPost(null) }}>
-          Fields {personas.length > 0 && <span style={{ marginLeft: 4, background: 'var(--color-primary)', color: '#fff', borderRadius: 99, padding: '0 5px', fontSize: 10, fontWeight: 700 }}>{personas.length}</span>}
-        </button>
-        {profileTab !== 'disciplines' && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-            <button className={'btn btn-sm ' + (gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(true)}>Grid</button>
-            <button className={'btn btn-sm ' + (!gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(false)}>Feed</button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Disciplines tab ─────────────────────────────────────── */}
-      {profileTab === 'disciplines' && (
-        <div style={{ marginTop: 8 }}>
-          {personas.map(p => {
-            const meta = getProfMeta(p.discipline)
-            const level = PERSONA_LEVELS[p.level as PersonaLevel] ?? PERSONA_LEVELS.newcomer
-            return (
-              <div key={p.id} className="persona-card" style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ fontSize: 28, lineHeight: 1 }}>{meta?.icon ?? '✦'}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 600, fontSize: 15 }}>{meta?.label ?? p.discipline}</span>
-                      <span className={`persona-level-badge ${p.level}`}>{level.label}</span>
-                    </div>
-                    {p.role_title && <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginTop: 2 }}>{p.role_title}</div>}
-                    {p.bio && <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 4, lineHeight: 1.5 }}>{p.bio}</div>}
-                    <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12, color: 'var(--color-text-3)' }}>
-                      <span>{p.post_count} Pro Post{p.post_count !== 1 ? 's' : ''}</span>
-                      {p.years_exp != null && <span>{p.years_exp} yr{p.years_exp !== 1 ? 's' : ''} exp</span>}
-                      {p.credentials && <span>· {p.credentials}</span>}
-                    </div>
-                    {/* Level progress bar */}
-                    {level.next && (
-                      <div style={{ marginTop: 8 }}>
-                        <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 3 }}>
-                          Next: <strong>{PERSONA_LEVELS[level.next].label}</strong> — {level.nextDesc}
-                        </div>
-                        <div style={{ height: 4, background: 'var(--color-border)', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${Math.min(100, (p.post_count / 5) * 100)}%`, background: 'var(--color-primary)', borderRadius: 2, transition: 'width 0.4s' }} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-
-          {personas.length === 0 && !isOwnProfile && (
-            <div className="empty-state">
-              <div className="empty-title">No fields yet</div>
-              <div className="empty-sub">This creator hasn't posted in any professional field yet.</div>
-            </div>
-          )}
-
-          {personas.length === 0 && isOwnProfile && (
-            <div className="empty-state">
-              <div className="empty-title">No fields yet</div>
-              <div className="empty-sub" style={{ maxWidth: 320, margin: '8px auto 0' }}>
-                Post Pro content in a field to establish yourself there. Your professional details can be set from <strong>Edit profile</strong>.
-              </div>
-            </div>
-          )}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          <button className={'btn btn-sm ' + (gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(true)}>Grid</button>
+          <button className={'btn btn-sm ' + (!gridView ? 'btn-primary' : 'btn-ghost')} onClick={() => setGridView(false)}>Feed</button>
         </div>
-      )}
+      </div>
 
       {profileTab === 'pro' && posts.length === 0 && (
         <div className="empty-state">
@@ -431,7 +380,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {posts.length > 0 && (gridView ? (
+      {posts.length > 0 && profileTab === 'personal' && (gridView ? (
         <div className="profile-grid">
           {posts.map(p => <GridCell key={p.id} post={p} onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />)}
         </div>
@@ -452,6 +401,42 @@ export default function ProfilePage() {
           ))}
         </>
       ))}
+
+      {posts.length > 0 && profileTab === 'pro' && (() => {
+        const groups: Record<string, Post[]> = {}
+        posts.forEach(p => {
+          const key = p.persona_discipline || '__other'
+          if (!groups[key]) groups[key] = []
+          groups[key].push(p)
+        })
+        return (
+          <div>
+            {Object.entries(groups).map(([disc, fieldPosts]) => {
+              const meta = getProfMeta(disc === '__other' ? '' : disc)
+              return (
+                <div key={disc} style={{ marginBottom: 32 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border)' }}>
+                    {meta && <span style={{ fontSize: 18 }}>{meta.icon}</span>}
+                    <span style={{ fontWeight: 600, fontSize: 15 }}>{meta?.label ?? disc}</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-3)', marginLeft: 2 }}>{fieldPosts.length} post{fieldPosts.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  {gridView ? (
+                    <div className="profile-grid">
+                      {fieldPosts.map(p => <GridCell key={p.id} post={p} onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />)}
+                    </div>
+                  ) : (
+                    <div>
+                      {fieldPosts.map(p => (
+                        <PostCard key={p.id} post={p} onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* Avatar lightbox */}
       {avatarLightbox && profile.avatar_url && (

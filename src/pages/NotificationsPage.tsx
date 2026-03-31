@@ -63,7 +63,7 @@ export default function NotificationsPage() {
       case 'share': return { text: name + ' shared your post', icon: <span style={iconStyle}><Icon.Share /></span>, color: 'var(--blue-600)', bg: 'var(--blue-50)', action: goToPost }
       case 'friend_request': return { text: name + ' sent you a friend request', icon: <span style={iconStyle}><Icon.UserPlus /></span>, color: 'var(--purple-600)', bg: 'var(--purple-50)', action: () => navigate('/friends') }
       case 'friend_accepted': return { text: name + ' accepted your friend request', icon: <span style={iconStyle}><Icon.UserCheck /></span>, color: 'var(--green-600)', bg: 'var(--green-50)', action: goToActor }
-      case 'peer_verify': return { text: name + ' verified you as a peer in your discipline', icon: <span style={iconStyle}><Icon.Award /></span>, color: 'var(--color-pro)', bg: 'var(--color-pro-light)', action: goToActor }
+      case 'peer_verify': return { text: name + ' verified you as a peer in your field', icon: <span style={iconStyle}><Icon.Award /></span>, color: 'var(--color-pro)', bg: 'var(--color-pro-light)', action: goToActor }
       default: return { text: 'New activity', icon: <span style={iconStyle}><Icon.Bell /></span>, color: 'var(--gray-500)', bg: 'var(--gray-100)' }
     }
   }

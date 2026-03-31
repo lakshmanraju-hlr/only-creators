@@ -96,7 +96,7 @@ export default function CreateGroupModal({ discipline, onClose, onCreated }: Pro
         {exactMatch && (
           <div className="group-duplicate-banner">
             <div className="group-duplicate-title">This group already exists</div>
-            <div className="group-duplicate-desc">"{exactMatch.name}" is already a group in this discipline.</div>
+            <div className="group-duplicate-desc">"{exactMatch.name}" is already a group in this field.</div>
             <button
               className="btn btn-primary btn-sm"
               style={{ marginTop:8 }}

@@ -69,7 +69,7 @@ export default function AuthPage() {
       {/* ── Brand panel ─────────────────────────────────────────── */}
       <div className="auth-brand">
         <div className="auth-brand-logo">only <em>creators</em></div>
-        <div className="auth-brand-headline">A home for every discipline.</div>
+        <div className="auth-brand-headline">A home for every field.</div>
         <p className="auth-brand-sub" style={{ marginTop: 12 }}>
           Browse, connect, and share across 19 professional communities — or just enjoy great content. You're in the right place either way.
         </p>

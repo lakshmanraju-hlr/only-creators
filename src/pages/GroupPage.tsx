@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase, Post, Group } from '@/lib/supabase'
+import { supabase, Post, Group, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import PostCard from '@/components/PostCard'
@@ -155,7 +155,7 @@ export default function GroupPage() {
               {' · '}
               {group.member_count} member{group.member_count === 1 ? '' : 's'}
               {' · '}
-              <span style={{ color:'var(--color-text-3)' }}>{group.discipline}</span>
+              <span style={{ color:'var(--color-text-3)' }}>{getProfMeta(group.discipline)?.label ?? group.discipline}</span>
             </div>
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>

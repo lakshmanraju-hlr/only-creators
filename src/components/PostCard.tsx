@@ -66,9 +66,21 @@ export default function PostCard({ post, onUpdated }: Props) {
   }
 
   const author = post.profiles
-  const myDiscipline = getCanonicalDiscipline(profile?.profession)
   const authorDiscipline = getCanonicalDiscipline(author?.profession)
-  const canProUpvote = !!(post.is_pro_post && myDiscipline && authorDiscipline && myDiscipline === authorDiscipline && profile?.id !== post.user_id)
+  const [canProUpvote, setCanProUpvote] = useState(false)
+
+  useEffect(() => {
+    if (!profile || !post.persona_discipline || post.user_id === profile.id || post.post_type !== 'pro') {
+      setCanProUpvote(false)
+      return
+    }
+    supabase
+      .from('discipline_personas')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .eq('discipline', post.persona_discipline)
+      .then((res) => setCanProUpvote((res.count ?? 0) > 0))
+  }, [profile?.id, post.persona_discipline, post.user_id, post.post_type])
 
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
   function goToAuthor() { if (author?.username) navigate('/profile/' + author.username) }
@@ -309,7 +321,7 @@ export default function PostCard({ post, onUpdated }: Props) {
         >
           <button
             className={'pro-btn ' + (proUpvoted ? 'active' : '') + ' ' + (!canProUpvote ? 'locked' : '')}
-            onClick={canProUpvote ? toggleProUpvote : () => toast('Only verified creators in the same discipline can give Pro Upvotes')}
+            onClick={canProUpvote ? toggleProUpvote : () => toast('Only verified creators in the same field can give Pro Upvotes')}
           >
             <span style={{ display:'flex', width:13, height:13 }}><Icon.Award /></span>
             <span>{proCount} Pro</span>

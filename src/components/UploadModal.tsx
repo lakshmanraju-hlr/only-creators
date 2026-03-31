@@ -381,7 +381,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
             <button
               className={`upload-chip ${postType === 'pro' ? 'pro-active' : ''}`}
               onClick={togglePro}
-              title={postType === 'pro' ? 'Pro Post — click to switch to general' : 'Make this a Pro Post for a specific discipline'}
+              title={postType === 'pro' ? 'Pro Post — click to switch to general' : 'Make this a Pro Post for a specific field'}
             >
               <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
               Pro

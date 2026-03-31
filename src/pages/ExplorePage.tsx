@@ -268,7 +268,7 @@ export default function ExplorePage() {
       {customDisciplines.length > 0 && (
         <>
           <div style={{ fontSize:14, fontWeight:600, letterSpacing:'-0.2px', margin:'28px 0 12px', color:'var(--color-text-2)' }}>
-            Community disciplines
+            Community fields
           </div>
           <div className="explore-grid">
             {customDisciplines.map(d => (
