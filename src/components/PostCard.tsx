@@ -39,6 +39,7 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [mentionStart, setMentionStart] = useState(-1)
   const [showMenu, setShowMenu] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [mediaLightbox, setMediaLightbox] = useState<{ url: string; type: 'photo' | 'video' } | null>(null)
   const commentRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -229,8 +230,16 @@ export default function PostCard({ post, onUpdated }: Props) {
         </div>
       </div>
 
-      {post.content_type === 'photo' && post.media_url && <div className="media-photo"><img src={post.media_url} alt="post" /></div>}
-      {post.content_type === 'video' && post.media_url && <div className="media-video"><video controls src={post.media_url} /></div>}
+      {post.content_type === 'photo' && post.media_url && (
+        <div className="media-photo" style={{ cursor: 'zoom-in' }} onClick={() => setMediaLightbox({ url: post.media_url!, type: 'photo' })}>
+          <img src={post.media_url} alt="post" />
+        </div>
+      )}
+      {post.content_type === 'video' && post.media_url && (
+        <div className="media-video" onClick={e => { if ((e.target as HTMLElement).tagName !== 'VIDEO') setMediaLightbox({ url: post.media_url!, type: 'video' }) }}>
+          <video controls src={post.media_url} />
+        </div>
+      )}
       {post.content_type === 'audio' && post.media_url && (
         <div className="media-audio">
           <div className="audio-title"><span style={{ display:'flex', width:14, height:14 }}><Icon.Music /></span>{post.caption || 'Audio'}</div>
@@ -447,6 +456,36 @@ export default function PostCard({ post, onUpdated }: Props) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {mediaLightbox && (
+        <div
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={() => setMediaLightbox(null)}
+        >
+          <button
+            onClick={() => setMediaLightbox(null)}
+            style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,0.12)', border:'none', borderRadius:'50%', width:40, height:40, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#fff', zIndex:1 }}
+          >
+            <span style={{ display:'flex', width:18, height:18 }}><Icon.X /></span>
+          </button>
+          {mediaLightbox.type === 'photo' ? (
+            <img
+              src={mediaLightbox.url}
+              alt=""
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth:'100%', maxHeight:'90vh', objectFit:'contain', borderRadius:8 }}
+            />
+          ) : (
+            <video
+              src={mediaLightbox.url}
+              controls
+              autoPlay
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth:'100%', maxHeight:'90vh', borderRadius:8 }}
+            />
+          )}
         </div>
       )}
 

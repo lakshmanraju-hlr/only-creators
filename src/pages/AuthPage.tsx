@@ -1,12 +1,9 @@
 import { useState } from 'react'
-import { supabase, PROFESSIONS, Profession } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 
 type AuthMode = 'login' | 'signup' | 'forgot'
-type SignupStep = 1 | 2   // 1 = basics, 2 = discipline (optional)
-
-const ALL_DISCIPLINES = Object.entries(PROFESSIONS) as [Profession, typeof PROFESSIONS[Profession]][]
 
 export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('login')
@@ -22,13 +19,11 @@ export default function AuthPage() {
   const [forgotSent, setForgotSent] = useState(false)
 
   // ── Signup ─────────────────────────────────────────────────────
-  const [step, setStep] = useState<SignupStep>(1)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [username, setUsername] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPass, setSignupPass] = useState('')
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(null)
 
   // ── Handlers ───────────────────────────────────────────────────
   async function handleLogin(e: React.FormEvent) {
@@ -40,15 +35,11 @@ export default function AuthPage() {
     setLoading(false)
   }
 
-  function handleStep1(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     if (!firstName || !signupEmail || !signupPass || !username)
       return toast.error('Please fill in all required fields')
     if (signupPass.length < 6) return toast.error('Password must be at least 6 characters')
-    setStep(2)
-  }
-
-  async function handleFinish(discipline: string | null) {
     setLoading(true)
     const cleanUser = username.replace('@', '').toLowerCase().replace(/[^a-z0-9_]/g, '')
     const { error } = await supabase.auth.signUp({
@@ -57,19 +48,7 @@ export default function AuthPage() {
       options: { data: { full_name: `${firstName} ${lastName}`.trim(), username: cleanUser } },
     })
     if (error) { toast.error(error.message); setLoading(false); return }
-
-    if (discipline) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Store their primary field of interest — NOT Pro status.
-        // Pro status in a field is earned only by making the first Pro post there.
-        await supabase.from('profiles').update({
-          profession: discipline,
-          professions: [discipline],
-        }).eq('id', user.id)
-      }
-    }
-    toast.success('Welcome!')
+    toast.success('Welcome to only creators!')
     setLoading(false)
   }
 
@@ -135,17 +114,15 @@ export default function AuthPage() {
         {/* ── LOGIN / SIGNUP ────────────────────────────────────── */}
         {mode !== 'forgot' && (
           <>
-            {/* Tab switcher — only on step 1 */}
-            {(mode === 'login' || step === 1) && (
-              <>
-                <div className="auth-form-title">{mode === 'login' ? 'Welcome back' : 'Create your account'}</div>
-                <div className="auth-form-sub">{mode === 'login' ? 'Sign in to continue' : "Join for free — takes under a minute"}</div>
-                <div className="seg-ctrl">
-                  <button className={`seg-btn ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Sign in</button>
-                  <button className={`seg-btn ${mode === 'signup' ? 'active' : ''}`} onClick={() => { setMode('signup'); setStep(1) }}>Sign up</button>
-                </div>
-              </>
-            )}
+            {/* Tab switcher */}
+            <>
+              <div className="auth-form-title">{mode === 'login' ? 'Welcome back' : 'Create your account'}</div>
+              <div className="auth-form-sub">{mode === 'login' ? 'Sign in to continue' : 'Join for free — takes under a minute'}</div>
+              <div className="seg-ctrl">
+                <button className={`seg-btn ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Sign in</button>
+                <button className={`seg-btn ${mode === 'signup' ? 'active' : ''}`} onClick={() => setMode('signup')}>Sign up</button>
+              </div>
+            </>
 
             {/* ── LOGIN FORM ──────────────────────────────────── */}
             {mode === 'login' && (
@@ -170,9 +147,9 @@ export default function AuthPage() {
               </form>
             )}
 
-            {/* ── SIGNUP STEP 1: basics ────────────────────────── */}
-            {mode === 'signup' && step === 1 && (
-              <form onSubmit={handleStep1}>
+            {/* ── SIGNUP FORM ──────────────────────────────────── */}
+            {mode === 'signup' && (
+              <form onSubmit={handleSignup}>
                 <div className="field-row">
                   <div className="field">
                     <label className="field-label">First name *</label>
@@ -198,60 +175,12 @@ export default function AuthPage() {
                     {showPass ? <Icon.EyeOff /> : <Icon.Eye />}
                   </button>
                 </div>
-                <button className="btn btn-primary btn-full" type="submit" style={{ marginTop: 8 }}>
-                  Continue <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.ArrowRight /></span>
+                <button className="btn btn-primary btn-full" type="submit" disabled={loading} style={{ marginTop: 8 }}>
+                  {loading ? <span className="spinner" /> : <>Create account <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.ArrowRight /></span></>}
                 </button>
+                <div className="or-divider">or</div>
+                <button type="button" className="btn btn-ghost btn-full" onClick={() => setMode('login')}>Already have an account? Sign in</button>
               </form>
-            )}
-
-            {/* ── SIGNUP STEP 2: discipline (optional) ─────────── */}
-            {mode === 'signup' && step === 2 && (
-              <div>
-                {/* Step indicator */}
-                <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-                  {[1, 2].map(s => (
-                    <div key={s} style={{ height: 3, flex: s === 2 ? 2 : 1, borderRadius: 2, background: s <= step ? 'var(--color-primary)' : 'var(--color-border)', transition: 'all 0.2s' }} />
-                  ))}
-                </div>
-
-                <div className="auth-form-title" style={{ marginBottom: 4 }}>Are you a professional?</div>
-                <div className="auth-form-sub" style={{ marginBottom: 20 }}>
-                  Choose your field if you'd like to connect with peers in that community. You can always do this later.
-                </div>
-
-                <div className="auth-discipline-grid">
-                  {ALL_DISCIPLINES.map(([key, val]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`auth-discipline-tile ${selectedDiscipline === key ? 'active' : ''}`}
-                      onClick={() => setSelectedDiscipline(prev => prev === key ? null : key)}
-                    >
-                      <span className="auth-discipline-icon">{val.icon}</span>
-                      <span className="auth-discipline-label">{val.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-                  <button
-                    className="btn btn-ghost"
-                    style={{ flex: 1 }}
-                    onClick={() => handleFinish(null)}
-                    disabled={loading}
-                  >
-                    Skip for now
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    style={{ flex: 2 }}
-                    onClick={() => handleFinish(selectedDiscipline)}
-                    disabled={loading}
-                  >
-                    {loading ? <span className="spinner" /> : selectedDiscipline ? 'Create account' : 'Create account'}
-                  </button>
-                </div>
-              </div>
             )}
           </>
         )}

@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase, Profile, Post, getProfMeta, getCanonicalDiscipline, DisciplinePersona, PERSONA_LEVELS, PersonaLevel } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -23,6 +23,8 @@ export default function ProfilePage() {
   const [avatarLightbox, setAvatarLightbox] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [showUpload, setShowUpload] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const isOwnProfile = !username || profile?.id === myProfile?.id
   const [hasVerified, setHasVerified] = useState(false)
@@ -128,6 +130,22 @@ export default function ProfilePage() {
     setVerifying(false)
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !myProfile) return
+    setUploadingAvatar(true)
+    const ext = file.name.split('.').pop()
+    const path = myProfile.id + '/avatar.' + ext
+    await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    const avatarUrl = data.publicUrl + '?t=' + Date.now()
+    await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', myProfile.id)
+    await refreshProfile()
+    setProfile(p => p ? { ...p, avatar_url: avatarUrl } : p)
+    toast.success('Photo updated!')
+    setUploadingAvatar(false)
+  }
+
   // Scroll to post if #post-id in URL
   useEffect(() => {
     if (!loading && posts.length > 0 && window.location.hash.startsWith('#post-')) {
@@ -218,12 +236,37 @@ export default function ProfilePage() {
       <div className="profile-hero">
         <div className="profile-hero-top">
           {/* Clickable avatar */}
-          <div
-            className="profile-big-av"
-            style={{ cursor: profile.avatar_url ? 'zoom-in' : 'default' }}
-            onClick={() => profile.avatar_url && setAvatarLightbox(true)}
-          >
-            {profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : initials(profile.full_name)}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarUpload}
+            />
+            <div
+              className="profile-big-av"
+              style={{ cursor: isOwnProfile ? 'pointer' : profile.avatar_url ? 'zoom-in' : 'default' }}
+              onClick={() => {
+                if (isOwnProfile) avatarInputRef.current?.click()
+                else if (profile.avatar_url) setAvatarLightbox(true)
+              }}
+            >
+              {uploadingAvatar
+                ? <div className="spinner" />
+                : profile.avatar_url
+                  ? <img src={profile.avatar_url} alt="" />
+                  : initials(profile.full_name)}
+            </div>
+            {isOwnProfile && (
+              <div
+                style={{ position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}
+                onClick={() => avatarInputRef.current?.click()}
+                title={profile.avatar_url ? 'Change photo' : 'Add photo'}
+              >
+                <span style={{ display: 'flex', width: 13, height: 13, color: '#fff' }}><Icon.Camera /></span>
+              </div>
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="profile-name">{profile.full_name}</div>

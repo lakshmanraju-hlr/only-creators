@@ -164,7 +164,7 @@ export default function ExplorePage() {
         {profile && myDisciplines.has(selectedDiscipline) && (
           <div className="discipline-joined-badge">
             <span style={{ display:'flex', width:13, height:13, color:'var(--amber-500)' }}><Icon.Award /></span>
-            <span>You're a {meta?.label ?? selectedDiscipline}</span>
+            <span>You're in {meta?.label ?? selectedDiscipline}</span>
             <span style={{ color:'var(--color-text-3)', fontWeight:400 }}>· Post Pro content to grow your standing in this field</span>
             <button
               className="btn btn-ghost btn-xs"
