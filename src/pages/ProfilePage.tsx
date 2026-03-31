@@ -23,6 +23,10 @@ export default function ProfilePage() {
   const [avatarLightbox, setAvatarLightbox] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [showUpload, setShowUpload] = useState(false)
+  const [endorsementCount, setEndorsementCount] = useState(0)
+  const [hasEndorsed, setHasEndorsed] = useState(false)
+  const [endorsing, setEndorsing] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -103,6 +107,16 @@ export default function ProfilePage() {
       .then(({ data }) => setHasVerified(!!data))
   }, [myProfile?.id, profile?.id])
 
+  useEffect(() => {
+    if (!profile) return
+    supabase.from('endorsements').select('id', { count: 'exact', head: true }).eq('endorsed_id', profile.id)
+      .then(({ count }) => setEndorsementCount(count || 0))
+    if (myProfile && !isOwnProfile) {
+      supabase.from('endorsements').select('id').eq('endorser_id', myProfile.id).eq('endorsed_id', profile.id).single()
+        .then(({ data }) => setHasEndorsed(!!data))
+    }
+  }, [profile?.id, myProfile?.id, isOwnProfile])
+
   async function toggleVerify() {
     if (!myProfile || !profile || !canVerify) return
     setVerifying(true)
@@ -126,6 +140,24 @@ export default function ProfilePage() {
       toast.success('Peer verified!')
     }
     setVerifying(false)
+  }
+
+  async function toggleEndorse() {
+    if (!myProfile || !profile || isOwnProfile) return
+    setEndorsing(true)
+    if (hasEndorsed) {
+      await supabase.from('endorsements').delete().match({ endorser_id: myProfile.id, endorsed_id: profile.id })
+      setHasEndorsed(false)
+      setEndorsementCount(c => Math.max(0, c - 1))
+      toast('Endorsement removed')
+    } else {
+      const { error } = await supabase.from('endorsements').insert({ endorser_id: myProfile.id, endorsed_id: profile.id })
+      if (error) { toast.error(error.message); setEndorsing(false); return }
+      setHasEndorsed(true)
+      setEndorsementCount(c => c + 1)
+      toast.success('Endorsed!')
+    }
+    setEndorsing(false)
   }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -244,8 +276,11 @@ export default function ProfilePage() {
             />
             <div
               className="profile-big-av"
-              style={{ cursor: profile.avatar_url ? 'zoom-in' : 'default' }}
-              onClick={() => { if (profile.avatar_url) setAvatarLightbox(true) }}
+              style={{ cursor: (isOwnProfile || profile.avatar_url) ? 'pointer' : 'default' }}
+              onClick={() => {
+                if (isOwnProfile && !profile.avatar_url) avatarInputRef.current?.click()
+                else if (profile.avatar_url) setAvatarLightbox(true)
+              }}
             >
               {uploadingAvatar
                 ? <div className="spinner" />
@@ -288,6 +323,16 @@ export default function ProfilePage() {
                   <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.MessageCircle /></span> Message
                 </button>
                 <SocialButton targetId={profile.id} targetName={profile.full_name} />
+                <button
+                  className={`btn btn-sm ${hasEndorsed ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={toggleEndorse}
+                  disabled={endorsing}
+                  style={{ gap: 5 }}
+                  title={hasEndorsed ? 'Remove endorsement' : 'Endorse this creator'}
+                >
+                  <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
+                  {hasEndorsed ? 'Endorsed ✓' : 'Endorse'}
+                </button>
                 {canVerify && (
                   <button
                     className={`btn btn-sm ${hasVerified ? 'btn-gold' : 'btn-ghost'}`}
@@ -316,12 +361,10 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
             {personas.map(p => {
               const meta = getProfMeta(p.discipline)
-              const level = PERSONA_LEVELS[p.level as PersonaLevel] ?? PERSONA_LEVELS.newcomer
               return (
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'var(--color-primary-light)', borderRadius: 999, fontSize: 12.5, color: 'var(--color-primary)', fontWeight: 500, border: '1px solid var(--color-primary-light)' }}>
                   <span>{meta?.icon ?? '✦'}</span>
                   <span>{meta?.label ?? p.discipline}</span>
-                  <span className={`persona-level-badge ${p.level}`} style={{ marginLeft: 2 }}>{level.label}</span>
                 </div>
               )
             })}
@@ -332,6 +375,7 @@ export default function ProfilePage() {
           <div><div className="p-stat-num">{profile.follower_count}</div><div className="p-stat-label">Followers</div></div>
           <div><div className="p-stat-num">{profile.following_count}</div><div className="p-stat-label">Following</div></div>
           <div><div className="p-stat-num">{profile.friend_count || 0}</div><div className="p-stat-label">Friends</div></div>
+          {endorsementCount > 0 && <div><div className="p-stat-num">{endorsementCount}</div><div className="p-stat-label">Endorsed</div></div>}
           {profile.is_pro && (
             <div title="Number of peer professionals who have verified this creator">
               <div className="p-stat-num" style={{ color: 'var(--color-pro)' }}>
@@ -409,26 +453,44 @@ export default function ProfilePage() {
           if (!groups[key]) groups[key] = []
           groups[key].push(p)
         })
+        const entries = Object.entries(groups)
         return (
           <div>
-            {Object.entries(groups).map(([disc, fieldPosts]) => {
+            {entries.map(([disc, fieldPosts], idx) => {
               const meta = getProfMeta(disc === '__other' ? '' : disc)
+              const isCollapsed = collapsedGroups.has(disc)
+              function toggleCollapse() {
+                setCollapsedGroups(prev => {
+                  const next = new Set(prev)
+                  if (next.has(disc)) next.delete(disc)
+                  else next.add(disc)
+                  return next
+                })
+              }
               return (
-                <div key={disc} style={{ marginBottom: 32 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border)' }}>
+                <div key={disc} style={{ marginBottom: 16, border: '1px solid var(--color-border)', borderRadius: 'var(--r-xl)', overflow: 'hidden' }}>
+                  <button
+                    onClick={toggleCollapse}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'var(--gray-0)', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                  >
                     {meta && <span style={{ fontSize: 18 }}>{meta.icon}</span>}
-                    <span style={{ fontWeight: 600, fontSize: 15 }}>{meta?.label ?? disc}</span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-3)', marginLeft: 2 }}>{fieldPosts.length} post{fieldPosts.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  {gridView ? (
-                    <div className="profile-grid">
-                      {fieldPosts.map(p => <GridCell key={p.id} post={p} onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />)}
-                    </div>
-                  ) : (
-                    <div>
-                      {fieldPosts.map(p => (
-                        <PostCard key={p.id} post={p} onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />
-                      ))}
+                    <span style={{ fontWeight: 600, fontSize: 15, flex: 1 }}>{meta?.label ?? disc}</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-3)', marginRight: 8 }}>{fieldPosts.length} post{fieldPosts.length !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-3)', transition: 'transform 0.2s', display: 'inline-block', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                  </button>
+                  {!isCollapsed && (
+                    <div style={{ padding: '0 16px 16px' }}>
+                      {gridView ? (
+                        <div className="profile-grid">
+                          {fieldPosts.map(p => <GridCell key={p.id} post={p} onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />)}
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 8 }}>
+                          {fieldPosts.map(p => (
+                            <PostCard key={p.id} post={p} onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -52,9 +52,7 @@ export default function AppShell() {
     if (saved) return saved === 'dark'
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
-  const [showOnboarding, setShowOnboarding] = useState(() =>
-    !localStorage.getItem('onboarding_done')
-  )
+  const [showOnboarding, setShowOnboarding] = useState(false)
   // Online friends for right panel
   const [onlineFriends, setOnlineFriends] = useState<Profile[]>([])
 
@@ -64,6 +62,12 @@ export default function AppShell() {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
+
+  useEffect(() => {
+    if (profile) {
+      setShowOnboarding(!localStorage.getItem('onboarding_done_' + profile.id))
+    }
+  }, [profile?.id])
 
   useEffect(() => {
     if (!profile) return
@@ -264,7 +268,7 @@ export default function AppShell() {
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} />}
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
       {showOnboarding && profile && (
-        <OnboardingModal onDone={() => { setShowOnboarding(false); localStorage.setItem('onboarding_done', '1') }} />
+        <OnboardingModal onDone={() => { setShowOnboarding(false); if (profile) localStorage.setItem('onboarding_done_' + profile.id, '1') }} />
       )}
     </div>
   )

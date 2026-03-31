@@ -266,10 +266,29 @@ export default function FeedPage({ onPost }: Props) {
   }, [fetchPosts])
 
   useEffect(() => {
-    const handler = () => fetchPosts()
+    const handler = async () => {
+      if (!profile) { fetchPosts(); return }
+      // Fetch the newest post by current user and pin it to the top
+      const { data } = await supabase.from('posts').select(FIELDS)
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (!data || data.length === 0) { fetchPosts(); return }
+      const uids = [profile.id]
+      const { data: profilesData } = await supabase.from('profiles')
+        .select('id,username,full_name,avatar_url,profession,role_title,is_pro,verification_count')
+        .in('id', uids)
+      const profileMap: Record<string, Profile> = {}
+      ;(profilesData || []).forEach((p: any) => { profileMap[p.id] = p })
+      const newPost: Post = { ...data[0], profiles: profileMap[data[0].user_id] || null }
+      setFeedItems(prev => {
+        const withoutNew = prev.filter(i => isFeedSection(i) || (i as Post).id !== newPost.id)
+        return [newPost, ...withoutNew]
+      })
+    }
     window.addEventListener('oc:post-created', handler)
     return () => window.removeEventListener('oc:post-created', handler)
-  }, [fetchPosts])
+  }, [fetchPosts, profile?.id])
 
   async function quickPost() {
     if (!profile || !composerText.trim()) return
@@ -278,7 +297,7 @@ export default function FeedPage({ onPost }: Props) {
       user_id: profile.id, content_type: 'text', caption: composerText.trim(),
       post_type: 'general',
     })
-    if (!error) { setComposerText(''); toast.success('Posted! ✦'); fetchPosts() }
+    if (!error) { setComposerText(''); toast.success('Posted! ✦'); window.dispatchEvent(new CustomEvent('oc:post-created')) }
     else toast.error(error.message)
     setPosting(false)
   }
