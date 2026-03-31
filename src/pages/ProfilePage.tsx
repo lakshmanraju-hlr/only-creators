@@ -228,9 +228,11 @@ export default function ProfilePage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="profile-name">{profile.full_name}</div>
             <div className="profile-handle">@{profile.username}</div>
-            {profile.role_title && (
+            {(profile.role_title || (profile as any).workplace) && (
               <div style={{ marginTop: 4, fontSize: 13.5, color: 'var(--color-text-2)', fontWeight: 500 }}>
-                {profile.role_title}
+                {profile.role_title && (profile as any).workplace
+                  ? `${profile.role_title} at ${(profile as any).workplace}`
+                  : profile.role_title || (profile as any).workplace}
               </div>
             )}
           </div>
@@ -466,6 +468,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
   const [fullName, setFullName] = useState(profile.full_name)
   const [username, setUsername] = useState(profile.username)
   const [roleTitle, setRoleTitle] = useState(profile.role_title || '')
+  const [workplace, setWorkplace] = useState((profile as any).workplace || '')
   const [bio, setBio] = useState(profile.bio || '')
   const [website, setWebsite] = useState(profile.website || '')
   const [personalPublic, setPersonalPublic] = useState(profile.personal_profile_public !== false)
@@ -519,6 +522,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
       full_name: fullName,
       username: username.replace('@', '').toLowerCase(),
       role_title: roleTitle.trim() || null,
+      workplace: workplace.trim() || null,
       bio, website, avatar_url: avatarUrl,
       personal_profile_public: personalPublic,
       updated_at: new Date().toISOString(),
@@ -567,11 +571,18 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
         <div className="field"><label className="field-label">Display name</label><input className="field-input" value={fullName} onChange={e => setFullName(e.target.value)} /></div>
         <div className="field">
           <label className="field-label">
-            Title / role
+            Job title
             <span style={{ fontWeight: 400, color: 'var(--color-text-3)', marginLeft: 6 }}>optional</span>
           </label>
-          <input className="field-input" placeholder="e.g. Cardiologist, Street Photographer, Head Chef…" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>Shown next to your name across the platform.</div>
+          <input className="field-input" placeholder="e.g. Software Engineer, Cardiologist, Head Chef…" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
+        </div>
+        <div className="field">
+          <label className="field-label">
+            Workplace
+            <span style={{ fontWeight: 400, color: 'var(--color-text-3)', marginLeft: 6 }}>optional</span>
+          </label>
+          <input className="field-input" placeholder="e.g. Google, NHS, Freelance…" value={workplace} onChange={e => setWorkplace(e.target.value)} />
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>Shows as "Software Engineer at Google" on your profile.</div>
         </div>
         <div className="field"><label className="field-label">Username</label><input className="field-input" value={username} onChange={e => setUsername(e.target.value)} /></div>
         <div className="field"><label className="field-label">Bio</label><textarea className="field-textarea" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the world about your craft…" /></div>

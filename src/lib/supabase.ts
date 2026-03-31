@@ -28,7 +28,8 @@ export interface Profile {
   website: string
   profession: string | null
   professions: string[]
-  role_title: string | null   // optional job title shown next to name, e.g. "Cardiologist"
+  role_title: string | null   // optional job title, e.g. "Software Engineer"
+  workplace: string | null    // optional workplace, e.g. "Google"
   is_pro: boolean
   personal_profile_public: boolean
   follower_count: number

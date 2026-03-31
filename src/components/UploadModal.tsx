@@ -208,7 +208,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     })
     setProgress(100)
     if (error) { toast.error('Failed to post: ' + error.message) }
-    else { toast.success('Posted!'); onClose() }
+    else { toast.success('Posted!'); window.dispatchEvent(new CustomEvent('oc:post-created')); onClose() }
     setUploading(false)
   }
 

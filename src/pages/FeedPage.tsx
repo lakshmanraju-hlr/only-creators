@@ -265,6 +265,12 @@ export default function FeedPage({ onPost }: Props) {
     return () => { supabase.removeChannel(channel) }
   }, [fetchPosts])
 
+  useEffect(() => {
+    const handler = () => fetchPosts()
+    window.addEventListener('oc:post-created', handler)
+    return () => window.removeEventListener('oc:post-created', handler)
+  }, [fetchPosts])
+
   async function quickPost() {
     if (!profile || !composerText.trim()) return
     setPosting(true)

@@ -65,8 +65,6 @@ export default function PostCard({ post, onUpdated }: Props) {
   }
 
   const author = post.profiles
-  // Only show a pill if the user has explicitly set a role_title — never auto-show discipline on general posts
-  const authorRoleTitle = (author as any)?.role_title || null
   const myDiscipline = getCanonicalDiscipline(profile?.profession)
   const authorDiscipline = getCanonicalDiscipline(author?.profession)
   const canProUpvote = !!(post.is_pro_post && myDiscipline && authorDiscipline && myDiscipline === authorDiscipline && profile?.id !== post.user_id)
@@ -206,7 +204,6 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div style={{ flex:1, minWidth:0 }}>
           <div className="post-author" onClick={goToAuthor}>
             <span className="post-author-name">{author?.full_name}</span>
-            {authorRoleTitle && <span className="post-author-role">{authorRoleTitle}</span>}
           </div>
           <div className="post-time" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span>@{author?.username} · {timeAgo}</span>

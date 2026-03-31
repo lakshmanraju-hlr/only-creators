@@ -10,19 +10,30 @@ import { Icon } from '@/lib/icons'
 export default function FriendsPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'requests' | 'friends'>('requests')
+  const [tab, setTab] = useState<'requests' | 'friends'>('friends')
   const [requests, setRequests] = useState<any[]>([])
+  const [pendingCount, setPendingCount] = useState(0)
   const [friends, setFriends] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
+
+  async function loadPendingCount(pid: string) {
+    const data = await getPendingRequests(pid)
+    setPendingCount(data.length)
+    return data
+  }
 
   async function load() {
     if (!profile) return
     setLoading(true)
     if (tab === 'requests') {
-      const data = await getPendingRequests(profile.id)
+      const data = await loadPendingCount(profile.id)
       setRequests(data)
     } else {
-      const friendIds = await getFriends(profile.id)
+      // Load friends + pending count in parallel
+      const [friendIds] = await Promise.all([
+        getFriends(profile.id),
+        loadPendingCount(profile.id),
+      ])
       if (friendIds.length === 0) { setFriends([]); setLoading(false); return }
       const { data } = await supabase.from('profiles').select('*').in('id', friendIds)
       setFriends((data || []) as Profile[])
@@ -36,7 +47,7 @@ export default function FriendsPage() {
     if (!profile) return
     const channel = supabase.channel('friend-requests')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friend_requests', filter: 'receiver_id=eq.' + profile.id },
-        () => { if (tab === 'requests') load() })
+        () => { loadPendingCount(profile.id); if (tab === 'requests') load() })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [profile?.id, tab])
@@ -65,11 +76,11 @@ export default function FriendsPage() {
       </div>
 
       <div className="feed-tabs" style={{ marginBottom: 24 }}>
-        <div className={'feed-tab ' + (tab === 'requests' ? 'active' : '')} onClick={() => setTab('requests')}>
-          Friend requests {requests.length > 0 && tab !== 'requests' && <span className="nav-badge" style={{ marginLeft: 6 }}>{requests.length}</span>}
-        </div>
         <div className={'feed-tab ' + (tab === 'friends' ? 'active' : '')} onClick={() => setTab('friends')}>
           My friends {friends.length > 0 && <span style={{ color: 'var(--color-text-3)', marginLeft: 4 }}>({friends.length})</span>}
+        </div>
+        <div className={'feed-tab ' + (tab === 'requests' ? 'active' : '')} onClick={() => setTab('requests')}>
+          Requests {pendingCount > 0 && <span className="nav-badge" style={{ marginLeft: 6 }}>{pendingCount}</span>}
         </div>
       </div>
 

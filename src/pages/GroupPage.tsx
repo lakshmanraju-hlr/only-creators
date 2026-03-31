@@ -26,7 +26,7 @@ export default function GroupPage() {
     const gid = groupIdRef.current
     if (!gid) return
     const { data, error } = await supabase.from('posts')
-      .select('*, profiles(*)')
+      .select('*, profiles!user_id(*)')
       .eq('group_id', gid)
       .order('created_at', { ascending: false })
       .limit(40)
@@ -56,7 +56,7 @@ export default function GroupPage() {
 
       const [postsRes, memberRes, countRes] = await Promise.all([
         supabase.from('posts')
-          .select('*, profiles(*)')
+          .select('*, profiles!user_id(*)')
           .eq('group_id', gData.id)
           .order('created_at', { ascending: false })
           .limit(40),
@@ -82,7 +82,9 @@ export default function GroupPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: 'group_id=eq.' + group.id },
         () => setTimeout(() => reloadPosts(), 300))
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    const handler = () => reloadPosts()
+    window.addEventListener('oc:post-created', handler)
+    return () => { supabase.removeChannel(ch); window.removeEventListener('oc:post-created', handler) }
   }, [group?.id, reloadPosts])
 
   async function toggleMembership() {
