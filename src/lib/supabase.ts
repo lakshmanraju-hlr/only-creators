@@ -46,6 +46,14 @@ export type PostType = 'general' | 'pro'
 
 export type PersonaLevel = 'newcomer' | 'contributor' | 'expert' | 'authority'
 
+// Trust weight used in Pro Multiplier calculation per PRD
+export const TRUST_WEIGHTS: Record<PersonaLevel, number> = {
+  newcomer:    1,   // Participant
+  contributor: 3,   // Contributor
+  expert:      6,   // Expert
+  authority:   10,  // Authority
+}
+
 export interface DisciplinePersona {
   id: string
   user_id: string
@@ -255,10 +263,36 @@ export function getProfMeta(profession: string | null | undefined): { label: str
 }
 
 export const PERSONA_LEVELS: Record<PersonaLevel, { label: string; next?: PersonaLevel; nextDesc: string }> = {
-  newcomer:    { label: 'Newcomer',    next: 'contributor', nextDesc: '5 Pro Posts + 5 Pro Upvotes received' },
-  contributor: { label: 'Contributor', next: 'expert',      nextDesc: '20 Pro Posts + 30 Pro Upvotes received' },
-  expert:      { label: 'Expert',      next: 'authority',   nextDesc: '50 Pro Posts + 100 Pro Upvotes received' },
-  authority:   { label: 'Authority',   nextDesc: 'Top level — you\'ve earned it' },
+  newcomer:    { label: 'Participant',  next: 'contributor', nextDesc: '3 Pro Posts approved + community engagement' },
+  contributor: { label: 'Contributor', next: 'expert',      nextDesc: '15 Pro Posts + 30 Pro Votes received' },
+  expert:      { label: 'Expert',      next: 'authority',   nextDesc: '50 Pro Posts + 100 Pro Votes received' },
+  authority:   { label: 'Authority',   nextDesc: 'Platform\'s top verified professional in this field' },
+}
+
+// Content type profiles per field — drives composer UX and initial distribution score
+export const FIELD_CONTENT_PROFILES: Record<string, {
+  primary: string[]     // preferred content types for this field
+  hint: string          // soft prompt shown when off-profile
+}> = {
+  photographer:    { primary: ['photo'],            hint: 'Photography posts perform best with at least one photo. Add a photo?' },
+  singer:          { primary: ['audio', 'video'],   hint: 'Vocal posts perform best with audio or video. Add a recording?' },
+  musician:        { primary: ['audio', 'video'],   hint: 'Music posts perform best with audio or video. Add a track?' },
+  poet:            { primary: ['poem', 'text'],     hint: 'Poetry posts perform best as a poem or written text. Use the poem editor?' },
+  'visual-artist': { primary: ['photo'],            hint: 'Visual art posts perform best with an image. Add a photo?' },
+  filmmaker:       { primary: ['video'],            hint: 'Film posts perform best with video. Add a clip?' },
+  dancer:          { primary: ['video'],            hint: 'Dance posts perform best with video. Add a clip?' },
+  comedian:        { primary: ['video', 'text'],    hint: 'Performance posts perform best with video. Add a clip?' },
+  culinary:        { primary: ['photo', 'video'],   hint: 'Culinary posts perform best with photos or video. Add media?' },
+  fitness:         { primary: ['video', 'photo'],   hint: 'Fitness posts perform best with video or photos. Add media?' },
+  technology:      { primary: ['text', 'document'], hint: 'Tech posts perform best as detailed write-ups. Consider writing more?' },
+  fashion:         { primary: ['photo'],            hint: 'Fashion posts perform best with photos. Add a photo?' },
+  architecture:    { primary: ['photo'],            hint: 'Architecture posts perform best with photos. Add a photo?' },
+  medicine:        { primary: ['text', 'document'], hint: 'Medical posts perform best as detailed text. Consider adding more context?' },
+  education:       { primary: ['text', 'document'], hint: 'Education posts perform best as text or documents. Use the text editor?' },
+  law:             { primary: ['text', 'document'], hint: 'Law posts perform best as detailed text. Consider a written post?' },
+  science:         { primary: ['text', 'document'], hint: 'Science posts perform best as text or documents. Add your findings in writing?' },
+  business:        { primary: ['text'],             hint: 'Business posts perform best as written insights. Consider adding more context?' },
+  wellness:        { primary: ['text', 'video'],    hint: 'Wellness posts perform best as text or video. Add some depth?' },
 }
 
 export interface Message {

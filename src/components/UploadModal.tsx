@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { supabase, ContentType, Group, Profile, DisciplinePersona, getProfMeta } from '@/lib/supabase'
+import { supabase, ContentType, Group, Profile, DisciplinePersona, getProfMeta, FIELD_CONTENT_PROFILES } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { suggestGroup } from '@/lib/groupCategorization'
@@ -42,6 +42,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
 
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [softPromptDismissed, setSoftPromptDismissed] = useState(false)
 
   const [mentionQuery, setMentionQuery] = useState('')
   const [mentionResults, setMentionResults] = useState<Profile[]>([])
@@ -71,6 +72,18 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
         }
       })
   }, [profile?.id])
+
+  // Auto-select primary content type when switching to Pro or changing persona
+  useEffect(() => {
+    if (postType !== 'pro') return
+    const disc = selectedPersona?.discipline ?? overrideDiscipline
+    if (!disc) return
+    const profile = FIELD_CONTENT_PROFILES[disc]
+    if (!profile) return
+    const primaryType = profile.primary[0] as ContentType
+    setContentType(primaryType)
+    setSoftPromptDismissed(false)
+  }, [postType, selectedPersona?.discipline, overrideDiscipline])
 
   // Load groups for the selected Pro persona's discipline
   useEffect(() => {
@@ -271,6 +284,23 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
             {file && <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 8 }}>Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</div>}
           </div>
         )}
+
+        {/* ── Field content type soft prompt ───────────────── */}
+        {postType === 'pro' && !softPromptDismissed && (() => {
+          const disc = selectedPersona?.discipline ?? overrideDiscipline
+          if (!disc) return null
+          const fieldProfile = FIELD_CONTENT_PROFILES[disc]
+          if (!fieldProfile) return null
+          const isOffProfile = !fieldProfile.primary.includes(contentType)
+          if (!isOffProfile) return null
+          return (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px', background: 'var(--amber-50, #fffbeb)', border: '1px solid var(--amber-200, #fde68a)', borderRadius: 'var(--r-lg)', marginBottom: 8, fontSize: 12.5, color: 'var(--amber-700, #92400e)', lineHeight: 1.5 }}>
+              <span style={{ flexShrink: 0, marginTop: 1 }}>💡</span>
+              <span style={{ flex: 1 }}>{fieldProfile.hint}</span>
+              <button onClick={() => setSoftPromptDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--amber-500, #f59e0b)', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+            </div>
+          )
+        })()}
 
         {/* ── Content type icon row ─────────────────────────── */}
         <div className="upload-ct-row">

@@ -91,13 +91,33 @@ export default function ExplorePage() {
       // Include all alias professions that map to this discipline
       const members = getDisciplineMembers(selectedDiscipline!)
       if (view === 'posts') {
-        // Filter directly by persona_discipline — set on any Pro post tagged to this field
-        const { data } = await supabase.from('posts')
-          .select('*, profiles!user_id(*), group:group_id(*)')
-          .in('persona_discipline', members)
-          .order('pro_upvote_count', { ascending: false })
-          .limit(20)
-        setPosts((data || []) as Post[])
+        // PRD field feed: 80% ranked by Pro Multiplier, 20% Newcomer Protection Pool
+        // Fetch established posts (have received pro votes) + newcomer pool separately
+        const [establishedRes, newcomerRes] = await Promise.all([
+          supabase.from('posts')
+            .select('*, profiles!user_id(*), group:group_id(*)')
+            .in('persona_discipline', members)
+            .gt('pro_upvote_count', 0)
+            .order('pro_upvote_count', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(16),
+          supabase.from('posts')
+            .select('*, profiles!user_id(*), group:group_id(*)')
+            .in('persona_discipline', members)
+            .eq('pro_upvote_count', 0)
+            .order('created_at', { ascending: false })
+            .limit(8),
+        ])
+        // Interleave: 4 established, 1 newcomer (20% protection pool)
+        const established = (establishedRes.data || []) as Post[]
+        const newcomers   = (newcomerRes.data  || []) as Post[]
+        const merged: Post[] = []
+        let ei = 0, ni = 0
+        while (ei < established.length || ni < newcomers.length) {
+          for (let i = 0; i < 4 && ei < established.length; i++) merged.push(established[ei++])
+          if (ni < newcomers.length) merged.push(newcomers[ni++])
+        }
+        setPosts(merged)
       } else if (view === 'creators') {
         const { data: dp } = await supabase.from('discipline_personas').select('user_id').in('discipline', members)
         const uids = [...new Set((dp || []).map((r: any) => r.user_id as string))]
@@ -186,7 +206,17 @@ export default function ExplorePage() {
               <div className="empty-title">No posts yet</div>
               <div className="empty-sub">Be the first verified {meta?.label || selectedDiscipline} to post</div>
             </div>
-          ) : posts.map(p => <PostCard key={p.id} post={p} />)
+          ) : posts.map((p, i) => (
+            <div key={p.id}>
+              {/* Label the first newcomer pool post (every 5th slot) */}
+              {i > 0 && (i % 5 === 4) && p.pro_upvote_count === 0 && (
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-3)', margin: '16px 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>✦</span> Rising Talent
+                </div>
+              )}
+              <PostCard post={p} />
+            </div>
+          ))
         ) : view === 'creators' ? (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {creators.length === 0 ? (

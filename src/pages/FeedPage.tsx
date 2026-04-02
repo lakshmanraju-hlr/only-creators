@@ -18,14 +18,46 @@ function isFeedSection(item: FeedItem): item is FeedSection {
   return (item as FeedSection).type === 'divider'
 }
 
-// Score a post for the discovery feed
-// score = pro_upvote_count + verif_boost - time_decay
-function discoveryScore(post: Post, now: number): number {
-  const verif = (post.profiles?.verification_count ?? 0) * 0.5
+// ── PRD-aligned feed scoring ──────────────────────────────────────────────────
+//
+// Post Score = Base Engagement Score × Pro Multiplier
+//   Base = (likes × 1) + (comments × 4) + (share_count × 2) + 10 (floor)
+//   Pro Multiplier = 1 + (pro_upvote_count × 2.5)  [proxy for trust-weighted sum]
+//   Craft match bonus: +12 if post is in one of the user's fields (high weight)
+//   Relationship bonus: +8 friend, +5 following
+//   Recency boost: posts < 6h old get +20, < 24h +8
+//   Time decay: accelerates after 48h (lose 1pt/6h beyond 48h)
+//
+function computePostScore(
+  post: Post,
+  now: number,
+  myDisciplines: Set<string>,
+  followingSet: Set<string>,
+  friendSet: Set<string>
+): number {
+  // Base engagement (low weight on likes per PRD)
+  const base = 10 + (post.like_count * 1) + (post.comment_count * 4) + ((post.share_count ?? 0) * 2)
+  // Pro Multiplier — each pro vote proxied as trust ≈ 2.5 (between Participant=1 and Contributor=3)
+  const proMultiplier = 1 + (post.pro_upvote_count * 2.5)
+  // Craft match — user's joined fields (very high weight per PRD)
+  const craftBonus = (post.persona_discipline && myDisciplines.has(post.persona_discipline)) ? 12 : 0
+  // Relationship strength
+  const isFriend   = friendSet.has(post.user_id)
+  const isFollowing = followingSet.has(post.user_id)
+  const relationshipBonus = isFriend ? 8 : isFollowing ? 5 : 0
+  // Recency boost (fresh content surfaces faster)
   const ageHours = (now - new Date(post.created_at).getTime()) / 3_600_000
-  // Gentle time decay: lose ~1 point every 48h, floor at 0
-  const decay = Math.max(0, ageHours / 48)
-  return post.pro_upvote_count + verif - decay
+  const recencyBoost = ageHours < 6 ? 20 : ageHours < 24 ? 8 : 0
+  // Time decay past 48h (gentle — doesn't kill good old content)
+  const decay = ageHours > 48 ? (ageHours - 48) / 6 : 0
+
+  return (base * proMultiplier) + craftBonus + relationshipBonus + recencyBoost - decay
+}
+
+// Whether a post qualifies for the Newcomer Protection Pool
+// (creators with zero prior pro endorsements on any post)
+function isNewcomerPost(post: Post): boolean {
+  return post.pro_upvote_count === 0
 }
 
 export default function FeedPage({ onPost }: Props) {
@@ -38,16 +70,19 @@ export default function FeedPage({ onPost }: Props) {
   const [posting, setPosting] = useState(false)
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const [friendIds, setFriendIds] = useState<string[]>([])
+  // User's joined fields for craft-match bonus
+  const [myFieldSet, setMyFieldSet] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!profile) return
-    // Load both social graphs
     Promise.all([
       supabase.from('follows').select('following_id').eq('follower_id', profile.id),
       getFriends(profile.id),
-    ]).then(([followRes, fIds]) => {
+      supabase.from('discipline_personas').select('discipline').eq('user_id', profile.id),
+    ]).then(([followRes, fIds, personaRes]) => {
       setFollowingIds((followRes.data || []).map((r: any) => r.following_id))
       setFriendIds(fIds)
+      setMyFieldSet(new Set((personaRes.data || []).map((r: any) => r.discipline as string)))
     })
   }, [profile?.id])
 
@@ -81,162 +116,164 @@ export default function FeedPage({ onPost }: Props) {
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
+    const followingSet = new Set(followingIds)
+    const friendSet    = new Set(friendIds)
+    const now = Date.now()
+    // PRD-aligned sort using full scoring function
+    const scoreSort = (arr: Post[]) =>
+      [...arr].sort((a, b) => computePostScore(b, now, myFieldSet, followingSet, friendSet) - computePostScore(a, now, myFieldSet, followingSet, friendSet))
+
     try {
-      // ── Social tabs: simple chronological, no algorithm ──────────────
+      // ── Social tabs: chronological with relationship bonus ────────────
       if (tab === 'following' || tab === 'friends') {
         const userIdFilter = tab === 'following' ? followingIds : friendIds
         if (userIdFilter.length === 0) { setFeedItems([]); setLoading(false); return }
         const { data, error } = await supabase.from('posts').select(FIELDS)
           .in('user_id', userIdFilter)
           .order('created_at', { ascending: false })
-          .limit(40)
+          .limit(50)
         if (error) { toast.error(error.message); setLoading(false); return }
         let posts = await enrichPosts(data || [])
+        posts = scoreSort(posts)
         posts = await markInteractions(posts)
         setFeedItems(posts)
         setLoading(false)
         return
       }
 
-      // ── Pro tab: original work ranked by peer upvotes ─────────────────
+      // ── Pro Picks tab: Pro posts ranked by Pro Multiplier ────────────
+      // Post Score = Base Engagement × Pro Multiplier
+      // Craft match bonus applied; newcomer pool (20%) interleaved
       if (tab === 'pro') {
         const { data, error } = await supabase.from('posts').select(FIELDS)
           .eq('post_type', 'pro')
-          .order('pro_upvote_count', { ascending: false })
           .order('created_at', { ascending: false })
-          .limit(40)
+          .limit(60)
         if (error) { toast.error(error.message); setLoading(false); return }
         let posts = await enrichPosts(data || [])
-        const now = Date.now()
-        posts = posts.sort((a, b) => discoveryScore(b, now) - discoveryScore(a, now))
-        posts = await markInteractions(posts)
-        setFeedItems(posts)
+        const established = scoreSort(posts.filter(p => !isNewcomerPost(p)))
+        const newcomerPool = scoreSort(posts.filter(isNewcomerPost))
+        // 20% Newcomer Protection Pool interleaved every 5th slot
+        const TOTAL = 40
+        const newcomerSlots = Math.ceil(TOTAL * 0.2)
+        const combined: Post[] = []
+        let ei = 0, ni = 0
+        for (let i = 0; i < TOTAL; i++) {
+          const isNewcomerSlot = (i + 1) % 5 === 0 && ni < newcomerPool.length
+          if (isNewcomerSlot) combined.push(newcomerPool[ni++])
+          else if (ei < established.length) combined.push(established[ei++])
+          else if (ni < newcomerPool.length) combined.push(newcomerPool[ni++])
+        }
+        const marked = await markInteractions(combined)
+        setFeedItems(marked)
         setLoading(false)
         return
       }
 
-      // ── "For You" tab: affinity-driven personalised algorithm ─────────
+      // ── "For You" tab: PRD multi-bucket algorithm ─────────────────────
       //
-      // 1. Load user's discipline affinity scores (highest first)
-      // 2. Identify "primary" disciplines (top half of scores, or own discipline)
-      // 3. Fetch most-upvoted posts from primary disciplines   → Primary bucket
-      // 4. Fetch most-upvoted posts from all other disciplines → Discovery bucket
-      // 5. Globally-viral posts (pro_upvote_count ≥ threshold) → Promoted bucket
-      // 6. Interleave: primary (60%) → discovery (30%) → promoted (10%)
-      // 7. Apply time-decay scoring so fresh content beats stale viral posts
+      // Buckets:
+      //   A. Craft Posts — from fields the user has joined (craft match, high weight)
+      //   B. Following / Friends — from social graph, recent
+      //   C. Trending — high Pro Multiplier posts from any field
+      //   D. Discover — from fields user hasn't joined yet
+      //   E. Newcomer Pool — 20% of feed, creators with 0 pro upvotes
+      //
+      // Final interleave: A(40%) → B(20%) → C(20%) → D(10%) → E(10%)
 
-      const myCanonical = getCanonicalDiscipline(profile?.profession)
+      const myFields = [...myFieldSet]
       const allDisciplineKeys = Object.keys(PROFESSIONS)
+      const otherFields = allDisciplineKeys.filter(d => !myFieldSet.has(d))
+      const hasJoinedFields = myFields.length > 0
+      const hasSocialGraph = followingIds.length > 0 || friendIds.length > 0
+      const socialIds = [...new Set([...followingIds, ...friendIds])]
 
-      // Load affinity scores
-      let primaryDisciplines: string[] = myCanonical ? [myCanonical] : []
-      if (profile) {
-        const { data: scoreRows } = await supabase
-          .from('user_discipline_scores')
-          .select('discipline,score')
-          .eq('user_id', profile.id)
-          .order('score', { ascending: false })
-          .limit(20)
-        if (scoreRows && scoreRows.length > 0) {
-          // Include any discipline with at least half the max score, plus own discipline
-          const maxScore = scoreRows[0].score
-          const threshold = Math.max(1, maxScore * 0.5)
-          const highAffinity = scoreRows
-            .filter((r: any) => r.score >= threshold)
-            .map((r: any) => getCanonicalDiscipline(r.discipline) || r.discipline)
-          primaryDisciplines = [...new Set([...primaryDisciplines, ...highAffinity])]
-        }
-      }
-
-      const discoveryDisciplines = allDisciplineKeys.filter(d => !primaryDisciplines.includes(d))
-
-      // Fetch pools in parallel
-      const VIRAL_THRESHOLD = 3 // posts with this many pro upvotes get promoted globally
-
-      const [primaryRes, discoveryRes, viralRes] = await Promise.all([
-        // Primary: most upvoted from affinity disciplines (or all if no affinity yet)
-        primaryDisciplines.length > 0
+      const [craftRes, socialRes, trendingRes, discoverRes, newcomerRes] = await Promise.all([
+        // A. Craft: posts from user's joined fields
+        hasJoinedFields
           ? supabase.from('posts').select(FIELDS)
-              .in('user_id',
-                // We need user IDs whose profession is in primary disciplines —
-                // fetch author IDs via profiles table
-                await supabase.from('profiles')
-                  .select('id')
-                  .in('profession', primaryDisciplines)
-                  .then(r => (r.data || []).map((p: any) => p.id))
-              )
+              .in('persona_discipline', myFields)
               .order('pro_upvote_count', { ascending: false })
+              .order('created_at', { ascending: false })
+              .limit(25)
+          : Promise.resolve({ data: [] }),
+
+        // B. Social: posts from following + friends
+        hasSocialGraph
+          ? supabase.from('posts').select(FIELDS)
+              .in('user_id', socialIds)
               .order('created_at', { ascending: false })
               .limit(20)
-          : supabase.from('posts').select(FIELDS)
-              .order('pro_upvote_count', { ascending: false })
-              .order('created_at', { ascending: false })
-              .limit(20),
+          : Promise.resolve({ data: [] }),
 
-        // Discovery: most upvoted from other disciplines
-        discoveryDisciplines.length > 0
+        // C. Trending: high pro-vote posts globally (Pro Multiplier effect)
+        supabase.from('posts').select(FIELDS)
+          .gte('pro_upvote_count', 2)
+          .order('pro_upvote_count', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(20),
+
+        // D. Discover: posts from other fields (cross-field discovery)
+        otherFields.length > 0
           ? supabase.from('posts').select(FIELDS)
-              .in('user_id',
-                await supabase.from('profiles')
-                  .select('id')
-                  .in('profession', discoveryDisciplines)
-                  .then(r => (r.data || []).map((p: any) => p.id))
-              )
+              .in('persona_discipline', otherFields.slice(0, 8))
               .order('pro_upvote_count', { ascending: false })
               .order('created_at', { ascending: false })
               .limit(15)
-          : Promise.resolve({ data: [], error: null }),
+          : Promise.resolve({ data: [] }),
 
-        // Viral / promoted: top upvoted across ALL disciplines
+        // E. Newcomer Pool: recent posts from creators with 0 pro upvotes
         supabase.from('posts').select(FIELDS)
-          .gte('pro_upvote_count', VIRAL_THRESHOLD)
-          .order('pro_upvote_count', { ascending: false })
+          .eq('pro_upvote_count', 0)
           .order('created_at', { ascending: false })
-          .limit(10),
+          .limit(15),
       ])
 
-      // Enrich all pools
-      const [primaryPosts, discoveryPosts, viralPosts] = await Promise.all([
-        enrichPosts(primaryRes.data || []),
-        enrichPosts(discoveryRes.data || []),
-        enrichPosts(viralRes.data || []),
+      const [craftPosts, socialPosts, trendingPosts, discoverPosts, newcomerPoolPosts] = await Promise.all([
+        enrichPosts((craftRes.data || []) as any[]),
+        enrichPosts((socialRes.data || []) as any[]),
+        enrichPosts((trendingRes.data || []) as any[]),
+        enrichPosts((discoverRes.data || []) as any[]),
+        enrichPosts((newcomerRes.data || []) as any[]),
       ])
 
-      const now = Date.now()
-      const sort = (arr: Post[]) => [...arr].sort((a, b) => discoveryScore(b, now) - discoveryScore(a, now))
-
-      const sortedPrimary   = sort(primaryPosts)
-      const sortedDiscovery = sort(discoveryPosts)
-      // Promoted: posts with high viral score not already in primary
-      const primaryIds = new Set(sortedPrimary.map(p => p.id))
-      const sortedViral = sort(viralPosts.filter(p => !primaryIds.has(p.id))).slice(0, 5)
-
-      // Interleave into a single feed with section labels
-      const items: FeedItem[] = []
       const seen = new Set<string>()
+      const items: FeedItem[] = []
 
-      function addSection(label: string, posts: Post[], maxCount: number) {
-        const fresh = posts.filter(p => !seen.has(p.id)).slice(0, maxCount)
+      function addSection(label: string, posts: Post[], maxCount: number, sorted = true) {
+        const source = sorted ? scoreSort(posts) : posts
+        const fresh = source.filter(p => !seen.has(p.id)).slice(0, maxCount)
         if (fresh.length === 0) return
         items.push({ type: 'divider', label, id: 'div-' + label })
         fresh.forEach(p => { seen.add(p.id); items.push(p) })
       }
 
-      const primaryLabel = primaryDisciplines.length > 0 ? 'From your fields' : 'Top posts'
+      // If user has fields, show craft-match content first
+      if (hasJoinedFields && craftPosts.length > 0) {
+        addSection('From your fields', craftPosts, 10)
+      }
+      if (hasSocialGraph && socialPosts.length > 0) {
+        addSection('From people you follow', socialPosts, 8, false) // chronological
+      }
+      addSection('Trending', trendingPosts, 8)
+      if (discoverPosts.length > 0) addSection('Discover new fields', discoverPosts, 6)
 
-      addSection(primaryLabel, sortedPrimary, 12)
-      addSection('Trending across fields', sortedDiscovery, 8)
-      if (sortedViral.length > 0) addSection('Highly upvoted — Promoted', sortedViral, 5)
+      // Newcomer Protection Pool — 20% — every 5th post slot
+      const newcomerFresh = scoreSort(newcomerPoolPosts.filter(p => !seen.has(p.id))).slice(0, 8)
+      if (newcomerFresh.length > 0) {
+        items.push({ type: 'divider', label: 'Rising talent', id: 'div-newcomer' })
+        newcomerFresh.forEach(p => { seen.add(p.id); items.push(p) })
+      }
 
-      // If the feed is very sparse (new platform), fall back to a global mix
+      // Sparse feed fallback
       if (items.filter(i => !isFeedSection(i)).length < 5) {
         const { data: fallback } = await supabase.from('posts').select(FIELDS)
-          .order('pro_upvote_count', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(30)
         const fallbackPosts = await enrichPosts(fallback || [])
-        const allPosts = sort(fallbackPosts)
-        await markInteractions(allPosts).then(marked => setFeedItems(marked))
+        const sorted = scoreSort(fallbackPosts)
+        const marked = await markInteractions(sorted)
+        setFeedItems(marked)
         setLoading(false)
         return
       }
@@ -254,7 +291,7 @@ export default function FeedPage({ onPost }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [tab, profile?.id, followingIds.join(','), friendIds.join(',')])
+  }, [tab, profile?.id, followingIds.join(','), friendIds.join(','), [...myFieldSet].sort().join(',')])
 
   useEffect(() => { fetchPosts() }, [fetchPosts])
 
