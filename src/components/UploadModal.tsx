@@ -78,9 +78,9 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     if (postType !== 'pro') return
     const disc = selectedPersona?.discipline ?? overrideDiscipline
     if (!disc) return
-    const profile = FIELD_CONTENT_PROFILES[disc]
-    if (!profile) return
-    const primaryType = profile.primary[0] as ContentType
+    const fieldProfile = FIELD_CONTENT_PROFILES[disc]
+    if (!fieldProfile) return
+    const primaryType = fieldProfile.primary[0] as ContentType
     setContentType(primaryType)
     setSoftPromptDismissed(false)
   }, [postType, selectedPersona?.discipline, overrideDiscipline])

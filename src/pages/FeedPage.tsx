@@ -188,8 +188,8 @@ export default function FeedPage({ onPost }: Props) {
       const hasSocialGraph = followingIds.length > 0 || friendIds.length > 0
       const socialIds = [...new Set([...followingIds, ...friendIds])]
 
-      const [craftRes, socialRes, trendingRes, discoverRes, newcomerRes] = await Promise.all([
-        // A. Craft: posts from user's joined fields
+      const [craftRes, socialRes, proRes, discoverRes] = await Promise.all([
+        // A. Craft: posts from user's joined fields (Pro posts with craft match)
         hasJoinedFields
           ? supabase.from('posts').select(FIELDS)
               .in('persona_discipline', myFields)
@@ -198,7 +198,7 @@ export default function FeedPage({ onPost }: Props) {
               .limit(25)
           : Promise.resolve({ data: [] }),
 
-        // B. Social: posts from following + friends
+        // B. Social: posts from following + friends, chronological
         hasSocialGraph
           ? supabase.from('posts').select(FIELDS)
               .in('user_id', socialIds)
@@ -206,35 +206,27 @@ export default function FeedPage({ onPost }: Props) {
               .limit(20)
           : Promise.resolve({ data: [] }),
 
-        // C. Trending: high pro-vote posts globally (Pro Multiplier effect)
+        // C. All posts scored by Pro Multiplier — no threshold so it works on new platforms
         supabase.from('posts').select(FIELDS)
-          .gte('pro_upvote_count', 2)
           .order('pro_upvote_count', { ascending: false })
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(40),
 
-        // D. Discover: posts from other fields (cross-field discovery)
+        // D. Discover: Pro posts from fields user hasn't joined yet
         otherFields.length > 0
           ? supabase.from('posts').select(FIELDS)
-              .in('persona_discipline', otherFields.slice(0, 8))
+              .in('persona_discipline', otherFields.slice(0, 10))
               .order('pro_upvote_count', { ascending: false })
               .order('created_at', { ascending: false })
               .limit(15)
           : Promise.resolve({ data: [] }),
-
-        // E. Newcomer Pool: recent posts from creators with 0 pro upvotes
-        supabase.from('posts').select(FIELDS)
-          .eq('pro_upvote_count', 0)
-          .order('created_at', { ascending: false })
-          .limit(15),
       ])
 
-      const [craftPosts, socialPosts, trendingPosts, discoverPosts, newcomerPoolPosts] = await Promise.all([
+      const [craftPosts, socialPosts, proPosts, discoverPosts] = await Promise.all([
         enrichPosts((craftRes.data || []) as any[]),
         enrichPosts((socialRes.data || []) as any[]),
-        enrichPosts((trendingRes.data || []) as any[]),
+        enrichPosts((proRes.data || []) as any[]),
         enrichPosts((discoverRes.data || []) as any[]),
-        enrichPosts((newcomerRes.data || []) as any[]),
       ])
 
       const seen = new Set<string>()
@@ -248,34 +240,26 @@ export default function FeedPage({ onPost }: Props) {
         fresh.forEach(p => { seen.add(p.id); items.push(p) })
       }
 
-      // If user has fields, show craft-match content first
       if (hasJoinedFields && craftPosts.length > 0) {
         addSection('From your fields', craftPosts, 10)
       }
       if (hasSocialGraph && socialPosts.length > 0) {
-        addSection('From people you follow', socialPosts, 8, false) // chronological
+        addSection('From people you follow', socialPosts, 8, false)
       }
-      addSection('Trending', trendingPosts, 8)
+
+      // Top posts / trending — always has data (no threshold)
+      const established = proPosts.filter(p => !isNewcomerPost(p))
+      const newcomerPool = proPosts.filter(isNewcomerPost)
+      const trendingLabel = hasJoinedFields ? 'Trending' : 'Top posts'
+      addSection(trendingLabel, established, 12)
+
       if (discoverPosts.length > 0) addSection('Discover new fields', discoverPosts, 6)
 
-      // Newcomer Protection Pool — 20% — every 5th post slot
-      const newcomerFresh = scoreSort(newcomerPoolPosts.filter(p => !seen.has(p.id))).slice(0, 8)
+      // Newcomer Protection Pool (20%) — always shown, labeled "Rising talent"
+      const newcomerFresh = scoreSort(newcomerPool.filter(p => !seen.has(p.id))).slice(0, 6)
       if (newcomerFresh.length > 0) {
         items.push({ type: 'divider', label: 'Rising talent', id: 'div-newcomer' })
         newcomerFresh.forEach(p => { seen.add(p.id); items.push(p) })
-      }
-
-      // Sparse feed fallback
-      if (items.filter(i => !isFeedSection(i)).length < 5) {
-        const { data: fallback } = await supabase.from('posts').select(FIELDS)
-          .order('created_at', { ascending: false })
-          .limit(30)
-        const fallbackPosts = await enrichPosts(fallback || [])
-        const sorted = scoreSort(fallbackPosts)
-        const marked = await markInteractions(sorted)
-        setFeedItems(marked)
-        setLoading(false)
-        return
       }
 
       // Mark interactions on all real posts
@@ -285,6 +269,7 @@ export default function FeedPage({ onPost }: Props) {
       marked.forEach(p => { markedMap[p.id] = p })
       const finalItems: FeedItem[] = items.map(i => isFeedSection(i) ? i : (markedMap[i.id] || i))
 
+      // If genuinely empty (brand new platform, zero posts), show empty state
       setFeedItems(finalItems)
     } catch (err: any) {
       toast.error('Failed to load posts')
