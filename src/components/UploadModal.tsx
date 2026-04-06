@@ -225,203 +225,235 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     setUploading(false)
   }
 
+  const chipBase = "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors border"
+  const chipInactive = `${chipBase} border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800`
+  const chipActive = `${chipBase} border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-600/10 text-brand-600 dark:text-brand-400`
+  const visBtn = (active: boolean) => `px-3 py-1 rounded-full text-[12px] font-medium transition-colors border ${active ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-600/10 text-brand-600 dark:text-brand-400' : 'border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'}`
+
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal upload-modal">
-        <div className="modal-header">
-          <div className="modal-title">New post</div>
-          <button className="modal-close" onClick={onClose}><Icon.X /></button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-[540px] bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="font-semibold text-[16px] text-gray-900 dark:text-white">New post</h2>
+          <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors" onClick={onClose}>
+            <span className="flex w-4 h-4"><Icon.X /></span>
+          </button>
         </div>
 
-        {/* ── Caption / text ─────────────────────────────────── */}
-        <div style={{ position: 'relative' }}>
-          {mentionResults.length > 0 && (
-            <div className="mention-dropdown">
-              {mentionResults.map((r, i) => (
-                <button key={r.id} className={'mention-option ' + (i === mentionIndex ? 'active' : '')} onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}>
-                  <div className="post-avatar" style={{ width: 24, height: 24, fontSize: 8, flexShrink: 0 }}>
-                    {r.avatar_url ? <img src={r.avatar_url} alt="" /> : r.full_name?.slice(0, 2).toUpperCase()}
-                  </div>
-                  <span style={{ fontWeight: 500, fontSize: 13 }}>{r.full_name}</span>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>@{r.username}</span>
-                </button>
-              ))}
+        <div className="px-5 py-4 space-y-3">
+          {/* Caption / text */}
+          <div className="relative">
+            {mentionResults.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden z-10">
+                {mentionResults.map((r, i) => (
+                  <button
+                    key={r.id}
+                    className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 text-left transition-colors ${i === mentionIndex ? 'bg-brand-50 dark:bg-brand-600/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                    onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}
+                  >
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[8px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                      {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : r.full_name?.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="font-medium text-[13px] text-gray-900 dark:text-white">{r.full_name}</span>
+                    <span className="text-[12px] text-gray-400">@{r.username}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <textarea
+              ref={captionRef}
+              className="w-full bg-transparent outline-none resize-none text-[14px] text-gray-900 dark:text-white placeholder:text-gray-400 min-h-[80px]"
+              placeholder={contentType === 'text' ? "What's on your mind?" : 'Add a caption…'}
+              value={caption}
+              onChange={handleCaptionChange}
+              onKeyDown={handleCaptionKey}
+            />
+          </div>
+
+          {/* Poem editor */}
+          {contentType === 'poem' && (
+            <textarea
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 outline-none resize-none text-[14px] text-gray-900 dark:text-white placeholder:text-gray-400 font-serif min-h-[120px]"
+              placeholder={'Let the words flow…\n\nEach line, a brushstroke\nOn the canvas of silence'}
+              value={poemText}
+              onChange={e => setPoemText(e.target.value)}
+            />
+          )}
+
+          {/* File upload zone */}
+          {needsFile && (
+            <div>
+              <div
+                className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
+                onClick={() => fileRef.current?.click()}
+              >
+                {filePreview
+                  ? <img src={filePreview} alt="" className="max-h-[160px] rounded-lg mx-auto" />
+                  : <>
+                    <span className="flex w-5 h-5 text-brand-600 mx-auto mb-2">{currentCT.icon}</span>
+                    <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">{file ? file.name : 'Click to browse or drag & drop'}</p>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      {contentType === 'photo' && 'JPG, PNG, GIF, WebP'}
+                      {contentType === 'audio' && 'MP3, WAV, OGG'}
+                      {contentType === 'video' && 'MP4, MOV — max 500MB'}
+                      {contentType === 'document' && 'PDF, DOC, DOCX'}
+                    </p>
+                  </>}
+              </div>
+              <input ref={fileRef} type="file" accept={currentCT.accept} className="hidden" onChange={handleFileChange} />
+              {file && <p className="text-[12px] text-gray-400 mt-1.5">Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</p>}
             </div>
           )}
-          <textarea
-            ref={captionRef}
-            className="upload-caption"
-            placeholder={contentType === 'poem' ? 'Add a caption…' : contentType === 'text' ? "What's on your mind?" : 'Add a caption…'}
-            value={caption}
-            onChange={handleCaptionChange}
-            onKeyDown={handleCaptionKey}
+
+          {/* Soft prompt for off-profile content type */}
+          {postType === 'pro' && !softPromptDismissed && (() => {
+            const disc = selectedPersona?.discipline ?? overrideDiscipline
+            if (!disc) return null
+            const fieldProfile = FIELD_CONTENT_PROFILES[disc]
+            if (!fieldProfile) return null
+            if (!fieldProfile.primary.includes(contentType)) return null
+            return (
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl text-[12.5px] text-amber-700 dark:text-amber-400 leading-snug">
+                <span className="shrink-0 mt-px">💡</span>
+                <span className="flex-1">{fieldProfile.hint}</span>
+                <button onClick={() => setSoftPromptDismissed(true)} className="text-amber-400 text-[16px] leading-none shrink-0">×</button>
+              </div>
+            )
+          })()}
+
+          {/* Content type row */}
+          <div className="flex gap-1.5 flex-wrap">
+            {CONTENT_TYPES.map(ct => (
+              <button
+                key={ct.type}
+                onClick={() => { setContentType(ct.type); setFile(null); setFilePreview(null) }}
+                title={ct.label}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors border ${
+                  contentType === ct.type
+                    ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-600/10 text-brand-600 dark:text-brand-400'
+                    : 'border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
+                }`}
+              >
+                <span className="flex w-3.5 h-3.5">{ct.icon}</span>
+                {ct.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Pro section */}
+          {postType === 'pro' && (
+            <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-100 dark:border-amber-900 rounded-xl p-3.5 space-y-3">
+              {personas.length === 0 && !overrideDiscipline ? (
+                <div>
+                  <p className="font-semibold text-[13px] text-amber-700 dark:text-amber-400 mb-1">No fields yet</p>
+                  <p className="text-[13px] text-amber-600 dark:text-amber-500 leading-relaxed">
+                    To make a Pro post, establish yourself in a field first —{' '}
+                    <button className="font-semibold text-brand-600 hover:underline" onClick={() => { onClose(); navigate('/explore') }}>go to Explore</button>
+                    , find your field, and post there.
+                  </p>
+                </div>
+              ) : overrideDiscipline && !selectedPersona ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex w-3.5 h-3.5 text-amber-600"><Icon.Award /></span>
+                  <span className="text-[13px] font-medium text-gray-900 dark:text-white">{getProfMeta(overrideDiscipline)?.label ?? overrideDiscipline}</span>
+                  <span className="text-[11px] text-gray-400">· This post establishes you as a Newcomer</span>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-500 mb-2">
+                      <span className="flex w-3 h-3"><Icon.Award /></span>
+                      Posting as
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {personas.map(p => {
+                        const meta = getProfMeta(p.discipline)
+                        return (
+                          <button key={p.id} onClick={() => { setSelectedPersona(p); setSelectedGroup(null); setGroupSuggestion(null) }} className={visBtn(selectedPersona?.id === p.id)}>
+                            {meta?.icon} {meta?.label ?? p.discipline}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {availableGroups.length > 0 && (
+                    <div>
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-500 mb-2">
+                        <span className="flex w-3 h-3"><Icon.Friends /></span>
+                        Community group
+                        {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
+                          <span className="text-brand-600 font-medium normal-case tracking-normal ml-1">suggested</span>
+                        )}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button className={visBtn(!selectedGroup)} onClick={() => setSelectedGroup(null)}>None</button>
+                        {availableGroups.map(g => (
+                          <button key={g.id} className={visBtn(selectedGroup?.id === g.id)} onClick={() => setSelectedGroup(g)}>
+                            {g.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Tags */}
+          <input
+            className="w-full bg-transparent outline-none text-[12.5px] text-gray-500 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-600 border-t border-gray-100 dark:border-gray-800 pt-3"
+            placeholder="#tag1  #tag2  #tag3"
+            value={tags}
+            onChange={e => setTags(e.target.value)}
           />
+
+          {/* Progress bar */}
+          {uploading && (
+            <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full bg-brand-600 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+            </div>
+          )}
         </div>
 
-        {/* ── Poem editor ───────────────────────────────────── */}
-        {contentType === 'poem' && (
-          <textarea className="poem-editor" placeholder={'Let the words flow…\n\nEach line, a brushstroke\nOn the canvas of silence'} value={poemText} onChange={e => setPoemText(e.target.value)} />
-        )}
-
-        {/* ── File upload zone ──────────────────────────────── */}
-        {needsFile && (
-          <div>
-            <div className="upload-zone" onClick={() => fileRef.current?.click()}>
-              {filePreview
-                ? <img src={filePreview} alt="" style={{ maxHeight: 160, borderRadius: 'var(--r-md)', margin: '0 auto' }} />
-                : <>
-                  <div className="upload-zone-icon"><span style={{ display: 'flex', width: 20, height: 20, color: 'var(--color-primary)' }}>{currentCT.icon}</span></div>
-                  <div className="upload-zone-text">{file ? file.name : 'Click to browse or drag & drop'}</div>
-                  <div className="upload-zone-sub">
-                    {contentType === 'photo' && 'JPG, PNG, GIF, WebP'}
-                    {contentType === 'audio' && 'MP3, WAV, OGG'}
-                    {contentType === 'video' && 'MP4, MOV — max 500MB'}
-                    {contentType === 'document' && 'PDF, DOC, DOCX'}
-                  </div>
-                </>}
-            </div>
-            <input ref={fileRef} type="file" accept={currentCT.accept} style={{ display: 'none' }} onChange={handleFileChange} />
-            {file && <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 8 }}>Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</div>}
-          </div>
-        )}
-
-        {/* ── Field content type soft prompt ───────────────── */}
-        {postType === 'pro' && !softPromptDismissed && (() => {
-          const disc = selectedPersona?.discipline ?? overrideDiscipline
-          if (!disc) return null
-          const fieldProfile = FIELD_CONTENT_PROFILES[disc]
-          if (!fieldProfile) return null
-          const isOffProfile = !fieldProfile.primary.includes(contentType)
-          if (!isOffProfile) return null
-          return (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px', background: 'var(--amber-50, #fffbeb)', border: '1px solid var(--amber-200, #fde68a)', borderRadius: 'var(--r-lg)', marginBottom: 8, fontSize: 12.5, color: 'var(--amber-700, #92400e)', lineHeight: 1.5 }}>
-              <span style={{ flexShrink: 0, marginTop: 1 }}>💡</span>
-              <span style={{ flex: 1 }}>{fieldProfile.hint}</span>
-              <button onClick={() => setSoftPromptDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--amber-500, #f59e0b)', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
-            </div>
-          )
-        })()}
-
-        {/* ── Content type icon row ─────────────────────────── */}
-        <div className="upload-ct-row">
-          {CONTENT_TYPES.map(ct => (
-            <button
-              key={ct.type}
-              className={`upload-ct-btn ${contentType === ct.type ? 'active' : ''}`}
-              onClick={() => { setContentType(ct.type); setFile(null); setFilePreview(null) }}
-              title={ct.label}
-            >
-              <span style={{ display: 'flex', width: 16, height: 16 }}>{ct.icon}</span>
-              <span>{ct.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Pro expansion (only when Pro mode active) ─────── */}
-        {postType === 'pro' && (
-          <div className="upload-pro-section">
-            {personas.length === 0 && !overrideDiscipline ? (
-              <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.6, padding: '10px 12px', background: 'var(--color-primary-light)', borderRadius: 'var(--r-md)' }}>
-                <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--color-primary)' }}>No fields yet</div>
-                To make a Pro post, establish yourself in a field first —{' '}
-                <button
-                  className="btn btn-ghost btn-xs"
-                  style={{ color: 'var(--color-primary)', padding: '0 2px', fontSize: 13, display: 'inline', fontWeight: 600 }}
-                  onClick={() => { onClose(); navigate('/explore') }}
-                >
-                  go to Explore
-                </button>
-                , find your field, and post there.
-              </div>
-            ) : overrideDiscipline && !selectedPersona ? (
-              // First Pro post in this discipline — show it as pre-selected, no picker needed
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>{getProfMeta(overrideDiscipline)?.label ?? overrideDiscipline}</span>
-                <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>· This post establishes you as a Newcomer</span>
-              </div>
-            ) : (
-              <>
-                <div className="upload-pro-section-label">
-                  <span style={{ display: 'flex', width: 13, height: 13, color: 'var(--color-pro)' }}><Icon.Award /></span>
-                  Posting as
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {personas.map(p => {
-                    const meta = getProfMeta(p.discipline)
-                    return (
-                      <button
-                        key={p.id}
-                        className={`upload-vis-btn ${selectedPersona?.id === p.id ? 'active' : ''}`}
-                        onClick={() => { setSelectedPersona(p); setSelectedGroup(null); setGroupSuggestion(null) }}
-                      >
-                        {meta?.icon} {meta?.label ?? p.discipline}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {availableGroups.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <div className="upload-pro-section-label">
-                      <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Friends /></span>
-                      Community group
-                      {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
-                        <span style={{ fontSize: 10, color: 'var(--color-primary)', marginLeft: 6, fontWeight: 500 }}>suggested</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      <button className={`upload-vis-btn ${!selectedGroup ? 'active' : ''}`} onClick={() => setSelectedGroup(null)}>None</button>
-                      {availableGroups.map(g => (
-                        <button key={g.id} className={`upload-vis-btn ${selectedGroup?.id === g.id ? 'active' : ''}`} onClick={() => setSelectedGroup(g)}>
-                          {g.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ── Tags (subtle) ─────────────────────────────────── */}
-        <input
-          className="upload-tags-input"
-          placeholder="#tag1  #tag2  #tag3"
-          value={tags}
-          onChange={e => setTags(e.target.value)}
-        />
-
-        {uploading && <div className="upload-progress" style={{ marginBottom: 10 }}><div className="upload-progress-fill" style={{ width: `${progress}%` }} /></div>}
-
-        {/* ── Bottom action bar ─────────────────────────────── */}
-        <div className="upload-action-bar">
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {/* Action bar */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-2">
             {postType === 'general' && (
               <button
-                className={`upload-chip ${postVisibility === 'friends' ? 'active' : ''}`}
                 onClick={() => setPostVisibility(v => v === 'public' ? 'friends' : 'public')}
+                className={postVisibility === 'friends' ? chipActive : chipInactive}
                 title={postVisibility === 'public' ? 'Public — click to restrict to friends' : 'Friends only — click to make public'}
               >
-                <span style={{ display: 'flex', width: 13, height: 13 }}>{postVisibility === 'friends' ? <Icon.Lock /> : <Icon.Globe />}</span>
+                <span className="flex w-3 h-3">{postVisibility === 'friends' ? <Icon.Lock /> : <Icon.Globe />}</span>
                 {postVisibility === 'friends' ? 'Friends' : 'Public'}
               </button>
             )}
             <button
-              className={`upload-chip ${postType === 'pro' ? 'pro-active' : ''}`}
               onClick={togglePro}
+              className={postType === 'pro' ? chipBase + ' border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400' : chipInactive}
               title={postType === 'pro' ? 'Pro Post — click to switch to general' : 'Make this a Pro Post for a specific field'}
             >
-              <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.Award /></span>
+              <span className="flex w-3 h-3"><Icon.Award /></span>
               Pro
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onClose} disabled={uploading}>Cancel</button>
-            <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={uploading}>
-              {uploading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Posting…</> : 'Post'}
+          <div className="flex items-center gap-2">
+            <button
+              className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              onClick={onClose} disabled={uploading}
+            >Cancel</button>
+            <button
+              className="px-5 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-full text-[13px] font-medium flex items-center gap-2 transition-colors"
+              onClick={handleSubmit} disabled={uploading}
+            >
+              {uploading ? <><div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> Posting…</> : 'Post'}
             </button>
           </div>
         </div>

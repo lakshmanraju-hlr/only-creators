@@ -150,97 +150,101 @@ export default function MessagesPage() {
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   return (
-    <div className="messages-shell">
+    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
       {/* Friends sidebar */}
-      <div className="messages-sidebar">
-        <div className="messages-sidebar-header">
-          <div style={{ fontWeight: 600, fontSize: 15 }}>Messages</div>
+      <div className="w-64 shrink-0 border-r border-gray-100 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-900 overflow-y-auto">
+        <div className="px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
+          <p className="font-semibold text-[15px] text-gray-900 dark:text-white">Messages</p>
         </div>
         {friendsLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}><div className="spinner" /></div>
+          <div className="flex justify-center py-6"><div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
         ) : friends.length === 0 ? (
-          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-3)', fontSize: 13 }}>
-            Add friends to start messaging
-          </div>
+          <p className="px-4 py-6 text-center text-[13px] text-gray-400">Add friends to start messaging</p>
         ) : friends.map(f => (
           <button
             key={f.id}
-            className={'msg-friend-item ' + (selectedFriend?.id === f.id ? 'active' : '')}
             onClick={() => openConversation(f)}
+            className={`flex items-center gap-3 px-4 py-3 w-full text-left transition-colors ${
+              selectedFriend?.id === f.id
+                ? 'bg-brand-50 dark:bg-brand-600/10'
+                : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+            }`}
           >
-            <div className="post-avatar" style={{ width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
-              {f.avatar_url ? <img src={f.avatar_url} alt="" /> : initials(f.full_name)}
+            <div className="w-[38px] h-[38px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[13px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-              <div style={{ fontWeight: 500, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.full_name}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--color-text-3)' }}>@{f.username}</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-[13.5px] text-gray-900 dark:text-white truncate">{f.full_name}</p>
+              <p className="text-[11.5px] text-gray-400 dark:text-gray-500">@{f.username}</p>
             </div>
           </button>
         ))}
       </div>
 
       {/* Chat area */}
-      <div className="messages-chat">
+      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-950">
         {!selectedFriend ? (
-          <div className="messages-empty">
-            <div className="empty-icon" style={{ margin: '0 auto 14px' }}><Icon.MessageCircle /></div>
-            <div className="empty-title">Select a friend to message</div>
-            <div className="empty-sub">Your conversations with friends will appear here</div>
+          <div className="flex flex-col items-center justify-center h-full">
+            <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.MessageCircle /></span>
+            <p className="font-semibold text-gray-600 dark:text-gray-400">Select a friend to message</p>
+            <p className="text-sm mt-1 text-gray-400">Your conversations with friends will appear here</p>
           </div>
         ) : (
           <>
-            <div className="messages-chat-header">
-              <div
-                className="post-avatar"
-                style={{ width: 34, height: 34, fontSize: 12, flexShrink: 0, cursor: 'pointer' }}
+            {/* Chat header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
+              <button
+                className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
                 onClick={() => navigate('/profile/' + selectedFriend.username)}
               >
-                {selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : initials(selectedFriend.full_name)}
-              </div>
-              <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate('/profile/' + selectedFriend.username)}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{selectedFriend.full_name}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--color-text-3)' }}>@{selectedFriend.username}</div>
-              </div>
+                {selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(selectedFriend.full_name)}
+              </button>
+              <button className="flex-1 text-left" onClick={() => navigate('/profile/' + selectedFriend.username)}>
+                <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{selectedFriend.full_name}</p>
+                <p className="text-[11.5px] text-gray-400 dark:text-gray-500">@{selectedFriend.username}</p>
+              </button>
             </div>
 
-            <div className="messages-body">
+            {/* Messages body */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {loading ? (
-                <div className="loading-center"><div className="spinner" /></div>
+                <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
               ) : messages.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--color-text-3)', fontSize: 13, padding: 24 }}>
-                  Send your first message to {selectedFriend.full_name}
-                </div>
+                <p className="text-center text-[13px] text-gray-400 py-6">Send your first message to {selectedFriend.full_name}</p>
               ) : messages.map(m => {
                 const isMine = m.sender_id === profile?.id
                 return (
-                  <div key={m.id} className={'msg-row ' + (isMine ? 'mine' : 'theirs')}>
+                  <div key={m.id} className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
                     {!isMine && (
-                      <div
-                        className="post-avatar"
-                        style={{ width: 26, height: 26, fontSize: 9, flexShrink: 0, alignSelf: 'flex-end', cursor: 'pointer' }}
+                      <button
+                        className="w-[26px] h-[26px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[9px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
                         onClick={() => navigate('/profile/' + selectedFriend.username)}
                       >
                         {(m.sender as any)?.avatar_url
-                          ? <img src={(m.sender as any).avatar_url} alt="" />
+                          ? <img src={(m.sender as any).avatar_url} alt="" className="w-full h-full object-cover" />
                           : initials((m.sender as any)?.full_name || '?')}
-                      </div>
+                      </button>
                     )}
-                    <div className="msg-bubble-wrap">
+                    <div className={`flex flex-col gap-1 max-w-[70%] ${isMine ? 'items-end' : 'items-start'}`}>
                       {m.post_id && (m.post as any) && (
-                        <div className="msg-post-preview">
-                          <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 4 }}>Shared post</div>
-                          <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {(m.post as any)?.caption || (m.post as any)?.content_type}
-                          </div>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                            by @{(m.post as any)?.profiles?.username}
-                          </div>
+                        <div className="px-3 py-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-left">
+                          <p className="text-[10px] text-gray-400 mb-1">Shared post</p>
+                          <p className="text-[13px] font-medium text-gray-900 dark:text-white truncate">{(m.post as any)?.caption || (m.post as any)?.content_type}</p>
+                          <p className="text-[11px] text-gray-400">by @{(m.post as any)?.profiles?.username}</p>
                         </div>
                       )}
-                      {m.body && <div className={'msg-bubble ' + (isMine ? 'mine' : 'theirs')}>{m.body}</div>}
-                      <div className={'msg-time ' + (isMine ? 'right' : '')}>
+                      {m.body && (
+                        <div className={`px-3.5 py-2.5 rounded-2xl text-[13.5px] leading-snug ${
+                          isMine
+                            ? 'bg-brand-600 text-white rounded-br-sm'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm'
+                        }`}>
+                          {m.body}
+                        </div>
+                      )}
+                      <p className={`text-[10.5px] text-gray-400 px-1`}>
                         {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                      </div>
+                      </p>
                     </div>
                   </div>
                 )
@@ -248,19 +252,24 @@ export default function MessagesPage() {
               <div ref={bottomRef} />
             </div>
 
-            <div className="messages-input-row">
+            {/* Input row */}
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
               <input
                 ref={inputRef}
-                className="messages-input"
+                className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2.5 text-[13.5px] text-gray-900 dark:text-white placeholder:text-gray-400 outline-none focus:border-brand-600 dark:focus:border-brand-400 transition-colors"
                 placeholder={'Message ' + selectedFriend.full_name + '…'}
                 value={text}
                 onChange={e => setText(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
               />
-              <button className="comment-submit" onClick={send} disabled={sending || !text.trim()}>
+              <button
+                onClick={send}
+                disabled={sending || !text.trim()}
+                className="w-9 h-9 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-40 flex items-center justify-center text-white transition-colors shrink-0"
+              >
                 {sending
-                  ? <div className="spinner" style={{ width: 12, height: 12 }} />
-                  : <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.Send /></span>}
+                  ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                  : <span className="flex w-3.5 h-3.5"><Icon.Send /></span>}
               </button>
             </div>
           </>

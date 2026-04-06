@@ -90,49 +90,40 @@ export default function SearchModal({ onClose }: Props) {
 
   return (
     <div
-      className="modal-overlay"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm px-4 pt-20"
       onClick={e => e.target === e.currentTarget && onClose()}
-      style={{ alignItems: 'flex-start', paddingTop: 80 }}
     >
-      <div className="modal" style={{ width: 560, padding: 0, overflow: 'hidden' }}>
+      <div className="w-full max-w-[560px] bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-800">
 
         {/* Search input */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '16px 20px', borderBottom: '1px solid var(--border)',
-        }}>
-          <span style={{ display:'flex', width:18, height:18, color:'var(--color-text-3)', flexShrink:0 }}><Icon.Search /></span>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+          <span className="flex w-[18px] h-[18px] text-gray-400 shrink-0"><Icon.Search /></span>
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search by name or @username…"
-            style={{
-              flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: 'var(--color-text)', fontSize: 15, fontFamily: 'var(--font-sans)',
-            }}
+            className="flex-1 bg-transparent outline-none text-[15px] text-gray-900 dark:text-white placeholder:text-gray-400"
             onKeyDown={e => e.key === 'Escape' && onClose()}
           />
           {query && (
-            <button onClick={() => setQuery('')} style={{ color:'var(--color-text-3)', display:'flex', width:16, height:16, background:'none', border:'none', cursor:'pointer', padding:4 }}><Icon.X /></button>
+            <button onClick={() => setQuery('')} className="flex w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors">
+              <Icon.X />
+            </button>
           )}
         </div>
 
         {/* Results */}
-        <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+        <div className="max-h-[480px] overflow-y-auto">
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-              <div className="spinner" />
-            </div>
+            <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
           ) : results.length === 0 && query ? (
-            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--color-text-3)' }}>
-              <div style={{ display:'flex', width:32, height:32, color:'var(--color-text-3)', margin:'0 auto 10px' }}><Icon.Search /></div>
-              <div style={{ fontSize: 14 }}>No creators found for <strong style={{ color: 'var(--color-text-2)' }}>"{query}"</strong></div>
+            <div className="flex flex-col items-center py-10 px-6">
+              <span className="flex w-8 h-8 text-gray-300 dark:text-gray-600 mb-2.5"><Icon.Search /></span>
+              <p className="text-[14px] text-gray-500 dark:text-gray-400">No creators found for <strong className="text-gray-700 dark:text-gray-300">"{query}"</strong></p>
             </div>
           ) : results.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--color-text-3)', fontSize: 14 }}>
-              Type a name or username to search creators
-            </div>
+            <p className="text-center py-10 px-6 text-[14px] text-gray-400">Type a name or username to search creators</p>
           ) : (
             results.map((p, i) => {
               const status = friendStatuses[p.id] || 'none'
@@ -140,56 +131,43 @@ export default function SearchModal({ onClose }: Props) {
               return (
                 <div
                   key={p.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '14px 20px',
-                    borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none',
-                    transition: 'background 0.1s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--gray-50)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  className={`flex items-center gap-3.5 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${i < results.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
                 >
-                  {/* Avatar — click to view profile */}
-                  <div
-                    className="post-avatar"
-                    style={{ width: 44, height: 44, fontSize: 15, flexShrink: 0, cursor: 'pointer' }}
+                  <button
+                    className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[15px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
                     onClick={() => goToProfile(p.username)}
                   >
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" /> : initials(p.full_name)}
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => goToProfile(p.username)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>{p.full_name}</span>
-                      {status === 'friends' && <span className="pro-chip" style={{ fontSize: 9 }}>✦ Friends</span>}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{p.username}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                      {(p as any).role_title && (
-                        <span style={{ fontSize: 12, color: 'var(--color-text-2)' }}>{(p as any).role_title}</span>
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(p.full_name)}
+                  </button>
+                  <button className="flex-1 min-w-0 text-left" onClick={() => goToProfile(p.username)}>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-[14px] text-gray-900 dark:text-white">{p.full_name}</span>
+                      {status === 'friends' && (
+                        <span className="text-[9px] font-semibold px-1.5 py-px bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded-full">✦ Friends</span>
                       )}
-                      <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                        {p.follower_count} followers
-                      </span>
                     </div>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <p className="text-[12px] text-gray-400 dark:text-gray-500 font-mono">@{p.username}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {(p as any).role_title && <span className="text-[12px] text-gray-500 dark:text-gray-400">{(p as any).role_title}</span>}
+                      <span className="text-[11px] text-gray-400">{p.follower_count} followers</span>
+                    </div>
+                  </button>
+                  <div className="flex gap-1.5 shrink-0">
                     {status !== 'friends' && (
                       <button
-                        className={`btn btn-sm ${btn.cls}`}
                         onClick={() => handleFriendAction(p)}
-                        style={{ whiteSpace: 'nowrap' }}
+                        className={`px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-colors ${
+                          btn.cls === 'btn-primary'
+                            ? 'bg-brand-600 hover:bg-brand-700 text-white'
+                            : 'border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
                       >
                         {btn.label}
                       </button>
                     )}
                     <button
-                      className="btn btn-sm btn-ghost"
                       onClick={() => goToProfile(p.username)}
-                      style={{ whiteSpace: 'nowrap' }}
+                      className="px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
                       View profile
                     </button>
@@ -201,10 +179,7 @@ export default function SearchModal({ onClose }: Props) {
         </div>
 
         {/* Footer hint */}
-        <div style={{
-          padding: '10px 20px', borderTop: '1px solid var(--border)',
-          display: 'flex', gap: 16, fontSize: 11, color: 'var(--color-text-3)',
-        }}>
+        <div className="flex gap-4 px-5 py-2.5 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400">
           <span>↵ View profile</span>
           <span>Esc Close</span>
         </div>

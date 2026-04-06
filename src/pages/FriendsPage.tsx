@@ -69,49 +69,62 @@ export default function FriendsPage() {
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   return (
-    <div style={{ maxWidth: 620, margin: '0 auto', padding: '24px 16px' }}>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, marginBottom: 4 }}>Friends</div>
-      <div style={{ fontSize: 13.5, color: 'var(--color-text-3)', marginBottom: 20 }}>
-        Friends is a mutual connection — both people must agree.
-      </div>
+    <div className="max-w-[620px] mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-1">Friends</h1>
+      <p className="text-[13.5px] text-gray-400 dark:text-gray-500 mb-5">Friends is a mutual connection — both people must agree.</p>
 
-      <div className="feed-tabs" style={{ marginBottom: 24 }}>
-        <div className={'feed-tab ' + (tab === 'friends' ? 'active' : '')} onClick={() => setTab('friends')}>
-          My friends {friends.length > 0 && <span style={{ color: 'var(--color-text-3)', marginLeft: 4 }}>({friends.length})</span>}
-        </div>
-        <div className={'feed-tab ' + (tab === 'requests' ? 'active' : '')} onClick={() => setTab('requests')}>
-          Requests {pendingCount > 0 && <span className="nav-badge" style={{ marginLeft: 6 }}>{pendingCount}</span>}
-        </div>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 dark:border-gray-800 mb-6">
+        <button
+          onClick={() => setTab('friends')}
+          className={`px-4 py-2.5 text-[13.5px] font-medium border-b-2 mb-[-1px] transition-colors ${
+            tab === 'friends' ? 'text-brand-600 dark:text-brand-400 border-brand-600 dark:border-brand-400' : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-300'
+          }`}
+        >
+          My friends {friends.length > 0 && <span className="text-gray-400 ml-1">({friends.length})</span>}
+        </button>
+        <button
+          onClick={() => setTab('requests')}
+          className={`px-4 py-2.5 text-[13.5px] font-medium border-b-2 mb-[-1px] transition-colors flex items-center gap-2 ${
+            tab === 'requests' ? 'text-brand-600 dark:text-brand-400 border-brand-600 dark:border-brand-400' : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-300'
+          }`}
+        >
+          Requests
+          {pendingCount > 0 && <span className="text-[10px] font-semibold bg-brand-600 text-white px-1.5 py-px rounded-full">{pendingCount}</span>}
+        </button>
       </div>
 
       {loading ? (
-        <div className="loading-center"><div className="spinner" /></div>
+        <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : tab === 'requests' ? (
         requests.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon"><Icon.UserPlus /></div>
-            <div className="empty-title">No pending friend requests</div>
-            <div className="empty-sub">When someone sends you a friend request, it will appear here</div>
+          <div className="flex flex-col items-center justify-center py-16">
+            <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.UserPlus /></span>
+            <p className="font-semibold text-gray-600 dark:text-gray-400">No pending friend requests</p>
+            <p className="text-sm mt-1 text-gray-400">When someone sends you a request, it'll appear here</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="space-y-2.5">
             {requests.map(req => {
               const sender = req.sender
               return (
-                <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--gray-0)', border: '1px solid var(--color-border)', borderRadius: 'var(--r-xl)', padding: '16px 18px' }}>
-                  <div className="post-avatar" style={{ width: 46, height: 46, fontSize: 16, flexShrink: 0, cursor: 'pointer' }}
-                    onClick={() => sender?.username && navigate('/profile/' + sender.username)}>
-                    {sender?.avatar_url ? <img src={sender.avatar_url} alt="" /> : initials(sender?.full_name || '?')}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => sender?.username && navigate('/profile/' + sender.username)}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{sender?.full_name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{sender?.username}</div>
-                    {(sender as any)?.role_title && <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginTop: 2 }}>{(sender as any).role_title}</div>}
-                    <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>{formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleDecline(req.sender_id)}>Decline</button>
-                    <button className="btn btn-primary btn-sm" onClick={() => handleAccept(req.sender_id, sender?.full_name)}>Accept</button>
+                <div key={req.id} className="flex items-center gap-3.5 px-4 py-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs">
+                  <button onClick={() => sender?.username && navigate('/profile/' + sender.username)} className="w-12 h-12 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[15px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                    {sender?.avatar_url ? <img src={sender.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(sender?.full_name || '?')}
+                  </button>
+                  <button className="flex-1 min-w-0 text-left" onClick={() => sender?.username && navigate('/profile/' + sender.username)}>
+                    <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{sender?.full_name}</p>
+                    <p className="text-[12px] text-gray-400 dark:text-gray-500 font-mono">@{sender?.username}</p>
+                    {(sender as any)?.role_title && <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5">{(sender as any).role_title}</p>}
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}</p>
+                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => handleDecline(req.sender_id)} className="px-3.5 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      Decline
+                    </button>
+                    <button onClick={() => handleAccept(req.sender_id, sender?.full_name)} className="px-3.5 py-2 bg-brand-600 text-white rounded-full text-sm font-medium hover:bg-brand-700 transition-colors">
+                      Accept
+                    </button>
                   </div>
                 </div>
               )
@@ -120,34 +133,34 @@ export default function FriendsPage() {
         )
       ) : (
         friends.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon"><Icon.Friends /></div>
-            <div className="empty-title">No friends yet</div>
-            <div className="empty-sub">Visit someone's profile and send them a friend request</div>
+          <div className="flex flex-col items-center justify-center py-16">
+            <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Friends /></span>
+            <p className="font-semibold text-gray-600 dark:text-gray-400">No friends yet</p>
+            <p className="text-sm mt-1 text-gray-400">Visit someone's profile and send them a friend request</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {friends.map(f => {
-              return (
-                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--gray-0)', border: '1px solid var(--color-border)', borderRadius: 'var(--r-xl)', padding: '14px 18px' }}>
-                  <div className="post-avatar" style={{ width: 42, height: 42, fontSize: 14, flexShrink: 0, cursor: 'pointer' }}
-                    onClick={() => navigate('/profile/' + f.username)}>
-                    {f.avatar_url ? <img src={f.avatar_url} alt="" /> : initials(f.full_name)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate('/profile/' + f.username)}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{f.full_name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontFamily: 'var(--font-mono)' }}>@{f.username}</div>
-                    {(f as any).role_title && <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginTop: 2 }}>{(f as any).role_title}</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => navigate('/messages?with=' + f.id)}>
-                      <span style={{ display: 'flex', width: 13, height: 13 }}><Icon.MessageCircle /></span> Message
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profile/' + f.username)}>Profile</button>
-                  </div>
+          <div className="space-y-2">
+            {friends.map(f => (
+              <div key={f.id} className="flex items-center gap-3.5 px-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs hover:border-gray-200 dark:hover:border-gray-700 transition-all">
+                <button onClick={() => navigate('/profile/' + f.username)} className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[14px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                  {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
+                </button>
+                <button className="flex-1 min-w-0 text-left" onClick={() => navigate('/profile/' + f.username)}>
+                  <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{f.full_name}</p>
+                  <p className="text-[12px] text-gray-400 dark:text-gray-500 font-mono">@{f.username}</p>
+                  {(f as any).role_title && <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5">{(f as any).role_title}</p>}
+                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => navigate('/messages?with=' + f.id)} className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <span className="flex w-3.5 h-3.5"><Icon.MessageCircle /></span>
+                    Message
+                  </button>
+                  <button onClick={() => navigate('/profile/' + f.username)} className="px-3.5 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    Profile
+                  </button>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )
       )}

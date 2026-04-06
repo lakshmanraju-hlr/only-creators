@@ -81,88 +81,107 @@ export default function OnboardingModal({ onDone }: Props) {
   const isLastStep = step === STEPS.length - 1
   const currentStep = STEPS[step]
 
+  const fieldClass = "w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-[13.5px] text-gray-900 dark:text-white placeholder:text-gray-400 outline-none focus:border-brand-600 dark:focus:border-brand-400 transition-colors"
+  const labelClass = "block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5"
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--gray-0)', borderRadius: 'var(--r-2xl)', width: '100%', maxWidth: 480, boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}>
+    <div className="fixed inset-0 bg-black/55 z-[1000] flex items-center justify-center p-4">
+      <div className="w-full max-w-[480px] bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden">
 
         {/* Progress bar */}
-        <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
+        <div className="flex gap-1 px-6 pt-4">
           {STEPS.map((_, i) => (
-            <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= step ? 'var(--color-primary)' : 'var(--color-border)', transition: 'background 0.3s' }} />
+            <div
+              key={i}
+              className={`flex-1 h-[3px] rounded-full transition-colors duration-300 ${i <= step ? 'bg-brand-600' : 'bg-gray-100 dark:bg-gray-800'}`}
+            />
           ))}
         </div>
 
-        <div style={{ padding: '24px 28px 28px' }}>
+        <div className="px-7 pb-7 pt-6">
           {/* Info steps */}
           {!isLastStep && (
-            <div style={{ textAlign: 'center', padding: '8px 0 24px' }}>
-              <div style={{ fontSize: 44, marginBottom: 16, lineHeight: 1 }}>{currentStep.icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.4px', marginBottom: 10 }}>{currentStep.title}</div>
-              <div style={{ fontSize: 14, color: 'var(--color-text-2)', lineHeight: 1.65, maxWidth: 360, margin: '0 auto' }}>{currentStep.sub}</div>
+            <div className="text-center py-2 pb-6">
+              <div className="text-[44px] leading-none mb-4">{currentStep.icon}</div>
+              <h2 className="text-[20px] font-bold tracking-tight text-gray-900 dark:text-white mb-2.5">{currentStep.title}</h2>
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed max-w-[360px] mx-auto">{currentStep.sub}</p>
             </div>
           )}
 
           {/* Profile setup step */}
           {isLastStep && (
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.3px', marginBottom: 4 }}>{currentStep.title}</div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 20 }}>{currentStep.sub}</div>
+              <h2 className="text-[18px] font-bold tracking-tight text-gray-900 dark:text-white mb-1">{currentStep.title}</h2>
+              <p className="text-[13px] text-gray-400 mb-5">{currentStep.sub}</p>
 
-              {/* Avatar upload */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                <label style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
-                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px dashed var(--color-primary)', fontSize: 22, fontWeight: 700, color: 'var(--color-primary)' }}>
+              {/* Avatar */}
+              <div className="flex items-center gap-4 mb-5">
+                <label className="cursor-pointer relative shrink-0">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                  <div className="w-[72px] h-[72px] rounded-full overflow-hidden bg-brand-50 dark:bg-brand-600/10 border-2 border-dashed border-brand-600 flex items-center justify-center text-[22px] font-bold text-brand-600">
                     {avatarPreview
-                      ? <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
                       : initials(profile?.full_name || '')}
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ display: 'flex', width: 11, height: 11, color: '#fff' }}><Icon.Camera /></span>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-brand-600 flex items-center justify-center">
+                    <span className="flex w-[11px] h-[11px] text-white"><Icon.Camera /></span>
                   </div>
                 </label>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{profile?.full_name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>@{profile?.username}</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>Tap the photo to upload</div>
+                  <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{profile?.full_name}</p>
+                  <p className="text-[12px] text-gray-400">@{profile?.username}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">Tap the photo to upload</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="field-label" style={{ fontSize: 11 }}>Job title</label>
-                  <input className="field-input" placeholder="e.g. Surgeon, Engineer…" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
+              <div className="grid grid-cols-2 gap-2.5 mb-3">
+                <div>
+                  <label className={labelClass}>Job title</label>
+                  <input className={fieldClass} placeholder="e.g. Surgeon, Engineer…" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
                 </div>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="field-label" style={{ fontSize: 11 }}>Workplace</label>
-                  <input className="field-input" placeholder="e.g. Google, NHS…" value={workplace} onChange={e => setWorkplace(e.target.value)} />
+                <div>
+                  <label className={labelClass}>Workplace</label>
+                  <input className={fieldClass} placeholder="e.g. Google, NHS…" value={workplace} onChange={e => setWorkplace(e.target.value)} />
                 </div>
               </div>
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label className="field-label" style={{ fontSize: 11 }}>Short bio</label>
-                <textarea className="field-textarea" style={{ minHeight: 64 }} placeholder="Tell the world about your work…" value={bio} onChange={e => setBio(e.target.value)} />
+              <div>
+                <label className={labelClass}>Short bio</label>
+                <textarea
+                  className={fieldClass + ' resize-none'}
+                  style={{ minHeight: 64 }}
+                  placeholder="Tell the world about your work…"
+                  value={bio}
+                  onChange={e => setBio(e.target.value)}
+                />
               </div>
             </div>
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 10, marginTop: isLastStep ? 20 : 4 }}>
+          <div className={`flex gap-2.5 ${isLastStep ? 'mt-5' : 'mt-1'}`}>
             {isLastStep ? (
               <>
-                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onDone} disabled={saving}>
-                  Skip for now
-                </button>
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveAndDone} disabled={saving}>
-                  {saving ? <span className="spinner" /> : 'Save & get started'}
+                <button
+                  className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-[14px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  onClick={onDone} disabled={saving}
+                >Skip for now</button>
+                <button
+                  className="flex-[2] py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl text-[14px] font-medium transition-colors flex items-center justify-center gap-2"
+                  onClick={saveAndDone} disabled={saving}
+                >
+                  {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Save & get started'}
                 </button>
               </>
             ) : (
               <>
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={onDone}>
+                <button className="text-[12px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2" onClick={onDone}>
                   Skip tour
                 </button>
-                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setStep(s => s + 1)}>
-                  Next <span style={{ display: 'flex', width: 14, height: 14 }}><Icon.ArrowRight /></span>
+                <button
+                  className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-[14px] font-medium flex items-center justify-center gap-2 transition-colors"
+                  onClick={() => setStep(s => s + 1)}
+                >
+                  Next <span className="flex w-3.5 h-3.5"><Icon.ArrowRight /></span>
                 </button>
               </>
             )}

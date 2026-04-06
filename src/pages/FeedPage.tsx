@@ -342,75 +342,119 @@ export default function FeedPage({ onPost }: Props) {
     pro: 'No pro posts yet',
   }
 
-  return (
-    <div className="feed-wrap">
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 
-      {/* ── Landing welcome banner ── */}
-      <div className="feed-hero">
-        <div className="feed-hero-left">
-          <div className="feed-hero-greeting">
-            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, <strong>{profile?.full_name?.split(' ')[0] || 'Creator'}</strong>
-          </div>
-          <div className="feed-hero-sub">
+  return (
+    <div className="max-w-[600px] mx-auto px-4 py-5">
+
+      {/* ── Welcome banner ── */}
+      <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-gray-950 border border-brand-100 dark:border-brand-900/40 rounded-2xl px-5 py-4 mb-5">
+        <div>
+          <p className="text-[15px] font-semibold text-gray-900 dark:text-white">
+            Good {greeting}, <strong>{profile?.full_name?.split(' ')[0] || 'Creator'}</strong>
+          </p>
+          <p className="text-[12.5px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
             Explore, create, and connect across professional fields.
-          </div>
+          </p>
         </div>
-        <div className="feed-hero-actions">
-          <button className="btn btn-ghost btn-sm" style={{ gap:5, fontSize:12 }} onClick={() => navigate('/explore')}>
-            <span style={{ display:'flex', width:13, height:13 }}><Icon.Explore /></span>
-            Explore fields
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/explore')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-[12px] font-medium text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 transition-colors"
+          >
+            <span className="flex w-3 h-3"><Icon.Explore /></span>
+            Explore
           </button>
-          <button className="btn btn-primary btn-sm" style={{ gap:5 }} onClick={onPost}>
-            <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
+          <button
+            onClick={onPost}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-600 text-white text-[12px] font-medium hover:bg-brand-700 transition-colors"
+          >
+            <span className="flex w-3 h-3"><Icon.Plus /></span>
             New post
           </button>
         </div>
       </div>
 
-      <div className="feed-tabs">
+      {/* ── Feed tabs ── */}
+      <div className="flex border-b border-gray-100 dark:border-gray-800 mb-4">
         {tabs.map(t => (
-          <div key={t.key} className={`feed-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-[13.5px] font-medium border-b-2 mb-[-1px] transition-colors ${
+              tab === t.key
+                ? 'text-brand-600 dark:text-brand-400 border-brand-600 dark:border-brand-400'
+                : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-300'
+            }`}
+          >
             {t.label}
-          </div>
+          </button>
         ))}
       </div>
 
-      <div className="composer">
-        <div className="composer-top">
-          <div className="post-avatar" style={{ width: 36, height: 36, fontSize: 12, flexShrink: 0 }}>
+      {/* ── Composer ── */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl px-4 py-3.5 mb-4 shadow-xs focus-within:border-gray-200 dark:focus-within:border-gray-700 focus-within:shadow-card transition-all">
+        <div className="flex gap-3">
+          <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
             {profile?.avatar_url
-              ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
               : initials(profile?.full_name || '')}
           </div>
-          <textarea className="composer-ta" placeholder="Share something with the world…"
-            value={composerText} onChange={e => setComposerText(e.target.value)} />
+          <textarea
+            className="flex-1 bg-transparent border-none outline-none text-[14px] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-none min-h-[52px] leading-relaxed pt-0.5"
+            placeholder="Share something with the world…"
+            value={composerText}
+            onChange={e => setComposerText(e.target.value)}
+          />
         </div>
-        <div className="composer-foot">
-          <div className="composer-tool" onClick={onPost} title="Photo"><Icon.Camera /></div>
-          <div className="composer-tool" onClick={onPost} title="Audio"><Icon.Music /></div>
-          <div className="composer-tool" onClick={onPost} title="Video"><Icon.Video /></div>
-          <div className="composer-tool" onClick={onPost} title="Poem"><Icon.PenLine /></div>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-text-3)' }}>{composerText.length}/500</span>
-          <button className="btn btn-primary btn-sm" style={{ marginLeft: 10 }}
-            onClick={quickPost} disabled={posting || !composerText.trim()}>
-            {posting ? <span className="spinner" /> : 'Post'}
+        <div className="flex items-center gap-1 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800">
+          {[
+            { icon: <Icon.Camera />, title: 'Photo' },
+            { icon: <Icon.Music />, title: 'Audio' },
+            { icon: <Icon.Video />, title: 'Video' },
+            { icon: <Icon.PenLine />, title: 'Poem' },
+          ].map(({ icon, title }) => (
+            <button
+              key={title}
+              title={title}
+              onClick={onPost}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <span className="flex w-[15px] h-[15px]">{icon}</span>
+            </button>
+          ))}
+          <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-600">{composerText.length}/500</span>
+          <button
+            onClick={quickPost}
+            disabled={posting || !composerText.trim()}
+            className="ml-2.5 px-4 py-1.5 bg-brand-600 text-white text-[13px] font-medium rounded-full hover:bg-brand-700 transition-colors disabled:opacity-40 flex items-center gap-1.5"
+          >
+            {posting ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Post'}
           </button>
         </div>
       </div>
 
+      {/* ── Feed items ── */}
       {loading ? (
-        <div className="loading-center"><div className="spinner" /></div>
+        <div className="flex justify-center py-16">
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        </div>
       ) : feedItems.filter(i => !isFeedSection(i)).length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon"><Icon.Feed /></div>
-          <div className="empty-title">{emptyMessages[tab]}</div>
-          <div style={{ marginTop: 12 }}>
-            <button className="btn btn-primary btn-sm" onClick={onPost}>Create a post</button>
-          </div>
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Feed /></span>
+          <p className="font-semibold text-gray-600 dark:text-gray-400">{emptyMessages[tab]}</p>
+          <button onClick={onPost} className="mt-4 px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-full hover:bg-brand-700 transition-colors">
+            Create a post
+          </button>
         </div>
       ) : feedItems.map(item =>
         isFeedSection(item) ? (
-          <div key={item.id} className="feed-section-divider">{item.label}</div>
+          <div key={item.id} className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 my-5">
+            <div className="w-5 h-px bg-gray-200 dark:bg-gray-700" />
+            {item.label}
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          </div>
         ) : (
           <PostCard key={item.id} post={item} onUpdated={fetchPosts} />
         )

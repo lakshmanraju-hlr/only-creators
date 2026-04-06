@@ -71,20 +71,20 @@ export default function NotificationsPage() {
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: '20px 16px' }}>
-      <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.4px', marginBottom: 4 }}>Notifications</div>
-      <div style={{ fontSize: 13.5, color: 'var(--color-text-3)', marginBottom: 20 }}>Your latest activity and peer endorsements</div>
+    <div className="max-w-[600px] mx-auto px-4 py-5">
+      <h1 className="text-[22px] font-semibold tracking-tight text-gray-900 dark:text-white mb-1">Notifications</h1>
+      <p className="text-[13.5px] text-gray-400 dark:text-gray-500 mb-5">Your latest activity and peer endorsements</p>
 
       {loading ? (
-        <div className="loading-center"><div className="spinner" /></div>
+        <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
       ) : notifications.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon"><Icon.Bell /></div>
-          <div className="empty-title">No notifications yet</div>
-          <div className="empty-sub">When creators interact with your posts, you'll see it here</div>
+        <div className="flex flex-col items-center justify-center py-16">
+          <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Bell /></span>
+          <p className="font-semibold text-gray-600 dark:text-gray-400">No notifications yet</p>
+          <p className="text-sm mt-1 text-gray-400">When creators interact with your posts, you'll see it here</p>
         </div>
       ) : (
-        <div style={{ background: 'var(--gray-0)', border: '1px solid var(--color-border)', borderRadius: 'var(--r-2xl)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' }}>
+        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs">
           {notifications.map((n, i) => {
             const meta = getNotifMeta(n)
             const actor = (n as any).actor
@@ -92,39 +92,36 @@ export default function NotificationsPage() {
               <div
                 key={n.id}
                 onClick={meta.action}
-                style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 16px',
-                  borderBottom: i < notifications.length - 1 ? '1px solid var(--color-border)' : 'none',
-                  cursor: meta.action ? 'pointer' : 'default',
-                  background: !n.is_read ? 'var(--blue-50)' : 'transparent',
-                  transition: 'background 0.12s',
-                }}
-                onMouseEnter={e => { if (meta.action) e.currentTarget.style.background = n.is_read ? 'var(--gray-50)' : 'var(--blue-100)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = !n.is_read ? 'var(--blue-50)' : 'transparent' }}
+                className={[
+                  'flex items-start gap-3 px-4 py-3.5 transition-colors',
+                  i < notifications.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : '',
+                  meta.action ? 'cursor-pointer' : 'cursor-default',
+                  !n.is_read ? 'bg-brand-50 dark:bg-brand-600/10 hover:bg-brand-100 dark:hover:bg-brand-600/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                ].join(' ')}
               >
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: !n.is_read ? 'var(--color-primary)' : 'transparent', flexShrink: 0, marginTop: 6 }} />
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: meta.bg, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${!n.is_read ? 'bg-brand-600' : 'bg-transparent'}`} />
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: meta.bg, color: meta.color }}>
                   {meta.icon}
                 </div>
                 {actor && (
-                  <div className="post-avatar" style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0, cursor: 'pointer' }}
-                    onClick={e => { e.stopPropagation(); if (actor.username) navigate('/profile/' + actor.username) }}>
-                    {actor.avatar_url ? <img src={actor.avatar_url} alt="" /> : initials(actor.full_name)}
-                  </div>
+                  <button
+                    className="w-8 h-8 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
+                    onClick={e => { e.stopPropagation(); if (actor.username) navigate('/profile/' + actor.username) }}
+                  >
+                    {actor.avatar_url ? <img src={actor.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(actor.full_name)}
+                  </button>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--color-text)' }}>
-                    <strong style={{ fontWeight: 600 }}>{(n as any).actor?.full_name || 'Someone'}</strong>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13.5px] leading-snug text-gray-900 dark:text-white">
+                    <span className="font-semibold">{(n as any).actor?.full_name || 'Someone'}</span>
                     {' '}{meta.text.replace((n as any).actor?.full_name || 'Someone', '').trim()}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 3 }}>
+                  </p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                  </div>
+                  </p>
                 </div>
                 {meta.action && (
-                  <div style={{ display: 'flex', width: 14, height: 14, color: 'var(--color-text-3)', flexShrink: 0, marginTop: 4 }}>
-                    <Icon.ChevronRight />
-                  </div>
+                  <span className="flex w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0 mt-1"><Icon.ChevronRight /></span>
                 )}
               </div>
             )

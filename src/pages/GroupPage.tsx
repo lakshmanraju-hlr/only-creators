@@ -129,113 +129,120 @@ export default function GroupPage() {
 
   function initials(n: string | undefined) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
-  if (loading) return <div className="loading-center"><div className="spinner" /></div>
+  if (loading) return (
+    <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
+  )
   if (!group) return (
-    <div className="empty-state" style={{ marginTop:60 }}>
-      <div className="empty-title">Group not found</div>
-      <button className="btn btn-ghost btn-sm" style={{ marginTop:12 }} onClick={() => navigate('/explore')}>Back to Explore</button>
+    <div className="flex flex-col items-center justify-center py-20">
+      <p className="font-semibold text-gray-600 dark:text-gray-400">Group not found</p>
+      <button className="mt-3 text-[13px] text-brand-600 font-medium" onClick={() => navigate('/explore')}>Back to Explore</button>
     </div>
   )
 
   return (
-    <div style={{ maxWidth:640, margin:'0 auto', padding:'20px 16px' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:18 }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)}>
-          <span style={{ display:'flex', width:14, height:14 }}><Icon.ArrowLeft /></span> Back
-        </button>
-      </div>
+    <div className="max-w-[640px] mx-auto px-4 py-5">
+      <button
+        className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-5 transition-colors"
+        onClick={() => navigate(-1)}
+      >
+        <span className="flex w-3.5 h-3.5"><Icon.ArrowLeft /></span> Back
+      </button>
 
-      <div className="group-header">
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div className="group-header-name">{group.name}</div>
-            {group.description && <div className="group-header-desc">{group.description}</div>}
-            <div className="group-header-meta">
+      {/* Group header card */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 mb-5 shadow-xs">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[20px] font-bold text-gray-900 dark:text-white tracking-tight">{group.name}</h1>
+            {group.description && <p className="text-[13.5px] text-gray-500 dark:text-gray-400 mt-1">{group.description}</p>}
+            <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-2">
               {group.post_count} post{group.post_count === 1 ? '' : 's'}
               {' · '}
               {group.member_count} member{group.member_count === 1 ? '' : 's'}
               {' · '}
-              <span style={{ color:'var(--color-text-3)' }}>{getProfMeta(group.discipline)?.label ?? group.discipline}</span>
-            </div>
+              <span>{getProfMeta(group.discipline)?.label ?? group.discipline}</span>
+            </p>
           </div>
-          <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
-            {/* Any logged-in member/creator can post here */}
+          <div className="flex items-center gap-2 shrink-0">
             {profile && (isMember || isCreator) && (
-              <button className="btn btn-primary btn-sm" style={{ gap:5 }} onClick={() => setShowUpload(true)}>
-                <span style={{ display:'flex', width:13, height:13 }}><Icon.Plus /></span>
+              <button
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full text-[13px] font-medium transition-colors"
+                onClick={() => setShowUpload(true)}
+              >
+                <span className="flex w-3 h-3"><Icon.Plus /></span>
                 Post here
               </button>
             )}
-            {/* Any logged-in user can join/leave — not shown to creator */}
             {profile && !isCreator && (
               <button
-                className={isMember ? 'btn btn-ghost btn-sm' : 'btn btn-sm'}
-                style={isMember ? { color:'var(--color-text-2)' } : { background:'var(--color-primary)', color:'#fff' }}
                 onClick={toggleMembership}
                 disabled={joining}
+                className={`px-3.5 py-2 rounded-full text-[13px] font-medium transition-colors ${
+                  isMember
+                    ? 'border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    : 'bg-brand-600 hover:bg-brand-700 text-white'
+                }`}
               >
-                {joining ? <span className="spinner" /> : isMember ? 'Leave' : 'Join'}
+                {joining ? <div className="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" /> : isMember ? 'Leave' : 'Join'}
               </button>
             )}
             {canDelete && !confirmDelete && (
               <button
-                className="btn btn-ghost btn-sm"
-                style={{ color:'var(--red-500)' }}
+                className="flex w-8 h-8 items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-full transition-colors"
                 onClick={() => setConfirmDelete(true)}
               >
-                <span style={{ display:'flex', width:13, height:13 }}><Icon.Trash /></span>
+                <span className="flex w-3.5 h-3.5"><Icon.Trash /></span>
               </button>
             )}
           </div>
         </div>
 
         {confirmDelete && (
-          <div className="group-delete-confirm">
-            <div style={{ fontSize:13, color:'var(--color-text-2)', marginBottom:10 }}>
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-[13px] text-gray-600 dark:text-gray-400 mb-3">
               Delete this group? Posts won't be deleted, but they'll be removed from the group.
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</button>
-              <button className="btn btn-sm" style={{ background:'var(--red-500)', color:'#fff' }} onClick={deleteGroup} disabled={deleting}>
-                {deleting ? <><span className="spinner" /> Deleting…</> : 'Yes, delete'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                className="px-3.5 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                onClick={() => setConfirmDelete(false)} disabled={deleting}
+              >Cancel</button>
+              <button
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-full text-[13px] font-medium transition-colors flex items-center gap-1.5"
+                onClick={deleteGroup} disabled={deleting}
+              >
+                {deleting ? <><div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> Deleting…</> : 'Yes, delete'}
               </button>
             </div>
           </div>
         )}
 
         {isCreator && (
-          <div style={{ marginTop:10, fontSize:11, color:'var(--color-primary)', fontWeight:600, display:'flex', alignItems:'center', gap:5 }}>
-            <span style={{ display:'flex', width:11, height:11 }}><Icon.Award /></span>
+          <div className="flex items-center gap-1.5 mt-3 text-[11px] font-semibold text-brand-600">
+            <span className="flex w-3 h-3"><Icon.Award /></span>
             You created this group
           </div>
         )}
       </div>
 
-      <div style={{ marginTop:20 }}>
-        {posts.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-title">No posts in this group yet</div>
-            {profile && (isMember || isCreator) ? (
-              <div style={{ marginTop:12 }}>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowUpload(true)}>Be the first to post</button>
-              </div>
-            ) : profile ? (
-              <div className="empty-sub">Join the group to post here</div>
-            ) : null}
-          </div>
-        ) : (
-          posts.map(p => (
-            <PostCard key={p.id} post={p} onUpdated={reloadPosts} />
-          ))
-        )}
-      </div>
+      {/* Posts */}
+      {posts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <p className="font-semibold text-gray-600 dark:text-gray-400">No posts in this group yet</p>
+          {profile && (isMember || isCreator) ? (
+            <button className="mt-3 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full text-[13px] font-medium transition-colors" onClick={() => setShowUpload(true)}>
+              Be the first to post
+            </button>
+          ) : profile ? (
+            <p className="text-sm mt-1 text-gray-400">Join the group to post here</p>
+          ) : null}
+        </div>
+      ) : (
+        posts.map(p => <PostCard key={p.id} post={p} onUpdated={reloadPosts} />)
+      )}
 
       {showUpload && (
         <UploadModal
-          onClose={() => {
-            setShowUpload(false)
-            setTimeout(() => reloadPosts(), 600)
-          }}
+          onClose={() => { setShowUpload(false); setTimeout(() => reloadPosts(), 600) }}
           defaultGroup={group}
           defaultDiscipline={group.discipline ?? undefined}
         />

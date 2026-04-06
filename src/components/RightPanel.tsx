@@ -102,45 +102,50 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
     return bActive - aActive
   })
 
+  const sectionClass = "mb-5 pb-5 border-b border-gray-100 dark:border-gray-800 last:border-0 last:pb-0"
+  const headingClass = "flex items-center text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
+
   return (
     <>
       {/* Friends & Active */}
       {friends.length > 0 && (
-        <div className="rp-section">
-          <div className="rp-heading">
+        <div className={sectionClass}>
+          <div className={headingClass}>
             Friends
-            <span style={{ marginLeft:'auto', fontSize:11, color:'var(--color-text-3)', fontWeight:400 }}>
-              {activeIds.size > 0 && <><span className="online-dot-sm" /> {activeIds.size} active</>}
-            </span>
+            {activeIds.size > 0 && (
+              <span className="ml-auto text-[10px] font-normal normal-case tracking-normal text-gray-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                {activeIds.size} active
+              </span>
+            )}
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+          <div className="flex flex-col gap-0.5">
             {sortedFriends.map(f => {
               const isActive = activeIds.has(f.id)
               return (
-                <div
+                <button
                   key={f.id}
-                  className="friend-row"
                   onClick={() => navigate('/messages?with=' + f.id)}
                   title={`Message ${f.full_name}`}
+                  className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left w-full"
                 >
-                  <div style={{ position:'relative', flexShrink:0 }}>
-                    <div className="sug-av" style={{ width:34, height:34, fontSize:12 }}>
-                      {f.avatar_url ? <img src={f.avatar_url} alt="" /> : initials(f.full_name)}
+                  <div className="relative shrink-0">
+                    <div className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300">
+                      {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
                     </div>
-                    {isActive && <span className="online-dot" />}
+                    {isActive && <span className="absolute -bottom-px -right-px w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-950" />}
                   </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:12.5, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.full_name}</div>
-                    {(f as any).role_title && <div style={{ fontSize:10, color:'var(--color-text-3)' }}>{(f as any).role_title}</div>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-medium text-gray-900 dark:text-white truncate">{f.full_name}</p>
+                    {(f as any).role_title && <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{(f as any).role_title}</p>}
                   </div>
-                  <span style={{ display:'flex', width:12, height:12, color:'var(--color-text-3)', flexShrink:0 }}><Icon.MessageCircle /></span>
-                </div>
+                  <span className="flex w-3 h-3 text-gray-400 shrink-0"><Icon.MessageCircle /></span>
+                </button>
               )
             })}
           </div>
           <button
-            className="btn btn-ghost btn-sm btn-full"
-            style={{ marginTop:8, fontSize:11 }}
+            className="mt-2 w-full py-1.5 text-[11px] text-brand-600 font-medium hover:bg-brand-50 dark:hover:bg-brand-600/10 rounded-lg transition-colors"
             onClick={() => navigate('/friends')}
           >
             See all friends
@@ -150,58 +155,66 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
 
       {/* Suggested creators */}
       {suggested.length > 0 && (
-        <div className="rp-section">
-          <div className="rp-heading">Suggested creators</div>
-          {suggested.map(c => {
-            return (
-              <div key={c.id} className="sug-user">
-                <div className="sug-av" style={{ cursor:'pointer' }} onClick={() => navigate(`/profile/${c.username}`)}>
-                  {c.avatar_url ? <img src={c.avatar_url} alt="" /> : initials(c.full_name)}
-                </div>
-                <div style={{ flex:1, minWidth:0, cursor:'pointer' }} onClick={() => navigate(`/profile/${c.username}`)}>
-                  <div className="sug-name">{c.full_name}</div>
-                  {(c as any).role_title && <div className="sug-role">{(c as any).role_title}</div>}
-                </div>
-                <button className={`follow-btn ${following.has(c.id) ? 'following' : ''}`} onClick={() => toggleFollow(c.id, c.full_name)}>
+        <div className={sectionClass}>
+          <div className={headingClass}>Suggested creators</div>
+          <div className="flex flex-col gap-0.5">
+            {suggested.map(c => (
+              <div key={c.id} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <button
+                  className="w-8 h-8 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
+                  onClick={() => navigate(`/profile/${c.username}`)}
+                >
+                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(c.full_name)}
+                </button>
+                <button className="flex-1 min-w-0 text-left" onClick={() => navigate(`/profile/${c.username}`)}>
+                  <p className="text-[12.5px] font-medium text-gray-900 dark:text-white truncate">{c.full_name}</p>
+                  {(c as any).role_title && <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{(c as any).role_title}</p>}
+                </button>
+                <button
+                  onClick={() => toggleFollow(c.id, c.full_name)}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors ${
+                    following.has(c.id)
+                      ? 'border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      : 'bg-brand-600 hover:bg-brand-700 text-white'
+                  }`}
+                >
                   {following.has(c.id) ? 'Following' : 'Follow'}
                 </button>
               </div>
-            )
-          })}
+            ))}
+          </div>
         </div>
       )}
 
       {/* Your Groups */}
       {groups.length > 0 && (
-        <div className="rp-section">
-          <div className="rp-heading">
+        <div className={sectionClass}>
+          <div className={headingClass}>
             Your groups
             <button
-              style={{ marginLeft:'auto', fontSize:11, color:'var(--color-primary)', background:'none', border:'none', cursor:'pointer', padding:0, fontWeight:500 }}
+              className="ml-auto text-[11px] font-normal normal-case tracking-normal text-brand-600 hover:underline"
               onClick={() => navigate('/explore?discipline=' + getCanonicalDiscipline(profile?.profession))}
             >
               See all
             </button>
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+          <div className="flex flex-col gap-0.5">
             {groups.map(g => {
               const joined = joinedGroupIds.has(g.id)
               return (
-                <div
+                <button
                   key={g.id}
-                  className="friend-row"
                   onClick={() => navigate('/groups/' + g.slug)}
                   title={g.name}
+                  className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left w-full"
                 >
-                  <div style={{ width:30, height:30, borderRadius:'var(--r-md)', background:'var(--color-primary-light)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <span style={{ fontSize:13 }}>◈</span>
+                  <div className="w-[30px] h-[30px] rounded-lg bg-brand-50 dark:bg-brand-600/10 flex items-center justify-center text-[13px] shrink-0">◈</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-medium text-gray-900 dark:text-white truncate">{g.name}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{g.post_count} posts · {g.member_count} members</p>
                   </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:12.5, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{g.name}</div>
-                    <div style={{ fontSize:10, color:'var(--color-text-3)' }}>{g.post_count} posts · {g.member_count} members</div>
-                  </div>
-                  {joined && <span style={{ fontSize:10, color:'var(--color-primary)', fontWeight:600, flexShrink:0 }}>Joined</span>}
-                </div>
+                  {joined && <span className="text-[10px] text-brand-600 font-semibold shrink-0">Joined</span>}
+                </button>
               )
             })}
           </div>
