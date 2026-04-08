@@ -7,7 +7,7 @@ import PostCard from '@/components/PostCard'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 
-type FeedTab = 'all' | 'following' | 'friends' | 'pro'
+type FeedTab = 'all' | 'following'
 interface Props { onPost: () => void }
 
 // Labelled section dividers injected between post groups
@@ -124,12 +124,11 @@ export default function FeedPage({ onPost }: Props) {
       [...arr].sort((a, b) => computePostScore(b, now, myFieldSet, followingSet, friendSet) - computePostScore(a, now, myFieldSet, followingSet, friendSet))
 
     try {
-      // ── Social tabs: chronological with relationship bonus ────────────
-      if (tab === 'following' || tab === 'friends') {
-        const userIdFilter = tab === 'following' ? followingIds : friendIds
-        if (userIdFilter.length === 0) { setFeedItems([]); setLoading(false); return }
+      // ── Following tab: chronological ─────────────────────────────────
+      if (tab === 'following') {
+        if (followingIds.length === 0) { setFeedItems([]); setLoading(false); return }
         const { data, error } = await supabase.from('posts').select(FIELDS)
-          .in('user_id', userIdFilter)
+          .in('user_id', followingIds)
           .order('created_at', { ascending: false })
           .limit(50)
         if (error) { toast.error(error.message); setLoading(false); return }
@@ -137,35 +136,6 @@ export default function FeedPage({ onPost }: Props) {
         posts = scoreSort(posts)
         posts = await markInteractions(posts)
         setFeedItems(posts)
-        setLoading(false)
-        return
-      }
-
-      // ── Pro Picks tab: Pro posts ranked by Pro Multiplier ────────────
-      // Post Score = Base Engagement × Pro Multiplier
-      // Craft match bonus applied; newcomer pool (20%) interleaved
-      if (tab === 'pro') {
-        const { data, error } = await supabase.from('posts').select(FIELDS)
-          .eq('post_type', 'pro')
-          .order('created_at', { ascending: false })
-          .limit(60)
-        if (error) { toast.error(error.message); setLoading(false); return }
-        let posts = await enrichPosts(data || [])
-        const established = scoreSort(posts.filter(p => !isNewcomerPost(p)))
-        const newcomerPool = scoreSort(posts.filter(isNewcomerPost))
-        // 20% Newcomer Protection Pool interleaved every 5th slot
-        const TOTAL = 40
-        const newcomerSlots = Math.ceil(TOTAL * 0.2)
-        const combined: Post[] = []
-        let ei = 0, ni = 0
-        for (let i = 0; i < TOTAL; i++) {
-          const isNewcomerSlot = (i + 1) % 5 === 0 && ni < newcomerPool.length
-          if (isNewcomerSlot) combined.push(newcomerPool[ni++])
-          else if (ei < established.length) combined.push(established[ei++])
-          else if (ni < newcomerPool.length) combined.push(newcomerPool[ni++])
-        }
-        const marked = await markInteractions(combined)
-        setFeedItems(marked)
         setLoading(false)
         return
       }
@@ -331,15 +301,11 @@ export default function FeedPage({ onPost }: Props) {
   const tabs: { key: FeedTab; label: string }[] = [
     { key: 'all',       label: 'For you' },
     { key: 'following', label: 'Following' },
-    { key: 'friends',   label: '✦ Friends' },
-    { key: 'pro',       label: 'Pro Picks ◆' },
   ]
 
   const emptyMessages: Record<FeedTab, string> = {
     all: 'Be the first to post',
     following: 'Follow some creators to see their posts here',
-    friends: 'Add friends to see their posts here',
-    pro: 'No pro posts yet',
   }
 
   const hour = new Date().getHours()
@@ -377,15 +343,15 @@ export default function FeedPage({ onPost }: Props) {
       </div>
 
       {/* ── Feed tabs ── */}
-      <div className="flex border-b border-gray-100 dark:border-gray-800 mb-4">
+      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 mb-5">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-[13.5px] font-medium border-b-2 mb-[-1px] transition-colors ${
+            className={`flex-1 py-2 rounded-full text-[14px] font-semibold transition-all duration-200 ${
               tab === t.key
-                ? 'text-brand-600 dark:text-brand-400 border-brand-600 dark:border-brand-400'
-                : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-sm'
+                : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
             }`}
           >
             {t.label}

@@ -220,12 +220,6 @@ export default function PostCard({ post, onUpdated }: Props) {
           </div>
         </div>
 
-        {post.post_type === 'pro' && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-            ◆ Pro
-          </span>
-        )}
-
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(v => !v)}

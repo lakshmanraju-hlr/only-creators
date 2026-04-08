@@ -118,8 +118,7 @@ export default function AppShell() {
   const navItems = [
     { path: '/',              icon: <Icon.Feed />,          label: 'Feed' },
     { path: '/explore',       icon: <Icon.Explore />,       label: 'Explore' },
-    { path: '/messages',      icon: <Icon.MessageCircle />, label: 'Messages' },
-    { path: '/friends',       icon: <Icon.Friends />,       label: 'Friends',       badge: pendingFriendCount },
+    { path: '/messages',      icon: <Icon.MessageCircle />, label: 'Messages',      badge: 0 },
     { path: '/notifications', icon: <Icon.Bell />,          label: 'Notifications', badge: unreadNotifCount },
     { path: '/profile',       icon: <Icon.Profile />,       label: 'Profile' },
   ]

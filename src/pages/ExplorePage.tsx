@@ -142,7 +142,7 @@ export default function ExplorePage() {
     const meta = getProfMeta(selectedDiscipline)
     const disc = DISCIPLINES.find(d => d.key === selectedDiscipline)
     return (
-      <div className="px-8 py-6">
+      <div className="max-w-[700px] mx-auto px-8 py-6">
         {/* Back + header */}
         <div className="flex items-center gap-3 mb-5">
           <button

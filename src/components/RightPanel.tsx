@@ -129,7 +129,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
   const headingClass = "flex items-center text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3"
 
   return (
-    <>
+    <div className="p-4">
       {/* Friends & Active */}
       {friends.length > 0 && (
         <div className={sectionClass}>
@@ -149,32 +149,31 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
               return (
                 <div
                   key={f.id}
-                  className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="flex items-center gap-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   {/* Avatar */}
                   <button onClick={() => navigate('/profile/' + f.username)} className="relative shrink-0">
-                    <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                       {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
                     </div>
-                    {isActive && <span className="absolute -bottom-px -right-px w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-950" />}
+                    {isActive && <span className="absolute -bottom-px -right-px w-2 h-2 rounded-full bg-green-500 border-2 border-white dark:border-gray-950" />}
                   </button>
                   {/* Name */}
                   <button className="flex-1 min-w-0 text-left" onClick={() => navigate('/profile/' + f.username)}>
-                    <p className="text-[12.5px] font-medium text-gray-900 dark:text-white truncate">{f.full_name}</p>
-                    {(f as any).role_title && <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{(f as any).role_title}</p>}
+                    <p className="text-[12px] font-medium text-gray-900 dark:text-white truncate leading-tight">{f.full_name}</p>
                   </button>
                   {/* Message icon */}
                   <button
                     onClick={() => navigate('/messages?with=' + f.id)}
                     title="Message"
-                    className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/10 transition-colors shrink-0"
+                    className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/10 transition-colors shrink-0"
                   >
-                    <span className="flex w-3.5 h-3.5"><Icon.MessageCircle /></span>
+                    <span className="flex w-3 h-3"><Icon.MessageCircle /></span>
                   </button>
                   {/* Follow button */}
                   <button
                     onClick={() => toggleFollow(f.id, f.full_name)}
-                    className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors ${
+                    className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors whitespace-nowrap ${
                       isFollowing
                         ? 'border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                         : 'bg-brand-600 hover:bg-brand-700 text-white'
@@ -292,6 +291,6 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 }

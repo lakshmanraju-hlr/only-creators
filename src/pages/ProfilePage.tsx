@@ -205,7 +205,7 @@ export default function ProfilePage() {
 
     return (
       <motion.div
-        className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs group"
+        className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs group"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => { setHovered(false); setShowMenu(false) }}
         whileHover={{ y: -3, boxShadow: '0 8px 30px rgba(0,0,0,0.10)' }}
@@ -213,7 +213,7 @@ export default function ProfilePage() {
       >
         {/* ── Media area ── */}
         <div
-          className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
+          className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer rounded-t-2xl"
           onClick={() => setPostLightbox(post)}
         >
           {post.content_type === 'photo' && post.media_url ? (
@@ -281,7 +281,7 @@ export default function ProfilePage() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.92, y: -4 }}
                   transition={{ duration: 0.12 }}
-                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg py-1 z-20 min-w-[130px]"
+                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg py-1 z-50 min-w-[130px]"
                 >
                   <button
                     className="w-full px-3.5 py-2 text-left text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2.5 transition-colors"
@@ -585,7 +585,7 @@ export default function ProfilePage() {
         {/* Feed view */}
         {!isPrivate && filteredPosts.length > 0 && !gridView && (
           <motion.div
-            className="max-w-[600px] mx-auto"
+            className="max-w-[700px] mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
