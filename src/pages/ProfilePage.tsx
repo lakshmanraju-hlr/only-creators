@@ -194,7 +194,7 @@ export default function ProfilePage() {
 
   const filteredPosts = selectedDiscipline
     ? posts.filter(p => p.persona_discipline === selectedDiscipline)
-    : posts
+    : posts.filter(p => !p.is_pro_post)
 
   // ── Grid Cell ──────────────────────────────────────────────────────────────
   function GridCell({ post, onDelete }: { post: Post; onDelete?: () => void }) {
@@ -344,7 +344,7 @@ export default function ProfilePage() {
                 if (isOwnProfile && !profile.avatar_url) avatarInputRef.current?.click()
                 else if (profile.avatar_url) setAvatarLightbox(true)
               }}
-              className="w-36 h-36 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
+              className="w-48 h-48 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
             >
               {uploadingAvatar ? (
                 <div className="w-full h-full flex items-center justify-center">
@@ -470,8 +470,8 @@ export default function ProfilePage() {
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
-              <span className="flex w-3.5 h-3.5"><Icon.Feed /></span>
-              All
+              <span className="flex w-3.5 h-3.5"><Icon.Profile /></span>
+              Personal
             </button>
             {personas.map(persona => {
               const disc = DISCIPLINE_MAP[persona.discipline]
@@ -500,35 +500,42 @@ export default function ProfilePage() {
       <div className="px-8 py-6">
 
         {/* Section header */}
-        {filteredPosts.length > 0 && (
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[18px] font-bold text-gray-900 dark:text-white">
-              {selectedDiscipline ? (DISCIPLINE_MAP[selectedDiscipline]?.label ?? selectedDiscipline) : 'All Posts'}
-            </h2>
-            <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[18px] font-bold text-gray-900 dark:text-white">
+            {selectedDiscipline ? (DISCIPLINE_MAP[selectedDiscipline]?.label ?? selectedDiscipline) : 'Personal'}
+          </h2>
+          <div className="flex items-center gap-2">
+            {isOwnProfile && (
               <button
-                onClick={() => setGridView(true)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                  gridView
-                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                    : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
-                }`}
+                onClick={() => setShowUpload(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full text-[12.5px] font-medium transition-colors"
               >
-                <span className="flex w-4 h-4"><Icon.GridView /></span>
+                <span className="flex w-3 h-3"><Icon.Plus /></span>
+                New post
               </button>
-              <button
-                onClick={() => setGridView(false)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                  !gridView
-                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                    : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
-                }`}
-              >
-                <span className="flex w-4 h-4"><Icon.ListView /></span>
-              </button>
-            </div>
+            )}
+            <button
+              onClick={() => setGridView(true)}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                gridView
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                  : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+              }`}
+            >
+              <span className="flex w-4 h-4"><Icon.GridView /></span>
+            </button>
+            <button
+              onClick={() => setGridView(false)}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                !gridView
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                  : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+              }`}
+            >
+              <span className="flex w-4 h-4"><Icon.ListView /></span>
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Private profile */}
         {isPrivate && (

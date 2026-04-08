@@ -128,7 +128,6 @@ export default function AppShell() {
   const proDiscs = myPersonas
     .map(p => ALL_DISCIPLINES.find(d => d.key === p.discipline))
     .filter(Boolean) as typeof ALL_DISCIPLINES[number][]
-  const otherDiscs = ALL_DISCIPLINES.filter(d => !myPersonaDisciplineKeys.has(d.key))
 
   function isNavActive(itemPath: string) {
     return itemPath === '/' ? path === '/' : path.startsWith(itemPath)
@@ -253,25 +252,8 @@ export default function AppShell() {
                   <span className="text-brand-500 dark:text-brand-400 text-[10px]">◆</span>
                 </button>
               ))}
-              <div className="h-px bg-gray-100 dark:bg-gray-800 mx-2.5 my-1.5" />
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2.5 pb-1">Explore</p>
             </>
           )}
-          {!proDiscs.length && <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2.5 pt-2 pb-1">Fields</p>}
-          {otherDiscs.map(d => (
-            <button
-              key={d.key}
-              onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13.5px] mb-0.5 transition-all text-left ${
-                path.includes('discipline=' + d.key)
-                  ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-medium'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              <span className="flex w-4 h-4 shrink-0">{d.icon}</span>
-              <span className="flex-1 min-w-0 truncate">{d.label}</span>
-            </button>
-          ))}
         </div>
 
         <div className="h-px bg-gray-100 dark:bg-gray-800 mx-2.5 my-1" />

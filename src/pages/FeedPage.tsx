@@ -346,7 +346,7 @@ export default function FeedPage({ onPost }: Props) {
   const greeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 
   return (
-    <div className="px-8 py-6">
+    <div className="max-w-[700px] mx-auto px-8 py-6">
 
       {/* ── Welcome banner ── */}
       <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-gray-950 border border-brand-100 dark:border-brand-900/40 rounded-2xl px-5 py-4 mb-5">

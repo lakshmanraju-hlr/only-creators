@@ -140,7 +140,7 @@ export default function GroupPage() {
   )
 
   return (
-    <div className="px-8 py-6">
+    <div className="max-w-[700px] mx-auto px-8 py-6">
       <button
         className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-5 transition-colors"
         onClick={() => navigate(-1)}

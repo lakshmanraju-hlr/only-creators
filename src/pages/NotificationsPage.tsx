@@ -72,7 +72,7 @@ export default function NotificationsPage() {
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   return (
-    <div className="px-8 py-6">
+    <div className="max-w-[700px] mx-auto px-8 py-6">
       <h1 className="text-[22px] font-bold tracking-tight text-gray-900 dark:text-white mb-1">Notifications</h1>
       <p className="text-[13.5px] text-gray-400 dark:text-gray-500 mb-5">Your latest activity and peer endorsements</p>
 
