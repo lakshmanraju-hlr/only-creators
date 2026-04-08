@@ -44,10 +44,8 @@ export default function ProfilePage() {
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
   const [avatarLightbox, setAvatarLightbox] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [postLightbox, setPostLightbox] = useState<Post | null>(null)
   const [showUpload, setShowUpload] = useState(false)
-  const [endorsementCount, setEndorsementCount] = useState(0)
-  const [hasEndorsed, setHasEndorsed] = useState(false)
-  const [endorsing, setEndorsing] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -101,7 +99,20 @@ export default function ProfilePage() {
       if (!isOwn) postsQuery = postsQuery.eq('visibility', 'public')
 
       const { data: postsData } = await postsQuery
-      const enriched = (postsData || []).map((p: any) => ({ ...p, profiles: profileData })) as Post[]
+      let enriched = (postsData || []).map((p: any) => ({ ...p, profiles: profileData })) as Post[]
+
+      // Mark which posts the current user has liked / pro-upvoted
+      if (myProfile && enriched.length > 0) {
+        const postIds = enriched.map(p => p.id)
+        const [likesRes, upvotesRes] = await Promise.all([
+          supabase.from('likes').select('post_id').eq('user_id', myProfile.id).in('post_id', postIds),
+          supabase.from('pro_upvotes').select('post_id').eq('user_id', myProfile.id).in('post_id', postIds),
+        ])
+        const likedSet = new Set((likesRes.data || []).map((r: any) => r.post_id as string))
+        const upvotedSet = new Set((upvotesRes.data || []).map((r: any) => r.post_id as string))
+        enriched = enriched.map(p => ({ ...p, user_liked: likedSet.has(p.id), user_pro_upvoted: upvotedSet.has(p.id) }))
+      }
+
       setPosts(enriched)
       setLoading(false)
 
@@ -138,15 +149,6 @@ export default function ProfilePage() {
       .then(({ data }) => setHasVerified(!!data))
   }, [myProfile?.id, profile?.id])
 
-  useEffect(() => {
-    if (!profile) return
-    supabase.from('endorsements').select('id', { count: 'exact', head: true }).eq('endorsed_id', profile.id)
-      .then(({ count }) => setEndorsementCount(count || 0))
-    if (myProfile && !isOwnProfile) {
-      supabase.from('endorsements').select('id').eq('endorser_id', myProfile.id).eq('endorsed_id', profile.id).single()
-        .then(({ data }) => setHasEndorsed(!!data))
-    }
-  }, [profile?.id, myProfile?.id, isOwnProfile])
 
   async function toggleVerify() {
     if (!myProfile || !profile || !canVerify) return
@@ -171,23 +173,6 @@ export default function ProfilePage() {
     setVerifying(false)
   }
 
-  async function toggleEndorse() {
-    if (!myProfile || !profile || isOwnProfile) return
-    setEndorsing(true)
-    if (hasEndorsed) {
-      await supabase.from('endorsements').delete().match({ endorser_id: myProfile.id, endorsed_id: profile.id })
-      setHasEndorsed(false)
-      setEndorsementCount(c => Math.max(0, c - 1))
-      toast('Endorsement removed')
-    } else {
-      const { error } = await supabase.from('endorsements').insert({ endorser_id: myProfile.id, endorsed_id: profile.id })
-      if (error) { toast.error(error.message); setEndorsing(false); return }
-      setHasEndorsed(true)
-      setEndorsementCount(c => c + 1)
-      toast.success('Endorsed!')
-    }
-    setEndorsing(false)
-  }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -214,72 +199,115 @@ export default function ProfilePage() {
   // ── Grid Cell ──────────────────────────────────────────────────────────────
   function GridCell({ post, onDelete }: { post: Post; onDelete?: () => void }) {
     const [hovered, setHovered] = useState(false)
+    const [showMenu, setShowMenu] = useState(false)
+    const year = new Date(post.created_at).getFullYear()
+    const title = post.caption || (post.content_type === 'poem' ? 'Poem' : post.content_type === 'audio' ? 'Audio' : post.content_type === 'video' ? 'Video' : post.content_type === 'document' ? 'Document' : 'Post')
+
     return (
       <motion.div
-        className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
+        className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs group"
         onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => { setSelectedPost(post); setGridView(false) }}
-        whileHover={{ scale: 1.015 }}
+        onMouseLeave={() => { setHovered(false); setShowMenu(false) }}
+        whileHover={{ y: -3, boxShadow: '0 8px 30px rgba(0,0,0,0.10)' }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
-        {post.content_type === 'photo' && post.media_url ? (
-          <img src={post.media_url} alt="" className="w-full h-full object-cover" />
-        ) : post.content_type === 'video' && post.media_url ? (
-          <>
-            <video src={post.media_url} className="w-full h-full object-cover" muted />
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-              <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <span className="flex w-6 h-6 text-white"><Icon.Video /></span>
+        {/* ── Media area ── */}
+        <div
+          className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
+          onClick={() => setPostLightbox(post)}
+        >
+          {post.content_type === 'photo' && post.media_url ? (
+            <img src={post.media_url} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          ) : post.content_type === 'video' && post.media_url ? (
+            <>
+              <video src={post.media_url} className="w-full h-full object-cover" muted />
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
+                  <span className="flex w-5 h-5 text-white"><Icon.Video /></span>
+                </div>
               </div>
+            </>
+          ) : post.content_type === 'audio' ? (
+            <div className="w-full h-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
+              <span className="flex w-10 h-10 text-white/80"><Icon.Music /></span>
             </div>
-          </>
-        ) : post.content_type === 'audio' ? (
-          <div className="w-full h-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
-            <span className="flex w-8 h-8 text-white/80"><Icon.Music /></span>
-          </div>
-        ) : post.content_type === 'poem' ? (
-          <div className="w-full h-full bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 flex flex-col items-center justify-center p-4 gap-1">
-            <span className="text-3xl text-amber-400 opacity-50 leading-none">"</span>
-            {post.poem_text && (
-              <p className="text-[10px] text-gray-500 text-center italic overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                {post.poem_text}
-              </p>
-            )}
-          </div>
-        ) : post.content_type === 'document' ? (
-          <div className="w-full h-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-            <span className="flex w-8 h-8 text-gray-400"><Icon.FileText /></span>
-          </div>
-        ) : (
-          <div className="w-full h-full bg-gray-50 dark:bg-gray-800 flex flex-col items-center justify-center p-4 gap-2">
-            <span className="flex w-6 h-6 text-gray-400"><Icon.MessageCircle /></span>
-            {post.caption && (
-              <p className="text-[10px] text-gray-500 text-center overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                {post.caption}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Hover overlay */}
-        <div className={`absolute inset-0 bg-black/40 flex items-end p-3 transition-opacity duration-150 ${hovered ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex items-center gap-3 text-white text-xs font-semibold">
-            <span>♥ {post.like_count}</span>
-            <span>💬 {post.comment_count}</span>
-          </div>
-          {isOwnProfile && onDelete && (
-            <button
-              onClick={async e => {
-                e.stopPropagation()
-                const { error } = await supabase.from('posts').delete().eq('id', post.id)
-                if (!error) { if (post.media_path) await supabase.storage.from('posts').remove([post.media_path]); onDelete() }
-              }}
-              className="absolute top-2 right-2 bg-brand-600/90 text-white rounded-lg px-2 py-1 text-[11px] font-medium flex items-center gap-1 hover:bg-brand-700 transition-colors"
-            >
-              <span className="flex w-3 h-3"><Icon.Trash /></span> Delete
-            </button>
+          ) : post.content_type === 'poem' ? (
+            <div className="w-full h-full bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/50 dark:to-orange-950/50 flex flex-col items-center justify-center p-5">
+              <span className="text-4xl text-amber-400/50 leading-none mb-2">"</span>
+              {post.poem_text && (
+                <p className="text-[11px] text-gray-500 text-center italic" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {post.poem_text}
+                </p>
+              )}
+            </div>
+          ) : post.content_type === 'document' ? (
+            <div className="w-full h-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+              <span className="flex w-10 h-10 text-gray-300 dark:text-gray-600"><Icon.FileText /></span>
+            </div>
+          ) : (
+            <div className="w-full h-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+              <span className="flex w-8 h-8 text-gray-300 dark:text-gray-600"><Icon.MessageCircle /></span>
+            </div>
           )}
+
+          {/* Heart button — shown on hover */}
+          <button
+            className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-110 active:scale-95 ${hovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}
+            onClick={e => e.stopPropagation()}
+          >
+            <span className="flex w-3.5 h-3.5 text-gray-500 dark:text-gray-400"><Icon.Heart /></span>
+          </button>
+        </div>
+
+        {/* ── Card footer ── */}
+        <div className="px-4 py-3 flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setPostLightbox(post)}>
+            <p className="font-semibold text-[13.5px] text-gray-900 dark:text-white truncate leading-snug">{title}</p>
+            <p className="text-[10.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">{year}</p>
+          </div>
+
+          {/* ··· menu */}
+          <div className="relative shrink-0 mt-0.5">
+            <button
+              className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={e => { e.stopPropagation(); setShowMenu(v => !v) }}
+            >
+              <span className="flex w-4 h-4"><Icon.MoreHorizontal /></span>
+            </button>
+            <AnimatePresence>
+              {showMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg py-1 z-20 min-w-[130px]"
+                >
+                  <button
+                    className="w-full px-3.5 py-2 text-left text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2.5 transition-colors"
+                    onClick={e => { e.stopPropagation(); setPostLightbox(post); setShowMenu(false) }}
+                  >
+                    <span className="flex w-3.5 h-3.5 text-gray-400"><Icon.Eye /></span>
+                    View
+                  </button>
+                  {isOwnProfile && onDelete && (
+                    <button
+                      className="w-full px-3.5 py-2 text-left text-[13px] text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2.5 transition-colors"
+                      onClick={async e => {
+                        e.stopPropagation()
+                        setShowMenu(false)
+                        const { error } = await supabase.from('posts').delete().eq('id', post.id)
+                        if (!error) { if (post.media_path) await supabase.storage.from('posts').remove([post.media_path]); onDelete() }
+                      }}
+                    >
+                      <span className="flex w-3.5 h-3.5"><Icon.Trash /></span>
+                      Delete
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </motion.div>
     )
@@ -305,7 +333,7 @@ export default function ProfilePage() {
     <div className="min-h-full bg-white dark:bg-gray-950">
 
       {/* ── PROFILE HEADER ── */}
-      <div className="max-w-[860px] mx-auto px-6 pt-8 pb-6">
+      <div className="px-8 pt-8 pb-6">
         <div className="flex items-start gap-6">
 
           {/* Avatar */}
@@ -316,7 +344,7 @@ export default function ProfilePage() {
                 if (isOwnProfile && !profile.avatar_url) avatarInputRef.current?.click()
                 else if (profile.avatar_url) setAvatarLightbox(true)
               }}
-              className="w-24 h-24 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
+              className="w-36 h-36 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
             >
               {uploadingAvatar ? (
                 <div className="w-full h-full flex items-center justify-center">
@@ -347,11 +375,6 @@ export default function ProfilePage() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-[22px] font-bold text-gray-900 dark:text-white leading-tight">{profile.full_name}</h1>
-                  {profile.is_pro && (
-                    <span title="Verified pro" className="w-[18px] h-[18px] rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 12 10" className="w-[9px] h-[9px]"><path d="M1 5l3 3 7-7" strokeWidth="1.8" stroke="white" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </span>
-                  )}
                 </div>
                 {(profile.role_title || (profile as any).workplace) && (
                   <p className="text-gray-500 dark:text-gray-400 text-[13.5px] mt-0.5 font-medium">
@@ -402,17 +425,6 @@ export default function ProfilePage() {
                     Message
                   </button>
                   <SocialButton targetId={profile.id} targetName={profile.full_name} />
-                  <button
-                    onClick={toggleEndorse}
-                    disabled={endorsing}
-                    className={`px-4 py-2 text-sm font-medium rounded-full border transition-colors ${
-                      hasEndorsed
-                        ? 'bg-brand-600 text-white border-brand-600 hover:bg-brand-700'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    {hasEndorsed ? 'Endorsed ✓' : 'Endorse'}
-                  </button>
                   {canVerify && (
                     <button
                       onClick={toggleVerify}
@@ -435,7 +447,6 @@ export default function ProfilePage() {
               {[
                 { value: profile.follower_count ?? 0, label: 'FOLLOWERS' },
                 { value: profile.post_count ?? posts.length, label: 'POSTS' },
-                { value: endorsementCount, label: 'ENDORSEMENTS' },
               ].map(({ value, label }) => (
                 <div key={label}>
                   <div className="text-[20px] font-bold text-gray-900 dark:text-white leading-tight">{Number(value).toLocaleString()}</div>
@@ -449,8 +460,8 @@ export default function ProfilePage() {
 
       {/* ── DISCIPLINE TABS ── */}
       <div className="sticky top-0 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 z-10">
-        <div className="max-w-[860px] mx-auto">
-          <div className="flex items-center gap-1 px-6 py-3 overflow-x-auto scrollbar-hide">
+        <div>
+          <div className="flex items-center gap-1 px-8 py-3 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setSelectedDiscipline(null)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
@@ -486,7 +497,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="max-w-[860px] mx-auto px-6 py-6">
+      <div className="px-8 py-6">
 
         {/* Section header */}
         {filteredPosts.length > 0 && (
@@ -549,7 +560,7 @@ export default function ProfilePage() {
         {/* Grid view */}
         {!isPrivate && filteredPosts.length > 0 && gridView && (
           <motion.div
-            className="grid grid-cols-2 gap-3"
+            className="grid grid-cols-4 gap-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
@@ -619,6 +630,57 @@ export default function ProfilePage() {
               >
                 <span className="flex w-3.5 h-3.5"><Icon.X /></span>
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── POST LIGHTBOX ── */}
+      <AnimatePresence>
+        {postLightbox && (
+          <motion.div
+            className="fixed inset-0 bg-black/92 flex items-center justify-center z-[10000]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPostLightbox(null)}
+          >
+            <button
+              onClick={() => setPostLightbox(null)}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
+            >
+              <span className="flex w-4 h-4 text-white"><Icon.X /></span>
+            </button>
+            <div
+              className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center gap-3"
+              onClick={e => e.stopPropagation()}
+            >
+              {postLightbox.content_type === 'photo' && postLightbox.media_url ? (
+                <img
+                  src={postLightbox.media_url}
+                  alt=""
+                  className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
+                />
+              ) : postLightbox.content_type === 'video' && postLightbox.media_url ? (
+                <video
+                  src={postLightbox.media_url}
+                  controls
+                  autoPlay
+                  className="max-w-[90vw] max-h-[85vh] rounded-xl shadow-2xl"
+                />
+              ) : postLightbox.content_type === 'poem' ? (
+                <div className="bg-amber-50 dark:bg-gray-900 rounded-2xl p-10 max-w-lg shadow-2xl">
+                  <p className="text-4xl text-amber-400 opacity-50 leading-none mb-4">"</p>
+                  <p className="text-gray-700 dark:text-gray-200 text-lg italic leading-relaxed">{postLightbox.poem_text}</p>
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-10 max-w-lg shadow-2xl">
+                  <p className="text-gray-700 dark:text-gray-200 text-base leading-relaxed">{postLightbox.caption}</p>
+                </div>
+              )}
+              {postLightbox.caption && postLightbox.content_type !== 'poem' && (
+                <p className="text-white/70 text-sm text-center max-w-lg">{postLightbox.caption}</p>
+              )}
             </div>
           </motion.div>
         )}

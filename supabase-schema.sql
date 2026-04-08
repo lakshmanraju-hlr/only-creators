@@ -81,7 +81,7 @@ create table public.notifications (
   id          uuid default uuid_generate_v4() primary key,
   user_id     uuid references public.profiles(id) on delete cascade not null, -- recipient
   actor_id    uuid references public.profiles(id) on delete cascade,           -- who triggered it
-  type        text not null check (type in ('like','pro_upvote','comment','follow','share')),
+  type        text not null check (type in ('like','pro_upvote','comment','follow','share','friend_request','friend_accepted','peer_verify','message')),
   post_id     uuid references public.posts(id) on delete cascade,
   is_read     boolean default false,
   created_at  timestamptz default now()

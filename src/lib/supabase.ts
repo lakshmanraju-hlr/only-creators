@@ -128,7 +128,7 @@ export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted' | 'peer_verify'
+  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted' | 'peer_verify' | 'message'
   post_id: string | null
   is_read: boolean
   created_at: string

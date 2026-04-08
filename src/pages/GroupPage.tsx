@@ -140,7 +140,7 @@ export default function GroupPage() {
   )
 
   return (
-    <div className="max-w-[640px] mx-auto px-4 py-5">
+    <div className="px-8 py-6">
       <button
         className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-5 transition-colors"
         onClick={() => navigate(-1)}
@@ -152,7 +152,7 @@ export default function GroupPage() {
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 mb-5 shadow-xs">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-[20px] font-bold text-gray-900 dark:text-white tracking-tight">{group.name}</h1>
+            <h1 className="text-[22px] font-bold text-gray-900 dark:text-white tracking-tight">{group.name}</h1>
             {group.description && <p className="text-[13.5px] text-gray-500 dark:text-gray-400 mt-1">{group.description}</p>}
             <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-2">
               {group.post_count} post{group.post_count === 1 ? '' : 's'}

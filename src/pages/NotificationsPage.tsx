@@ -64,6 +64,7 @@ export default function NotificationsPage() {
       case 'friend_request': return { text: name + ' sent you a friend request', icon: <span style={iconStyle}><Icon.UserPlus /></span>, color: 'var(--purple-600)', bg: 'var(--purple-50)', action: () => navigate('/friends') }
       case 'friend_accepted': return { text: name + ' accepted your friend request', icon: <span style={iconStyle}><Icon.UserCheck /></span>, color: 'var(--green-600)', bg: 'var(--green-50)', action: goToActor }
       case 'peer_verify': return { text: name + ' verified you as a peer in your field', icon: <span style={iconStyle}><Icon.Award /></span>, color: 'var(--color-pro)', bg: 'var(--color-pro-light)', action: goToActor }
+      case 'message': return { text: name + ' sent you a message', icon: <span style={iconStyle}><Icon.MessageCircle /></span>, color: 'var(--blue-600)', bg: 'var(--blue-50)', action: () => navigate('/messages?with=' + actor?.id) }
       default: return { text: 'New activity', icon: <span style={iconStyle}><Icon.Bell /></span>, color: 'var(--gray-500)', bg: 'var(--gray-100)' }
     }
   }
@@ -71,8 +72,8 @@ export default function NotificationsPage() {
   function initials(name: string) { return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   return (
-    <div className="max-w-[600px] mx-auto px-4 py-5">
-      <h1 className="text-[22px] font-semibold tracking-tight text-gray-900 dark:text-white mb-1">Notifications</h1>
+    <div className="px-8 py-6">
+      <h1 className="text-[22px] font-bold tracking-tight text-gray-900 dark:text-white mb-1">Notifications</h1>
       <p className="text-[13.5px] text-gray-400 dark:text-gray-500 mb-5">Your latest activity and peer endorsements</p>
 
       {loading ? (

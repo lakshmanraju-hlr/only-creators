@@ -143,6 +143,15 @@ export default function MessagesPage() {
     } else if (data) {
       // Replace optimistic with real id
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: data.id } : m))
+      // Notify the recipient
+      if (selectedFriend) {
+        await supabase.from('notifications').insert({
+          user_id: selectedFriend.id,
+          actor_id: profile.id,
+          type: 'message',
+          post_id: null,
+        })
+      }
     }
     setSending(false)
   }

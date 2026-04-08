@@ -142,7 +142,7 @@ export default function ExplorePage() {
     const meta = getProfMeta(selectedDiscipline)
     const disc = DISCIPLINES.find(d => d.key === selectedDiscipline)
     return (
-      <div className="max-w-[640px] mx-auto px-4 py-5">
+      <div className="px-8 py-6">
         {/* Back + header */}
         <div className="flex items-center gap-3 mb-5">
           <button
@@ -306,7 +306,7 @@ export default function ExplorePage() {
   }
 
   return (
-    <div className="max-w-[820px] mx-auto px-5 py-5">
+    <div className="px-8 py-6">
       <h1 className="text-[22px] font-bold text-gray-900 dark:text-white tracking-tight mb-1">Explore fields</h1>
       <p className="text-[13.5px] text-gray-400 dark:text-gray-500 mb-6">Discover verified creators across every professional field</p>
 

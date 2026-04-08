@@ -102,9 +102,13 @@ export default function PostCard({ post, onUpdated }: Props) {
   async function toggleProUpvote() {
     if (!canProUpvote || !profile) return
     const was = proUpvoted; setProUpvoted(!was); setProCount(c => was ? c - 1 : c + 1)
-    if (was) { await supabase.from('pro_upvotes').delete().match({ user_id: profile.id, post_id: post.id }) }
-    else {
-      await supabase.from('pro_upvotes').insert({ user_id: profile.id, post_id: post.id, profession: profile.profession })
+    if (was) {
+      const { error } = await supabase.from('pro_upvotes').delete().match({ user_id: profile.id, post_id: post.id })
+      if (error) { setProUpvoted(true); setProCount(c => c + 1); toast.error('Failed to remove upvote') }
+    } else {
+      const profession = post.persona_discipline || profile.profession || 'general'
+      const { error } = await supabase.from('pro_upvotes').insert({ user_id: profile.id, post_id: post.id, profession })
+      if (error) { setProUpvoted(false); setProCount(c => c - 1); toast.error('Failed to upvote') ; return }
       if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'pro_upvote', post_id: post.id })
       if (authorDiscipline) supabase.rpc('increment_discipline_score', { p_user_id: profile.id, p_discipline: authorDiscipline, p_delta: 5 })
       toast.success('Pro Upvote given!')
@@ -377,7 +381,7 @@ export default function PostCard({ post, onUpdated }: Props) {
         >
           <button
             onClick={canProUpvote ? toggleProUpvote : () => toast('Only verified creators in the same field can give Pro Upvotes')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12.5px] font-medium border transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-medium border transition-colors ${
               proUpvoted
                 ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
                 : canProUpvote
