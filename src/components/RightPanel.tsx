@@ -6,27 +6,6 @@ import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
 import toast from 'react-hot-toast'
 
-const ALL_DISCIPLINES = [
-  { key: 'photographer',  icon: Icon.Camera,      label: 'Photography' },
-  { key: 'singer',        icon: Icon.Mic,         label: 'Vocals & Singing' },
-  { key: 'musician',      icon: Icon.Music,       label: 'Music' },
-  { key: 'poet',          icon: Icon.PenLine,     label: 'Poetry & Writing' },
-  { key: 'visual-artist', icon: Icon.Paintbrush,  label: 'Visual Arts' },
-  { key: 'filmmaker',     icon: Icon.Film,        label: 'Film & Video' },
-  { key: 'dancer',        icon: Icon.Music,       label: 'Dance' },
-  { key: 'comedian',      icon: Icon.Drama,       label: 'Performance' },
-  { key: 'culinary',      icon: Icon.Utensils,    label: 'Culinary Arts' },
-  { key: 'fitness',       icon: Icon.Activity,    label: 'Fitness & Sports' },
-  { key: 'technology',    icon: Icon.Code,        label: 'Technology' },
-  { key: 'fashion',       icon: Icon.Scissors,    label: 'Fashion & Style' },
-  { key: 'architecture',  icon: Icon.Building,    label: 'Architecture' },
-  { key: 'medicine',      icon: Icon.Heart2,      label: 'Medicine & Health' },
-  { key: 'education',     icon: Icon.PenLine,     label: 'Education' },
-  { key: 'law',           icon: Icon.Shield,      label: 'Law & Justice' },
-  { key: 'science',       icon: Icon.Microscope,  label: 'Science & Research' },
-  { key: 'business',      icon: Icon.Briefcase,   label: 'Business' },
-  { key: 'wellness',      icon: Icon.Heart2,      label: 'Wellness & Mind' },
-] as const
 
 interface Props {
   onlineFriends: Profile[]
@@ -42,7 +21,6 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
   const [groups, setGroups] = useState<Group[]>([])
   const [joinedGroupIds, setJoinedGroupIds] = useState<Set<string>>(new Set())
-  const [browseOpen, setBrowseOpen] = useState(false)
 
   useEffect(() => {
     if (!profile) return
@@ -160,7 +138,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
                   </button>
                   {/* Name */}
                   <button className="flex-1 min-w-0 text-left" onClick={() => navigate('/profile/' + f.username)}>
-                    <p className="text-[12px] font-medium text-gray-900 dark:text-white truncate leading-tight">{f.full_name}</p>
+                    <p className="text-[14px] font-medium text-gray-900 dark:text-white truncate leading-tight">{f.full_name}</p>
                   </button>
                   {/* Message icon */}
                   <button
@@ -173,7 +151,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
                   {/* Follow button */}
                   <button
                     onClick={() => toggleFollow(f.id, f.full_name)}
-                    className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors whitespace-nowrap ${
+                    className={`text-[13px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors whitespace-nowrap ${
                       isFollowing
                         ? 'border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                         : 'bg-brand-600 hover:bg-brand-700 text-white'
@@ -208,12 +186,12 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
                   {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(c.full_name)}
                 </button>
                 <button className="flex-1 min-w-0 text-left" onClick={() => navigate(`/profile/${c.username}`)}>
-                  <p className="text-[12.5px] font-medium text-gray-900 dark:text-white truncate">{c.full_name}</p>
+                  <p className="text-[14px] font-medium text-gray-900 dark:text-white truncate">{c.full_name}</p>
                   {(c as any).role_title && <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{(c as any).role_title}</p>}
                 </button>
                 <button
                   onClick={() => toggleFollow(c.id, c.full_name)}
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors ${
+                  className={`text-[13px] font-medium px-2.5 py-1 rounded-full shrink-0 transition-colors ${
                     following.has(c.id)
                       ? 'border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                       : 'bg-brand-600 hover:bg-brand-700 text-white'
@@ -262,35 +240,6 @@ export default function RightPanel({ onlineFriends, setOnlineFriends }: Props) {
         </div>
       )}
 
-      {/* Browse Fields */}
-      <div className={sectionClass}>
-        <button
-          className={headingClass + ' w-full'}
-          onClick={() => setBrowseOpen(v => !v)}
-        >
-          Browse fields
-          <span className={`ml-auto flex w-3 h-3 text-gray-400 transition-transform duration-200 ${browseOpen ? '-rotate-90' : 'rotate-90'}`}>
-            <Icon.ChevronRight />
-          </span>
-        </button>
-        {browseOpen && (
-          <div className="flex flex-col gap-0.5 mt-1">
-            {ALL_DISCIPLINES.map(d => {
-              const IconComp = d.icon
-              return (
-                <button
-                  key={d.key}
-                  onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
-                  className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-[12.5px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white transition-colors text-left w-full"
-                >
-                  <span className="flex w-3.5 h-3.5 shrink-0"><IconComp /></span>
-                  <span className="truncate">{d.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

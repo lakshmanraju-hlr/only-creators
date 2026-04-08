@@ -137,6 +137,9 @@ export default function AppShell() {
     <div className="app-shell">
       {/* ── TOPBAR ── */}
       <header className="col-span-full flex items-center gap-3 px-5 h-[56px] bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50" style={{ gridColumn: '1 / -1' }}>
+        <div className="font-display text-[18px] font-bold text-gray-900 dark:text-white tracking-tight select-none mr-auto">
+          only <em className="not-italic text-brand-600">creators</em>
+        </div>
         <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => setDarkMode(d => !d)}
@@ -179,15 +182,8 @@ export default function AppShell() {
 
       {/* ── LEFT SIDEBAR ── */}
       <aside className="app-sidebar bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden" style={{ gridColumn: '1', gridRow: '2' }}>
-        {/* Logo */}
-        <div className="px-5 pt-5 pb-3">
-          <div className="font-display text-[18px] font-bold text-gray-900 dark:text-white tracking-tight select-none">
-            only <em className="not-italic text-brand-600">creators</em>
-          </div>
-        </div>
-
         {/* Main nav */}
-        <div className="px-3 pb-1">
+        <div className="px-3 pt-3 pb-1">
           {navItems.map(item => (
             <button
               key={item.path}
@@ -228,7 +224,6 @@ export default function AppShell() {
                 >
                   <span className="flex w-[18px] h-[18px] shrink-0">{d.icon}</span>
                   <span className="flex-1 min-w-0 truncate">{d.label}</span>
-                  <span className="text-brand-500 dark:text-brand-400 text-[10px]">◆</span>
                 </button>
               ))}
             </>

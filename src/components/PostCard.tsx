@@ -213,9 +213,9 @@ export default function PostCard({ post, onUpdated }: Props) {
 
         <div className="flex-1 min-w-0">
           <button onClick={goToAuthor} className="flex items-center gap-1.5 hover:text-brand-600 transition-colors group">
-            <span className="text-[13.5px] font-semibold text-gray-900 dark:text-white group-hover:text-brand-600 transition-colors">{author?.full_name}</span>
+            <span className="text-[15px] font-semibold text-gray-900 dark:text-white group-hover:text-brand-600 transition-colors">{author?.full_name}</span>
           </button>
-          <div className="text-[11.5px] text-gray-400 dark:text-gray-500">
+          <div className="text-[13px] text-gray-400 dark:text-gray-500">
             @{author?.username} · {timeAgo}
           </div>
         </div>
@@ -304,7 +304,7 @@ export default function PostCard({ post, onUpdated }: Props) {
 
       {/* ── Caption ── */}
       {post.caption && post.content_type !== 'audio' && (
-        <div className="px-4 py-2.5 text-[14px] leading-[1.65] text-gray-800 dark:text-gray-200">
+        <div className="px-4 py-2.5 text-[15px] leading-[1.65] text-gray-800 dark:text-gray-200">
           {post.caption.split(' ').map((word, i) =>
             word.startsWith('#')
               ? <span key={i} className="text-brand-600 dark:text-brand-400 cursor-pointer hover:underline">{word} </span>
@@ -331,7 +331,7 @@ export default function PostCard({ post, onUpdated }: Props) {
       <div className="flex items-center px-2.5 py-1.5 border-t border-gray-100 dark:border-gray-800 gap-1">
         <button
           onClick={toggleLike}
-          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[13px] transition-colors ${
+          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[14px] transition-colors ${
             liked
               ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30'
               : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300'
@@ -343,7 +343,7 @@ export default function PostCard({ post, onUpdated }: Props) {
 
         <button
           onClick={loadComments}
-          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[13px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[14px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
           <span className="flex w-4 h-4"><Icon.MessageCircle /></span>
           <span className="tabular-nums">{post.comment_count}</span>
@@ -351,7 +351,7 @@ export default function PostCard({ post, onUpdated }: Props) {
 
         <button
           onClick={openShare}
-          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[13px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[14px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
           <span className="flex w-4 h-4"><Icon.Share /></span>
         </button>

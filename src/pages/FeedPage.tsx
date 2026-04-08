@@ -338,25 +338,9 @@ export default function FeedPage({ onPost }: Props) {
           <p className="text-[15px] font-semibold text-gray-900 dark:text-white">
             Good {greeting}, <strong>{profile?.full_name?.split(' ')[0] || 'Creator'}</strong>
           </p>
-          <p className="text-[12.5px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+          <p className="text-[14px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
             Explore, create, and connect across professional fields.
           </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => navigate('/explore')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-[12px] font-medium text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 transition-colors"
-          >
-            <span className="flex w-3 h-3"><Icon.Explore /></span>
-            Explore
-          </button>
-          <button
-            onClick={onPost}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-600 text-white text-[12px] font-medium hover:bg-brand-700 transition-colors"
-          >
-            <span className="flex w-3 h-3"><Icon.Plus /></span>
-            New post
-          </button>
         </div>
       </div>
 
