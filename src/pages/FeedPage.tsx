@@ -314,6 +314,24 @@ export default function FeedPage({ onPost }: Props) {
   return (
     <div className="max-w-[700px] mx-auto px-8 py-6">
 
+      {/* ── Search + Browse row ── */}
+      <div className="flex items-center gap-3 mb-5">
+        <button
+          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
+          className="flex items-center gap-3 flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-full px-5 py-3.5 text-[14px] text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-text shadow-sm"
+        >
+          <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
+          <span>Search creators, projects...</span>
+        </button>
+        <button
+          onClick={() => navigate('/explore')}
+          className="flex items-center gap-2.5 px-5 py-3.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[14px] font-semibold text-gray-800 dark:text-white hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0 shadow-sm"
+        >
+          <span className="flex w-[18px] h-[18px] text-brand-600"><Icon.Layers /></span>
+          Browse Fields
+        </button>
+      </div>
+
       {/* ── Welcome banner ── */}
       <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-gray-950 border border-brand-100 dark:border-brand-900/40 rounded-2xl px-5 py-4 mb-5">
         <div>

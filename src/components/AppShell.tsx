@@ -136,39 +136,41 @@ export default function AppShell() {
   return (
     <div className="app-shell">
       {/* ── TOPBAR ── */}
-      <header className="col-span-full flex items-center gap-4 px-6 h-[64px] bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50" style={{ gridColumn: '1 / -1' }}>
-        {/* Search bar */}
-        <button
-          onClick={() => setShowSearch(true)}
-          className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-full px-5 py-3 text-[14px] text-gray-400 flex-1 hover:bg-gray-100 dark:hover:bg-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-text"
-        >
-          <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-          <span className="flex-1 text-left">Search creators, projects...</span>
-          <kbd className="text-[11px] font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-1.5 py-px text-gray-400 shrink-0">⌘K</kbd>
-        </button>
-
-        {/* Browse Fields button */}
-        <button
-          onClick={() => navigate('/explore')}
-          className="flex items-center gap-2.5 px-5 py-3 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[14px] font-semibold text-gray-800 dark:text-white hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0 shadow-sm"
-        >
-          <span className="flex w-[18px] h-[18px] text-brand-600"><Icon.Layers /></span>
-          Browse Fields
-        </button>
-
-        {/* Right controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
+      <header className="col-span-full flex items-center gap-3 px-5 h-[56px] bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50" style={{ gridColumn: '1 / -1' }}>
+        <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => setDarkMode(d => !d)}
             title={darkMode ? 'Switch to light' : 'Switch to dark'}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <span className="flex w-[18px] h-[18px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
           </button>
           <button
+            onClick={() => setShowUpload(true)}
+            title="New post"
+            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <span className="flex w-[18px] h-[18px]"><Icon.Plus /></span>
+          </button>
+          <button
+            onClick={() => navigate('/messages')}
+            title="Messages"
+            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <span className="flex w-[18px] h-[18px]"><Icon.MessageCircle /></span>
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            title="Notifications"
+            className="relative w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <span className="flex w-[18px] h-[18px]"><Icon.Bell /></span>
+            {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-brand-600 border border-white" />}
+          </button>
+          <button
             onClick={() => navigate('/profile')}
             title="Profile"
-            className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 transition-colors"
+            className="w-[30px] h-[30px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 border-[1.5px] border-gray-200 dark:border-gray-700 hover:border-brand-500 transition-colors ml-0.5"
           >
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
           </button>
