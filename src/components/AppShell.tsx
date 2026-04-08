@@ -120,6 +120,7 @@ export default function AppShell() {
     { path: '/explore',       icon: <Icon.Explore />,       label: 'Explore' },
     { path: '/messages',      icon: <Icon.MessageCircle />, label: 'Messages',      badge: 0 },
     { path: '/notifications', icon: <Icon.Bell />,          label: 'Notifications', badge: unreadNotifCount },
+    { path: '/bookmarks',     icon: <Icon.Bookmark />,      label: 'Bookmarks' },
     { path: '/profile',       icon: <Icon.Profile />,       label: 'Profile' },
   ]
 
@@ -135,62 +136,39 @@ export default function AppShell() {
   return (
     <div className="app-shell">
       {/* ── TOPBAR ── */}
-      <header className="col-span-full flex items-center gap-3 px-5 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50" style={{ gridColumn: '1 / -1' }}>
-        <div className="font-display text-[17px] font-semibold text-gray-900 dark:text-white tracking-tight shrink-0 select-none">
-          only <em className="not-italic text-brand-600">creators</em>
-        </div>
-
+      <header className="col-span-full flex items-center gap-4 px-6 h-[64px] bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50" style={{ gridColumn: '1 / -1' }}>
+        {/* Search bar */}
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3.5 py-[7px] text-sm text-gray-400 flex-1 max-w-sm mx-auto hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 transition-colors cursor-text"
+          className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-full px-5 py-3 text-[14px] text-gray-400 flex-1 hover:bg-gray-100 dark:hover:bg-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-text"
         >
-          <span className="flex w-3.5 h-3.5"><Icon.Search /></span>
-          <span>Search creators…</span>
-          <kbd className="ml-auto text-[10px] font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-px text-gray-400">⌘K</kbd>
+          <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
+          <span className="flex-1 text-left">Search creators, projects...</span>
+          <kbd className="text-[11px] font-mono bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-1.5 py-px text-gray-400 shrink-0">⌘K</kbd>
         </button>
 
-        <div className="flex items-center gap-1 ml-auto">
+        {/* Browse Fields button */}
+        <button
+          onClick={() => navigate('/explore')}
+          className="flex items-center gap-2.5 px-5 py-3 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[14px] font-semibold text-gray-800 dark:text-white hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0 shadow-sm"
+        >
+          <span className="flex w-[18px] h-[18px] text-brand-600"><Icon.Layers /></span>
+          Browse Fields
+        </button>
+
+        {/* Right controls */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setDarkMode(d => !d)}
             title={darkMode ? 'Switch to light' : 'Switch to dark'}
-            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <span className="flex w-[18px] h-[18px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
           </button>
           <button
-            onClick={() => setShowUpload(true)}
-            title="New post"
-            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <span className="flex w-[18px] h-[18px]"><Icon.Plus /></span>
-          </button>
-          <button
-            onClick={() => navigate('/messages')}
-            title="Messages"
-            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <span className="flex w-[18px] h-[18px]"><Icon.MessageCircle /></span>
-          </button>
-          <button
-            onClick={() => navigate('/friends')}
-            title="Friends"
-            className="relative w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <span className="flex w-[18px] h-[18px]"><Icon.Friends /></span>
-            {pendingFriendCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-brand-600 border border-white" />}
-          </button>
-          <button
-            onClick={() => navigate('/notifications')}
-            title="Notifications"
-            className="relative w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <span className="flex w-[18px] h-[18px]"><Icon.Bell /></span>
-            {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-brand-600 border border-white" />}
-          </button>
-          <button
             onClick={() => navigate('/profile')}
             title="Profile"
-            className="w-[30px] h-[30px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 border-[1.5px] border-gray-200 dark:border-gray-700 hover:border-brand-500 transition-colors ml-0.5"
+            className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 transition-colors"
           >
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
           </button>
@@ -199,54 +177,54 @@ export default function AppShell() {
 
       {/* ── LEFT SIDEBAR ── */}
       <aside className="app-sidebar bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden" style={{ gridColumn: '1', gridRow: '2' }}>
+        {/* Logo */}
+        <div className="px-5 pt-5 pb-3">
+          <div className="font-display text-[18px] font-bold text-gray-900 dark:text-white tracking-tight select-none">
+            only <em className="not-italic text-brand-600">creators</em>
+          </div>
+        </div>
+
         {/* Main nav */}
-        <div className="px-2 pt-2.5 pb-1">
+        <div className="px-3 pb-1">
           {navItems.map(item => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13.5px] mb-0.5 transition-all text-left ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] mb-0.5 transition-all text-left ${
                 isNavActive(item.path)
-                  ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-medium'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-semibold'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <span className="flex w-4 h-4 shrink-0">{item.icon}</span>
+              <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
               <span className="flex-1 min-w-0 truncate">{item.label}</span>
               {item.badge != null && item.badge > 0 && (
-                <span className="text-[10px] font-semibold bg-brand-600 text-white px-1.5 py-px rounded-full min-w-[18px] text-center">
+                <span className="text-[11px] font-bold bg-brand-600 text-white px-1.5 py-px rounded-full min-w-[20px] text-center">
                   {item.badge}
                 </span>
               )}
             </button>
           ))}
-          <button
-            onClick={() => setShowSearch(true)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13.5px] mb-0.5 transition-all text-left text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white"
-          >
-            <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-            Find creators
-          </button>
         </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800 mx-2.5 my-1" />
+        <div className="h-px bg-gray-100 dark:bg-gray-800 mx-3 my-2" />
 
-        {/* Disciplines */}
-        <div className="flex-1 overflow-y-auto px-2 min-h-0 pb-1">
+        {/* My fields */}
+        <div className="flex-1 overflow-y-auto px-3 min-h-0 pb-1">
           {proDiscs.length > 0 && (
             <>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2.5 pt-2 pb-1">My fields</p>
+              <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 pt-1 pb-2">My fields</p>
               {proDiscs.map(d => (
                 <button
                   key={d.key}
                   onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13.5px] mb-0.5 transition-all text-left ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14.5px] mb-0.5 transition-all text-left ${
                     path.includes('discipline=' + d.key)
-                      ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-medium'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-semibold'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white font-medium'
                   }`}
                 >
-                  <span className="flex w-4 h-4 shrink-0">{d.icon}</span>
+                  <span className="flex w-[18px] h-[18px] shrink-0">{d.icon}</span>
                   <span className="flex-1 min-w-0 truncate">{d.label}</span>
                   <span className="text-brand-500 dark:text-brand-400 text-[10px]">◆</span>
                 </button>
@@ -255,36 +233,38 @@ export default function AppShell() {
           )}
         </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800 mx-2.5 my-1" />
+        <div className="h-px bg-gray-100 dark:bg-gray-800 mx-3 my-2" />
 
         {/* New post */}
-        <button
-          onClick={() => setShowUpload(true)}
-          className="mx-2 mb-2.5 flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl px-3.5 py-2.5 text-[13.5px] font-medium transition-colors"
-        >
-          <span className="flex w-[15px] h-[15px]"><Icon.Plus /></span>
-          New post
-        </button>
+        <div className="px-3 mb-3">
+          <button
+            onClick={() => setShowUpload(true)}
+            className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-4 py-3 text-[15px] font-semibold transition-colors"
+          >
+            <span className="flex w-4 h-4"><Icon.Plus /></span>
+            New post
+          </button>
+        </div>
 
         {/* User area */}
-        <div className="border-t border-gray-100 dark:border-gray-800 px-2 pt-2 pb-2">
+        <div className="border-t border-gray-100 dark:border-gray-800 px-3 pt-3 pb-3">
           <button
             onClick={() => navigate('/profile')}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 overflow-hidden shrink-0">
+            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-bold text-blue-700 dark:text-blue-300 overflow-hidden shrink-0">
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <div className="text-[13px] font-medium text-gray-900 dark:text-white truncate">{profile?.full_name}</div>
-              <div className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{profile?.role_title || 'General account'}</div>
+              <div className="text-[14px] font-semibold text-gray-900 dark:text-white truncate">{profile?.full_name}</div>
+              <div className="text-[12px] text-gray-400 dark:text-gray-500 truncate">{profile?.role_title || 'General account'}</div>
             </div>
           </button>
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[12.5px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl transition-colors mt-0.5"
+            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl transition-colors mt-0.5"
           >
-            <span className="flex w-3.5 h-3.5"><Icon.LogOut /></span>
+            <span className="flex w-4 h-4"><Icon.LogOut /></span>
             Sign out
           </button>
         </div>
@@ -298,6 +278,7 @@ export default function AppShell() {
           <Route path="/messages"          element={<MessagesPage />} />
           <Route path="/friends"           element={<FriendsPage />} />
           <Route path="/notifications"     element={<NotificationsPage />} />
+          <Route path="/bookmarks"         element={<div className="max-w-[700px] mx-auto px-8 py-6"><h1 className="text-[22px] font-bold text-gray-900 dark:text-white tracking-tight mb-1">Bookmarks</h1><p className="text-[13.5px] text-gray-400">Coming soon</p></div>} />
           <Route path="/profile"           element={<ProfilePage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/groups/:slug"      element={<GroupPage />} />
