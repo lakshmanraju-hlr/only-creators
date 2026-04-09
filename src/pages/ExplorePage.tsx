@@ -142,7 +142,7 @@ export default function ExplorePage() {
     const meta = getProfMeta(selectedDiscipline)
     const disc = DISCIPLINES.find(d => d.key === selectedDiscipline)
     return (
-      <div className="max-w-[700px] mx-auto px-8 py-6">
+      <div className="max-w-[700px] mx-auto px-4 md:px-8 py-4 md:py-6">
         {/* Back + header */}
         <div className="apple-card px-5 py-4 flex items-center gap-3 mb-5">
           <button
@@ -306,16 +306,16 @@ export default function ExplorePage() {
   }
 
   return (
-    <div className="px-8 py-6">
+    <div className="px-4 md:px-8 py-4 md:py-6">
       <h1 className="text-[22px] font-bold text-gray-900 dark:text-white tracking-tight mb-1">Explore fields</h1>
       <p className="text-[13.5px] text-gray-400 dark:text-gray-500 mb-6">Discover verified creators across every professional field</p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {DISCIPLINES.map(d => (
           <button
             key={d.key}
             onClick={() => setSearchParams({ discipline: d.key })}
-            className="group apple-card flex flex-col items-start gap-2 p-4 text-left transition-all"
+            className="group apple-card flex flex-col items-start gap-2 p-3 md:p-4 text-left transition-all"
           >
             <div className="w-10 h-10 bg-brand-50 dark:bg-brand-950/40 rounded-xl flex items-center justify-center group-hover:bg-brand-100 dark:group-hover:bg-brand-950/60 transition-colors">
               <span className="flex w-5 h-5 text-brand-600 dark:text-brand-400"><d.Icon /></span>

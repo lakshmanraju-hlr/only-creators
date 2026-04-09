@@ -137,86 +137,98 @@ export default function AppShell() {
     <div className="app-shell">
       {/* ── TOPBAR ── */}
       <header
-        className={`col-span-full flex items-center h-[64px] px-6 sticky top-0 z-50 ${darkMode ? 'topbar-dark' : 'topbar-light'}`}
+        className="col-span-full flex items-center h-[56px] sm:h-[64px] px-4 sm:px-6 sticky top-0 z-50"
         style={{
           gridColumn: '1 / -1',
-          background: darkMode ? 'rgba(28,28,30,0.88)' : 'rgba(255,255,255,0.82)',
+          background: darkMode ? 'rgba(28,28,30,0.92)' : 'rgba(255,255,255,0.88)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
           borderBottom: darkMode ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.1)',
         }}
       >
-        {/* Left: Logo */}
-        <div className="w-[240px] flex-shrink-0 flex items-center">
-          <span
-            className="font-display text-[20px] font-extrabold tracking-tight text-gray-900 dark:text-white select-none cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            only<em className="not-italic text-brand-600">creators</em>
-          </span>
-        </div>
+        {/* Logo */}
+        <span
+          className="font-display text-[18px] sm:text-[20px] font-extrabold tracking-tight text-gray-900 dark:text-white select-none cursor-pointer shrink-0"
+          onClick={() => navigate('/')}
+        >
+          only<em className="not-italic text-brand-600">creators</em>
+        </span>
 
-        {/* Center: Search + Browse Fields */}
-        <div className="flex-1 flex items-center justify-center gap-3 max-w-2xl mx-auto">
+        {/* Center: Search + Browse Fields — hidden on mobile */}
+        <div className="hidden sm:flex flex-1 items-center justify-center gap-3 max-w-2xl mx-auto px-4">
           <button
-            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-            className={`flex-1 flex items-center gap-3 rounded-full px-4 py-2.5 text-[14px] transition-colors cursor-text text-left ${darkMode ? 'bg-white/[0.08] text-white/40 hover:bg-white/[0.11]' : 'bg-black/[0.05] text-gray-400 hover:bg-black/[0.07]'}`}
+            onClick={() => setShowSearch(true)}
+            className={`flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left ${darkMode ? 'bg-white/[0.08] text-white/40 hover:bg-white/[0.11]' : 'bg-black/[0.05] text-gray-400 hover:bg-black/[0.07]'}`}
           >
             <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-            <span>Search creators or fields...</span>
+            <span className="hidden md:block">Search creators or fields...</span>
           </button>
           <button
             onClick={() => navigate('/explore')}
-            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-5 py-2.5 text-[13px] font-bold whitespace-nowrap transition-colors shadow-sm shrink-0"
+            className="hidden md:flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-4 py-2 text-[13px] font-bold whitespace-nowrap transition-colors shadow-sm shrink-0"
           >
-            <span className="flex w-[15px] h-[15px]"><Icon.Layers /></span>
+            <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
             Browse Fields
           </button>
         </div>
 
-        {/* Right: Icons + User pill */}
-        <div className="w-[288px] flex-shrink-0 flex items-center justify-end">
-          <div
-            className="flex items-center gap-1 rounded-full py-1 pl-4 pr-1"
-            style={{
-              background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
-              border: darkMode ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.06)',
-            }}
+        {/* Right */}
+        <div className="flex items-center justify-end gap-1 ml-auto">
+          {/* Search icon — mobile only */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className={`sm:hidden w-9 h-9 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
           >
-            <div className="flex items-center gap-0.5 mr-2">
-              <button
-                onClick={() => setDarkMode(d => !d)}
-                title={darkMode ? 'Light mode' : 'Dark mode'}
-                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-white'}`}
-              >
-                <span className="flex w-[17px] h-[17px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
-              </button>
-              <button
-                onClick={() => navigate('/messages')}
-                title="Messages"
-                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-white'}`}
-              >
-                <span className="flex w-[17px] h-[17px]"><Icon.MessageCircle /></span>
-              </button>
-              <button
-                onClick={() => navigate('/notifications')}
-                title="Notifications"
-                className="relative w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-colors"
-              >
-                <span className="flex w-[17px] h-[17px]"><Icon.Bell /></span>
-                {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-[#f5f5f7]" />}
-              </button>
-            </div>
-            <div
-              className="flex items-center gap-2.5 cursor-pointer px-1 py-0.5 rounded-full hover:bg-white transition-colors"
-              onClick={() => navigate('/profile')}
+            <span className="flex w-[18px] h-[18px]"><Icon.Search /></span>
+          </button>
+
+          {/* Icon buttons — hidden on mobile */}
+          <button
+            onClick={() => setDarkMode(d => !d)}
+            title={darkMode ? 'Light mode' : 'Dark mode'}
+            className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+          >
+            <span className="flex w-[17px] h-[17px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
+          </button>
+          <button
+            onClick={() => navigate('/messages')}
+            title="Messages"
+            className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+          >
+            <span className="flex w-[17px] h-[17px]"><Icon.MessageCircle /></span>
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            title="Notifications"
+            className={`hidden sm:flex relative w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+          >
+            <span className="flex w-[17px] h-[17px]"><Icon.Bell /></span>
+            {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" style={{ border: `2px solid ${darkMode ? '#1c1c1e' : '#f5f5f7'}` }} />}
+          </button>
+
+          {/* Name + avatar pill */}
+          <div
+            className="flex items-center gap-2 sm:gap-3 ml-1 pl-2 sm:pl-4 pr-1.5 py-1.5 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
+            style={{
+              background: darkMode ? 'rgba(255,255,255,0.07)' : '#ffffff',
+              border: darkMode ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.08)',
+              boxShadow: darkMode ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
+            }}
+            onClick={() => navigate('/profile')}
+          >
+            <span
+              className="text-[13px] sm:text-[14px] font-bold leading-none hidden sm:block"
+              style={{ color: darkMode ? 'rgba(255,255,255,0.88)' : '#111111' }}
             >
-              <span className={`text-[14px] font-bold hidden md:block leading-none ${darkMode ? 'text-white/80' : 'text-gray-900'}`}>
-                {profile?.full_name}
-              </span>
-              <div className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-bold text-blue-700 dark:text-blue-300 border border-white shadow-sm">
-                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
-              </div>
+              {profile?.full_name}
+            </span>
+            <div
+              className="w-[32px] h-[32px] sm:w-[36px] sm:h-[36px] rounded-xl overflow-hidden bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-700 shrink-0"
+              style={{ border: darkMode ? '0.5px solid rgba(255,255,255,0.12)' : '0.5px solid rgba(0,0,0,0.06)' }}
+            >
+              {profile?.avatar_url
+                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                : initials(profile?.full_name || '')}
             </div>
           </div>
         </div>
@@ -284,7 +296,7 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="overflow-y-auto overflow-x-hidden" style={{ gridColumn: '2', gridRow: '2', background: darkMode ? '#111111' : '#f5f5f7' }}>
+      <main className="app-main" style={{ background: darkMode ? '#111111' : '#f5f5f7' }}>
         <Routes>
           <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
           <Route path="/explore"           element={<ExplorePage />} />
@@ -304,21 +316,26 @@ export default function AppShell() {
       </div>
 
       {/* ── BOTTOM NAV (mobile) ── */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 flex items-center justify-around py-1.5 z-50 sm:hidden">
-        {navItems.filter(i => ['/', '/explore', '/messages', '/notifications', '/profile'].includes(i.path)).map(item => (
+      <nav
+        className="fixed bottom-0 left-0 right-0 flex items-center justify-around z-50 sm:hidden"
+        style={{
+          background: darkMode ? 'rgba(28,28,30,0.96)' : 'rgba(255,255,255,0.96)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderTop: darkMode ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.08)',
+          paddingBottom: 'env(safe-area-inset-bottom, 4px)',
+          paddingTop: '6px',
+        }}
+      >
+        {navItems.map(item => (
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
-              path === item.path
-                ? 'text-brand-600 dark:text-brand-400'
-                : 'text-gray-400 dark:text-gray-500'
-            }`}
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors"
+            style={{ color: isNavActive(item.path) ? '#800020' : darkMode ? 'rgba(255,255,255,0.4)' : '#8e8e93' }}
           >
-            <span className="relative flex w-[22px] h-[22px]">
-              {item.icon}
-            </span>
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <span className="flex w-[22px] h-[22px]">{item.icon}</span>
+            <span className="text-[10px] font-semibold">{item.label}</span>
           </button>
         ))}
       </nav>

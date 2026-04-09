@@ -311,7 +311,7 @@ export default function FeedPage({ onPost }: Props) {
   const greeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 
   return (
-    <div className="max-w-[700px] mx-auto px-8 py-6">
+    <div className="max-w-[700px] mx-auto px-4 md:px-8 py-4 md:py-6">
 
       {/* ── Greeting ── */}
       <div className="mb-6">

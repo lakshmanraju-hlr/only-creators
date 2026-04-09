@@ -333,8 +333,8 @@ export default function ProfilePage() {
     <div className="min-h-full">
 
       {/* ── PROFILE HEADER ── */}
-      <div className="px-8 pt-8 pb-6">
-        <div className="apple-card p-6 flex items-start gap-6">
+      <div className="px-4 md:px-8 pt-5 md:pt-8 pb-4 md:pb-6">
+        <div className="apple-card p-4 md:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-6">
 
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -344,7 +344,7 @@ export default function ProfilePage() {
                 if (isOwnProfile && !profile.avatar_url) avatarInputRef.current?.click()
                 else if (profile.avatar_url) setAvatarLightbox(true)
               }}
-              className="w-48 h-48 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
+              className="w-28 h-28 sm:w-36 sm:h-36 md:w-48 md:h-48 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
             >
               {uploadingAvatar ? (
                 <div className="w-full h-full flex items-center justify-center">
@@ -370,11 +370,11 @@ export default function ProfilePage() {
           </div>
 
           {/* Info */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 w-full sm:w-auto">
             <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-[22px] font-bold text-gray-900 dark:text-white leading-tight">{profile.full_name}</h1>
+              <div className="text-center sm:text-left w-full sm:w-auto">
+                <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                  <h1 className="text-[20px] md:text-[22px] font-bold text-gray-900 dark:text-white leading-tight">{profile.full_name}</h1>
                 </div>
                 {(profile.role_title || (profile as any).workplace) && (
                   <p className="text-gray-500 dark:text-gray-400 text-[13.5px] mt-0.5 font-medium">
@@ -401,7 +401,7 @@ export default function ProfilePage() {
 
               {/* Actions */}
               {isOwnProfile ? (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 mx-auto sm:mx-0">
                   <button
                     onClick={() => setShowEditModal(true)}
                     className="px-5 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold rounded-full hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors tracking-wide"
@@ -443,7 +443,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Stats */}
-            <div className="flex items-center gap-8 mt-5">
+            <div className="flex items-center gap-8 mt-4 justify-center sm:justify-start">
               {[
                 { value: profile.follower_count ?? 0, label: 'Followers' },
                 { value: profile.post_count ?? posts.length, label: 'Posts' },
@@ -461,7 +461,7 @@ export default function ProfilePage() {
       {/* ── DISCIPLINE TABS ── */}
       <div className="sticky top-0 border-b frosted-bar z-10">
         <div>
-          <div className="flex items-center gap-1.5 px-8 py-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1.5 px-4 md:px-8 py-3 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setSelectedDiscipline(null)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all shrink-0 ${
@@ -497,7 +497,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="px-8 py-6">
+      <div className="px-4 md:px-8 py-4 md:py-6">
 
         {/* Section header */}
         <div className="flex items-center justify-between mb-5">
@@ -567,7 +567,7 @@ export default function ProfilePage() {
         {/* Grid view */}
         {!isPrivate && filteredPosts.length > 0 && gridView && (
           <motion.div
-            className="grid grid-cols-4 gap-3"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
