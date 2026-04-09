@@ -404,16 +404,10 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 shrink-0 mx-auto md:mx-0">
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="px-5 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold rounded-full hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors tracking-wide"
+                    className="px-5 py-2 text-sm font-semibold rounded-full transition-colors tracking-wide bg-black/[0.06] dark:bg-white/[0.10] text-gray-900 dark:text-white/90 border border-black/[0.08] dark:border-white/[0.12] hover:bg-black/[0.09] dark:hover:bg-white/[0.14]"
+                    style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
                   >
-                    EDIT PROFILE
-                  </button>
-                  <button
-                    onClick={() => setShowUpload(true)}
-                    className="w-9 h-9 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    title="New post"
-                  >
-                    <span className="flex w-4 h-4 text-gray-500 dark:text-gray-400"><Icon.Settings /></span>
+                    Edit Profile
                   </button>
                 </div>
               ) : (
@@ -464,10 +458,10 @@ export default function ProfilePage() {
           <div className="flex items-center gap-1.5 px-4 md:px-8 py-3 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setSelectedDiscipline(null)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all shrink-0 ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] whitespace-nowrap transition-all shrink-0 ${
                 selectedDiscipline === null
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
+                  ? 'font-semibold text-gray-900 dark:text-white bg-black/[0.09] dark:bg-white/[0.13] border border-black/[0.07] dark:border-white/[0.10] shadow-sm'
+                  : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
               }`}
             >
               <span className="flex w-3.5 h-3.5"><Icon.Profile /></span>
@@ -481,10 +475,10 @@ export default function ProfilePage() {
                 <button
                   key={persona.discipline}
                   onClick={() => setSelectedDiscipline(persona.discipline)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] whitespace-nowrap transition-all shrink-0 ${
                     isActive
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
+                      ? 'font-semibold text-gray-900 dark:text-white bg-black/[0.09] dark:bg-white/[0.13] border border-black/[0.07] dark:border-white/[0.10] shadow-sm'
+                      : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
                   }`}
                 >
                   <span className="flex w-3.5 h-3.5"><disc.IconComp /></span>
@@ -874,6 +868,12 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
             </div>
           </div>
 
+          {/* Personal section label */}
+          <div className="flex items-center gap-3 pt-1">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 shrink-0">Personal</p>
+            <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+          </div>
+
           <Field label="Display name"><input className="field-input-tw" value={fullName} onChange={e => setFullName(e.target.value)} /></Field>
           <Field label="Job title" hint="optional">
             <input className="field-input-tw" placeholder="e.g. Software Engineer, Cardiologist…" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
@@ -890,10 +890,16 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
             <input className="field-input-tw" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yourportfolio.com" />
           </Field>
 
+          {/* Separator before privacy/professional */}
+          <div className="flex items-center gap-3 pt-1">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 shrink-0">Settings</p>
+            <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+          </div>
+
           {/* Privacy toggle */}
           <button
             onClick={() => setPersonalPublic(v => !v)}
-            className="w-full flex items-center justify-between py-3 border-t border-gray-100 dark:border-gray-800"
+            className="w-full flex items-center justify-between py-2"
           >
             <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <span className="flex w-4 h-4 text-gray-500">{personalPublic ? <Icon.Globe /> : <Icon.Lock />}</span>

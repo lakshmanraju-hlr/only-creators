@@ -50,11 +50,12 @@ export default function AppShell() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme')
     if (saved) return saved === 'dark'
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
+    return false // Default to light mode
   })
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onlineFriends, setOnlineFriends] = useState<Profile[]>([])
   const [chatWithProfile, setChatWithProfile] = useState<Profile | null>(null)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const path = location.pathname
 
@@ -137,7 +138,7 @@ export default function AppShell() {
     <div className="app-shell">
       {/* ── TOPBAR ── */}
       <header
-        className="col-span-full flex items-center h-[56px] md:h-[64px] px-4 md:px-6 sticky top-0 z-50"
+        className="col-span-full relative flex items-center h-[56px] md:h-[64px] px-4 md:px-6 sticky top-0 z-50"
         style={{
           gridColumn: '1 / -1',
           background: darkMode ? 'rgba(28,28,30,0.92)' : 'rgba(255,255,255,0.88)',
@@ -154,18 +155,18 @@ export default function AppShell() {
           only<em className="not-italic text-brand-600">creators</em>
         </span>
 
-        {/* Center: Search + Browse Fields — hidden on mobile */}
-        <div className="hidden md:flex flex-1 items-center justify-center gap-3 max-w-2xl mx-auto px-4">
+        {/* Center: Search + Browse Fields — absolutely centered, hidden on mobile */}
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 w-[400px]">
           <button
             onClick={() => setShowSearch(true)}
             className={`flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left ${darkMode ? 'bg-white/[0.08] text-white/40 hover:bg-white/[0.11]' : 'bg-black/[0.05] text-gray-400 hover:bg-black/[0.07]'}`}
           >
             <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-            <span className="hidden md:block">Search creators or fields...</span>
+            <span>Search creators or fields...</span>
           </button>
           <button
             onClick={() => navigate('/explore')}
-            className="hidden md:flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-4 py-2 text-[13px] font-bold whitespace-nowrap transition-colors shadow-sm shrink-0"
+            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-4 py-2 text-[13px] font-bold whitespace-nowrap transition-colors shadow-sm shrink-0"
           >
             <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
             Browse Fields
@@ -173,7 +174,7 @@ export default function AppShell() {
         </div>
 
         {/* Right */}
-        <div className="flex items-center justify-end gap-1 ml-auto">
+        <div className="flex items-center justify-end gap-1 ml-auto relative">
           {/* Search icon — mobile only */}
           <button
             onClick={() => setShowSearch(true)}
@@ -182,7 +183,7 @@ export default function AppShell() {
             <span className="flex w-[18px] h-[18px]"><Icon.Search /></span>
           </button>
 
-          {/* Icon buttons — hidden on mobile */}
+          {/* Dark mode toggle — desktop only, outside pill */}
           <button
             onClick={() => setDarkMode(d => !d)}
             title={darkMode ? 'Light mode' : 'Dark mode'}
@@ -190,47 +191,101 @@ export default function AppShell() {
           >
             <span className="flex w-[17px] h-[17px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
           </button>
-          <button
-            onClick={() => navigate('/messages')}
-            title="Messages"
-            className={`hidden md:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
-          >
-            <span className="flex w-[17px] h-[17px]"><Icon.MessageCircle /></span>
-          </button>
-          <button
-            onClick={() => navigate('/notifications')}
-            title="Notifications"
-            className={`hidden md:flex relative w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
-          >
-            <span className="flex w-[17px] h-[17px]"><Icon.Bell /></span>
-            {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" style={{ border: `2px solid ${darkMode ? '#1c1c1e' : '#f5f5f7'}` }} />}
-          </button>
 
-          {/* Name + avatar pill */}
+          {/* Pill: messages + notifs + name + avatar */}
           <div
-            className="flex items-center gap-2 md:gap-3 ml-1 pl-2 md:pl-4 pr-1.5 py-1.5 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
+            className="flex items-center ml-1 pl-1 pr-1 py-1 rounded-full"
             style={{
               background: darkMode ? 'rgba(255,255,255,0.07)' : '#ffffff',
               border: darkMode ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.08)',
               boxShadow: darkMode ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
             }}
-            onClick={() => navigate('/profile')}
           >
+            {/* Messages — desktop only */}
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/messages') }}
+              title="Messages"
+              className={`hidden md:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+            >
+              <span className="flex w-[16px] h-[16px]"><Icon.MessageCircle /></span>
+            </button>
+
+            {/* Notifications — desktop only */}
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/notifications') }}
+              title="Notifications"
+              className={`hidden md:flex relative w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+            >
+              <span className="flex w-[16px] h-[16px]"><Icon.Bell /></span>
+              {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" style={{ border: `2px solid ${darkMode ? '#1c1c1e' : 'white'}` }} />}
+            </button>
+
+            {/* Divider — desktop only */}
+            <div
+              className="hidden md:block w-px h-4 mx-1 shrink-0"
+              style={{ background: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' }}
+            />
+
+            {/* Name — desktop only */}
             <span
-              className="text-[13px] md:text-[14px] font-bold leading-none hidden md:block"
+              className="text-[13px] md:text-[14px] font-bold leading-none hidden md:block px-2 cursor-pointer select-none"
               style={{ color: darkMode ? 'rgba(255,255,255,0.88)' : '#111111' }}
+              onClick={() => navigate('/profile')}
             >
               {profile?.full_name}
             </span>
-            <div
-              className="w-[32px] h-[32px] md:w-[36px] md:h-[36px] rounded-xl overflow-hidden bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-700 shrink-0"
+
+            {/* Avatar — click opens menu */}
+            <button
+              onClick={() => setShowProfileMenu(v => !v)}
+              className="w-[32px] h-[32px] md:w-[36px] md:h-[36px] rounded-full overflow-hidden bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-700 shrink-0 transition-opacity hover:opacity-80"
               style={{ border: darkMode ? '0.5px solid rgba(255,255,255,0.12)' : '0.5px solid rgba(0,0,0,0.06)' }}
             >
               {profile?.avatar_url
                 ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                 : initials(profile?.full_name || '')}
-            </div>
+            </button>
           </div>
+
+          {/* Backdrop */}
+          {showProfileMenu && (
+            <div className="fixed inset-0 z-[998]" onClick={() => setShowProfileMenu(false)} />
+          )}
+
+          {/* Profile dropdown menu */}
+          {showProfileMenu && (
+            <div
+              className="absolute right-0 top-[calc(100%+8px)] z-[999] w-[220px] rounded-2xl overflow-hidden py-1.5"
+              style={{
+                background: darkMode ? '#2c2c2e' : '#ffffff',
+                border: darkMode ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.08)',
+                boxShadow: darkMode ? '0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3)' : '0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06)',
+              }}
+            >
+              <button
+                onClick={() => { navigate('/profile'); setShowProfileMenu(false) }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left ${darkMode ? 'text-white/88 hover:bg-white/[0.08]' : 'text-gray-800 hover:bg-gray-50'}`}
+              >
+                <span className="flex w-4 h-4 shrink-0" style={{ color: darkMode ? 'rgba(255,255,255,0.45)' : '#8e8e93' }}><Icon.Profile /></span>
+                Edit profile
+              </button>
+              <button
+                onClick={() => setDarkMode(d => !d)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left ${darkMode ? 'text-white/88 hover:bg-white/[0.08]' : 'text-gray-800 hover:bg-gray-50'}`}
+              >
+                <span className="flex w-4 h-4 shrink-0" style={{ color: darkMode ? 'rgba(255,255,255,0.45)' : '#8e8e93' }}>{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
+                {darkMode ? 'Light mode' : 'Dark mode'}
+              </button>
+              <div className="h-px mx-3 my-1" style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
+              <button
+                onClick={() => { signOut(); setShowProfileMenu(false) }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-red-500 ${darkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-red-50'}`}
+              >
+                <span className="flex w-4 h-4 shrink-0 text-red-500"><Icon.LogOut /></span>
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -277,20 +332,6 @@ export default function AppShell() {
               ))}
             </>
           )}
-        </div>
-
-        <div className="h-px mx-3 my-2" style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
-
-        {/* New post */}
-        <div className="px-3 mb-3">
-          <button
-            onClick={() => setShowUpload(true)}
-            className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl px-4 py-4 text-[15px] font-semibold transition-colors"
-            style={{ boxShadow: '0 4px 14px rgba(128,0,32,0.35)' }}
-          >
-            <span className="flex w-4 h-4"><Icon.Plus /></span>
-            New post
-          </button>
         </div>
 
       </aside>
