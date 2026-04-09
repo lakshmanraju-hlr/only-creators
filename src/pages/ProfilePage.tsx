@@ -205,10 +205,10 @@ export default function ProfilePage() {
 
     return (
       <motion.div
-        className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs group"
+        className="apple-card overflow-hidden group"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => { setHovered(false); setShowMenu(false) }}
-        whileHover={{ y: -3, boxShadow: '0 8px 30px rgba(0,0,0,0.10)' }}
+        whileHover={{ y: -3, boxShadow: '0 12px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)' }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
         {/* ── Media area ── */}
@@ -330,11 +330,11 @@ export default function ProfilePage() {
   const isPrivate = !isOwnProfile && profile.personal_profile_public === false
 
   return (
-    <div className="min-h-full bg-white dark:bg-gray-950">
+    <div className="min-h-full">
 
       {/* ── PROFILE HEADER ── */}
       <div className="px-8 pt-8 pb-6">
-        <div className="flex items-start gap-6">
+        <div className="apple-card p-6 flex items-start gap-6">
 
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -445,12 +445,12 @@ export default function ProfilePage() {
             {/* Stats */}
             <div className="flex items-center gap-8 mt-5">
               {[
-                { value: profile.follower_count ?? 0, label: 'FOLLOWERS' },
-                { value: profile.post_count ?? posts.length, label: 'POSTS' },
+                { value: profile.follower_count ?? 0, label: 'Followers' },
+                { value: profile.post_count ?? posts.length, label: 'Posts' },
               ].map(({ value, label }) => (
                 <div key={label}>
-                  <div className="text-[20px] font-bold text-gray-900 dark:text-white leading-tight">{Number(value).toLocaleString()}</div>
-                  <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 tracking-widest mt-0.5">{label}</div>
+                  <div className="text-[22px] font-bold text-gray-900 dark:text-white leading-tight">{Number(value).toLocaleString()}</div>
+                  <div className="text-[12px] text-gray-400 dark:text-gray-500 mt-0.5">{label}</div>
                 </div>
               ))}
             </div>
@@ -459,15 +459,15 @@ export default function ProfilePage() {
       </div>
 
       {/* ── DISCIPLINE TABS ── */}
-      <div className="sticky top-0 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 z-10">
+      <div className="sticky top-0 border-b frosted-bar z-10">
         <div>
-          <div className="flex items-center gap-1 px-8 py-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1.5 px-8 py-3 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setSelectedDiscipline(null)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all shrink-0 ${
                 selectedDiscipline === null
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
               }`}
             >
               <span className="flex w-3.5 h-3.5"><Icon.Profile /></span>
@@ -481,10 +481,10 @@ export default function ProfilePage() {
                 <button
                   key={persona.discipline}
                   onClick={() => setSelectedDiscipline(persona.discipline)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all shrink-0 ${
                     isActive
-                      ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
                   }`}
                 >
                   <span className="flex w-3.5 h-3.5"><disc.IconComp /></span>
@@ -501,7 +501,7 @@ export default function ProfilePage() {
 
         {/* Section header */}
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[18px] font-bold text-gray-900 dark:text-white">
+          <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white tracking-tight">
             {selectedDiscipline ? (DISCIPLINE_MAP[selectedDiscipline]?.label ?? selectedDiscipline) : 'Personal'}
           </h2>
           <div className="flex items-center gap-2">
@@ -619,25 +619,39 @@ export default function ProfilePage() {
       <AnimatePresence>
         {avatarLightbox && profile.avatar_url && (
           <motion.div
-            className="fixed inset-0 bg-black/85 flex items-center justify-center z-[10000]"
+            className="fixed inset-0 flex items-center justify-center z-[10000]"
+            style={{
+              backdropFilter: 'blur(28px) saturate(160%) brightness(0.45)',
+              WebkitBackdropFilter: 'blur(28px) saturate(160%) brightness(0.45)',
+              background: 'rgba(0,0,0,0.55)',
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setAvatarLightbox(false)}
           >
-            <div className="relative max-w-[90vw] max-h-[90vh]">
+            <button
+              onClick={() => setAvatarLightbox(false)}
+              className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-colors"
+              style={{ background: 'rgba(255,255,255,0.12)', border: '0.5px solid rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
+            >
+              <span className="flex w-4 h-4 text-white"><Icon.X /></span>
+            </button>
+            <motion.div
+              className="relative"
+              onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.88, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 12 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            >
               <img
                 src={profile.avatar_url}
                 alt={profile.full_name}
-                className="rounded-2xl max-w-[90vw] max-h-[90vh] object-contain shadow-2xl"
+                className="rounded-full max-w-[80vw] max-h-[80vh] object-contain"
+                style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
               />
-              <button
-                onClick={() => setAvatarLightbox(false)}
-                className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors"
-              >
-                <span className="flex w-3.5 h-3.5"><Icon.X /></span>
-              </button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -646,49 +660,62 @@ export default function ProfilePage() {
       <AnimatePresence>
         {postLightbox && (
           <motion.div
-            className="fixed inset-0 bg-black/92 flex items-center justify-center z-[10000]"
+            className="fixed inset-0 flex items-center justify-center z-[10000]"
+            style={{
+              backdropFilter: 'blur(28px) saturate(160%) brightness(0.45)',
+              WebkitBackdropFilter: 'blur(28px) saturate(160%) brightness(0.45)',
+              background: 'rgba(0,0,0,0.55)',
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setPostLightbox(null)}
           >
+            {/* Frosted close button */}
             <button
               onClick={() => setPostLightbox(null)}
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
+              className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-colors"
+              style={{ background: 'rgba(255,255,255,0.12)', border: '0.5px solid rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}
             >
               <span className="flex w-4 h-4 text-white"><Icon.X /></span>
             </button>
-            <div
+            <motion.div
               className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center gap-3"
               onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.88, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 12 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             >
               {postLightbox.content_type === 'photo' && postLightbox.media_url ? (
                 <img
                   src={postLightbox.media_url}
                   alt=""
-                  className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
+                  className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl"
+                  style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
                 />
               ) : postLightbox.content_type === 'video' && postLightbox.media_url ? (
                 <video
                   src={postLightbox.media_url}
                   controls
                   autoPlay
-                  className="max-w-[90vw] max-h-[85vh] rounded-xl shadow-2xl"
+                  className="max-w-[90vw] max-h-[85vh] rounded-2xl"
+                  style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
                 />
               ) : postLightbox.content_type === 'poem' ? (
-                <div className="bg-amber-50 dark:bg-gray-900 rounded-2xl p-10 max-w-lg shadow-2xl">
-                  <p className="text-4xl text-amber-400 opacity-50 leading-none mb-4">"</p>
-                  <p className="text-gray-700 dark:text-gray-200 text-lg italic leading-relaxed">{postLightbox.poem_text}</p>
+                <div className="rounded-3xl p-10 max-w-lg" style={{ background: 'rgba(255,248,230,0.10)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.15)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
+                  <p className="text-5xl text-amber-300/50 leading-none mb-4">"</p>
+                  <p className="text-white/90 text-[17px] italic leading-relaxed">{postLightbox.poem_text}</p>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-900 rounded-2xl p-10 max-w-lg shadow-2xl">
-                  <p className="text-gray-700 dark:text-gray-200 text-base leading-relaxed">{postLightbox.caption}</p>
+                <div className="rounded-3xl p-10 max-w-lg" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.15)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
+                  <p className="text-white/90 text-[16px] leading-relaxed">{postLightbox.caption}</p>
                 </div>
               )}
               {postLightbox.caption && postLightbox.content_type !== 'poem' && (
-                <p className="text-white/70 text-sm text-center max-w-lg">{postLightbox.caption}</p>
+                <p className="text-white/60 text-[13.5px] text-center max-w-lg px-4">{postLightbox.caption}</p>
               )}
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -803,18 +830,24 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000] p-4"
+      className="fixed inset-0 flex items-center justify-center z-[1000] p-4"
+      style={{
+        backdropFilter: 'blur(20px) saturate(140%) brightness(0.6)',
+        WebkitBackdropFilter: 'blur(20px) saturate(140%) brightness(0.6)',
+        background: 'rgba(0,0,0,0.45)',
+      }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <motion.div
-        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="apple-card w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.15)' }}
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit profile</h2>
+          <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white">Edit profile</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

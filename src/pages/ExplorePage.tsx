@@ -144,10 +144,10 @@ export default function ExplorePage() {
     return (
       <div className="max-w-[700px] mx-auto px-8 py-6">
         {/* Back + header */}
-        <div className="flex items-center gap-3 mb-5">
+        <div className="apple-card px-5 py-4 flex items-center gap-3 mb-5">
           <button
             onClick={() => setSearchParams({})}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <span className="flex w-3.5 h-3.5"><Icon.ArrowLeft /></span>
             Back
@@ -164,15 +164,15 @@ export default function ExplorePage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 dark:border-gray-800 mb-4">
+        <div className="flex gap-1.5 mb-5">
           {(['posts', 'creators', 'groups'] as const).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-4 py-2.5 text-[13.5px] font-medium border-b-2 mb-[-1px] capitalize transition-colors ${
+              className={`px-4 py-2 text-[13.5px] font-semibold rounded-full transition-all ${
                 view === v
-                  ? 'text-brand-600 dark:text-brand-400 border-brand-600 dark:border-brand-400'
-                  : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-300'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
               }`}
             >
               {v === 'posts' ? 'Top posts' : v.charAt(0).toUpperCase() + v.slice(1)}
@@ -182,7 +182,7 @@ export default function ExplorePage() {
 
         {/* Join / member banner */}
         {profile && !myDisciplines.has(selectedDiscipline) && (
-          <div className="flex items-center gap-4 bg-brand-50 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900/40 rounded-2xl px-4 py-3.5 mb-4">
+          <div className="apple-card flex items-center gap-4 px-4 py-4 mb-4" style={{ background: 'linear-gradient(135deg, rgba(128,0,32,0.04) 0%, transparent 100%)' }}>
             {disc && <div className="w-10 h-10 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center shadow-xs shrink-0">
               <span className="flex w-5 h-5 text-brand-600 dark:text-brand-400"><disc.Icon /></span>
             </div>}
@@ -241,7 +241,7 @@ export default function ExplorePage() {
               <button
                 key={c.id}
                 onClick={() => navigate('/profile/' + c.username)}
-                className="w-full flex items-center gap-3.5 px-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-card transition-all text-left"
+                className="w-full apple-card flex items-center gap-3.5 px-4 py-3.5 transition-all text-left"
               >
                 <div className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[14px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
                   {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(c.full_name)}
@@ -276,7 +276,7 @@ export default function ExplorePage() {
               <button
                 key={g.id}
                 onClick={() => navigate('/groups/' + g.slug)}
-                className="w-full text-left px-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-card transition-all"
+                className="w-full apple-card text-left px-4 py-3.5 transition-all"
               >
                 <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{g.name}</p>
                 {g.description && <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">{g.description}</p>}
@@ -315,14 +315,14 @@ export default function ExplorePage() {
           <button
             key={d.key}
             onClick={() => setSearchParams({ discipline: d.key })}
-            className="group flex flex-col items-start gap-2 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs hover:border-brand-200 dark:hover:border-brand-800 hover:shadow-card transition-all text-left"
+            className="group apple-card flex flex-col items-start gap-2 p-4 text-left transition-all"
           >
             <div className="w-10 h-10 bg-brand-50 dark:bg-brand-950/40 rounded-xl flex items-center justify-center group-hover:bg-brand-100 dark:group-hover:bg-brand-950/60 transition-colors">
               <span className="flex w-5 h-5 text-brand-600 dark:text-brand-400"><d.Icon /></span>
             </div>
             <p className="font-semibold text-[13.5px] text-gray-900 dark:text-white leading-snug">{d.name}</p>
-            {d.count && <p className="text-[11.5px] text-gray-400 dark:text-gray-500">{d.count} creators</p>}
-            <p className="text-[10.5px] font-semibold text-brand-500 dark:text-brand-400 uppercase tracking-wide">Pro verified</p>
+            {d.count && <p className="text-[12px] text-gray-400 dark:text-gray-500">{d.count} creators</p>}
+            <p className="text-[11px] font-semibold text-brand-500 dark:text-brand-400 uppercase tracking-wide">Pro verified</p>
           </button>
         ))}
       </div>
@@ -335,11 +335,11 @@ export default function ExplorePage() {
               <button
                 key={d}
                 onClick={() => setSearchParams({ discipline: d })}
-                className="flex flex-col items-start gap-2 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-card transition-all text-left"
+                className="apple-card flex flex-col items-start gap-2 p-4 text-left transition-all"
               >
                 <div className="w-10 h-10 bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-center text-lg">✦</div>
                 <p className="font-semibold text-[13.5px] text-gray-900 dark:text-white">{d.charAt(0).toUpperCase() + d.slice(1)}</p>
-                <p className="text-[10.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Creator verified</p>
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Creator verified</p>
               </button>
             ))}
           </div>
