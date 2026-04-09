@@ -167,7 +167,7 @@ export default function AppShell() {
           </button>
           <button
             onClick={() => navigate('/explore')}
-            className="flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full px-5 py-2.5 text-[13px] font-bold whitespace-nowrap hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-sm shrink-0"
+            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-5 py-2.5 text-[13px] font-bold whitespace-nowrap transition-colors shadow-sm shrink-0"
           >
             <span className="flex w-[15px] h-[15px]"><Icon.Layers /></span>
             Browse Fields

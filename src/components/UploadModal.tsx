@@ -8,6 +8,13 @@ import toast from 'react-hot-toast'
 
 interface Props { onClose: () => void; defaultGroup?: Group; defaultDiscipline?: string }
 
+// Primary tabs shown prominently at the top
+const PRIMARY_TYPES: { type: ContentType; icon: React.ReactNode; label: string; accept?: string }[] = [
+  { type: 'photo',    icon: <Icon.Camera />,   label: 'Image',   accept: 'image/*' },
+  { type: 'video',    icon: <Icon.Video />,    label: 'Video',   accept: 'video/*' },
+  { type: 'text',     icon: <Icon.PenLine />,  label: 'Text' },
+]
+
 const CONTENT_TYPES: { type: ContentType; icon: React.ReactNode; label: string; accept?: string }[] = [
   { type: 'text',     icon: <Icon.PenLine />,  label: 'Text' },
   { type: 'photo',    icon: <Icon.Camera />,   label: 'Photo',    accept: 'image/*' },
@@ -237,12 +244,32 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     >
       <div className="w-full max-w-[540px] bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="font-semibold text-[16px] text-gray-900 dark:text-white">New post</h2>
-          <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors" onClick={onClose}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <h2 className="font-bold text-[18px] text-gray-900 dark:text-white tracking-tight">New post</h2>
+          <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors" onClick={onClose}>
             <span className="flex w-4 h-4"><Icon.X /></span>
           </button>
         </div>
+
+        {/* Primary type tabs */}
+        <div className="flex gap-2 px-5 pb-4">
+          {PRIMARY_TYPES.map(pt => (
+            <button
+              key={pt.type}
+              onClick={() => { setContentType(pt.type); setFile(null); setFilePreview(null) }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[14px] font-semibold transition-all border ${
+                contentType === pt.type
+                  ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <span className="flex w-[16px] h-[16px]">{pt.icon}</span>
+              {pt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
         <div className="px-5 py-4 space-y-3">
           {/* Caption / text */}
@@ -325,24 +352,25 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
             )
           })()}
 
-          {/* Content type row */}
-          <div className="flex gap-1.5 flex-wrap">
-            {CONTENT_TYPES.map(ct => (
-              <button
-                key={ct.type}
-                onClick={() => { setContentType(ct.type); setFile(null); setFilePreview(null) }}
-                title={ct.label}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors border ${
-                  contentType === ct.type
-                    ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-600/10 text-brand-600 dark:text-brand-400'
-                    : 'border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
-                }`}
-              >
-                <span className="flex w-3.5 h-3.5">{ct.icon}</span>
-                {ct.label}
-              </button>
-            ))}
-          </div>
+          {/* More type options — audio, poem, doc */}
+          {!['photo','video','text'].includes(contentType) && (
+            <div className="flex gap-1.5 flex-wrap">
+              {CONTENT_TYPES.filter(ct => !['photo','video','text'].includes(ct.type)).map(ct => (
+                <button
+                  key={ct.type}
+                  onClick={() => { setContentType(ct.type); setFile(null); setFilePreview(null) }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors border ${
+                    contentType === ct.type
+                      ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-600/10 text-brand-600 dark:text-brand-400'
+                      : 'border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
+                  }`}
+                >
+                  <span className="flex w-3.5 h-3.5">{ct.icon}</span>
+                  {ct.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Pro section */}
           {postType === 'pro' && (
