@@ -358,9 +358,9 @@ export default function FeedPage({ onPost }: Props) {
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
           <div className="flex items-center gap-5 text-[14px] text-gray-400">
             {[
-              { icon: <Icon.Camera />, label: 'Image' },
-              { icon: <Icon.Video />,  label: 'Video' },
-              { icon: <Icon.Calendar />, label: 'Event' },
+              { icon: <Icon.Camera />,  label: 'Image' },
+              { icon: <Icon.Video />,   label: 'Video' },
+              { icon: <Icon.PenLine />, label: 'Text' },
             ].map(({ icon, label }) => (
               <button
                 key={label}

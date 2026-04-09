@@ -137,13 +137,13 @@ export default function AppShell() {
     <div className="app-shell">
       {/* ── TOPBAR ── */}
       <header
-        className="col-span-full flex items-center h-[64px] px-6 sticky top-0 z-50"
+        className={`col-span-full flex items-center h-[64px] px-6 sticky top-0 z-50 ${darkMode ? 'topbar-dark' : 'topbar-light'}`}
         style={{
           gridColumn: '1 / -1',
-          background: 'rgba(255,255,255,0.82)',
+          background: darkMode ? 'rgba(28,28,30,0.88)' : 'rgba(255,255,255,0.82)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-          borderBottom: '0.5px solid rgba(0,0,0,0.1)',
+          borderBottom: darkMode ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.1)',
         }}
       >
         {/* Left: Logo */}
@@ -160,7 +160,7 @@ export default function AppShell() {
         <div className="flex-1 flex items-center justify-center gap-3 max-w-2xl mx-auto">
           <button
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-            className="flex-1 flex items-center gap-3 bg-black/[0.05] rounded-full px-4 py-2.5 text-[14px] text-gray-400 hover:bg-black/[0.07] transition-colors cursor-text text-left"
+            className={`flex-1 flex items-center gap-3 rounded-full px-4 py-2.5 text-[14px] transition-colors cursor-text text-left ${darkMode ? 'bg-white/[0.08] text-white/40 hover:bg-white/[0.11]' : 'bg-black/[0.05] text-gray-400 hover:bg-black/[0.07]'}`}
           >
             <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
             <span>Search creators or fields...</span>
@@ -178,20 +178,23 @@ export default function AppShell() {
         <div className="w-[288px] flex-shrink-0 flex items-center justify-end">
           <div
             className="flex items-center gap-1 rounded-full py-1 pl-4 pr-1"
-            style={{ background: 'rgba(0,0,0,0.03)', border: '0.5px solid rgba(0,0,0,0.06)' }}
+            style={{
+              background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
+              border: darkMode ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.06)',
+            }}
           >
             <div className="flex items-center gap-0.5 mr-2">
               <button
                 onClick={() => setDarkMode(d => !d)}
                 title={darkMode ? 'Light mode' : 'Dark mode'}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-colors"
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-white'}`}
               >
                 <span className="flex w-[17px] h-[17px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
               </button>
               <button
                 onClick={() => navigate('/messages')}
                 title="Messages"
-                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-colors"
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-white'}`}
               >
                 <span className="flex w-[17px] h-[17px]"><Icon.MessageCircle /></span>
               </button>
@@ -208,8 +211,8 @@ export default function AppShell() {
               className="flex items-center gap-2.5 cursor-pointer px-1 py-0.5 rounded-full hover:bg-white transition-colors"
               onClick={() => navigate('/profile')}
             >
-              <span className="text-[14px] font-bold text-gray-900 dark:text-white hidden md:block leading-none">
-                {profile?.full_name?.split(' ')[0]}
+              <span className={`text-[14px] font-bold hidden md:block leading-none ${darkMode ? 'text-white/80' : 'text-gray-900'}`}>
+                {profile?.full_name}
               </span>
               <div className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-bold text-blue-700 dark:text-blue-300 border border-white shadow-sm">
                 {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
@@ -220,7 +223,7 @@ export default function AppShell() {
       </header>
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside className="app-sidebar flex flex-col overflow-hidden" style={{ gridColumn: '1', gridRow: '2', background: '#ffffff', borderRight: '0.5px solid rgba(0,0,0,0.08)' }}>
+      <aside className="app-sidebar flex flex-col overflow-hidden" style={{ gridColumn: '1', gridRow: '2', background: darkMode ? '#1c1c1e' : '#ffffff', borderRight: darkMode ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.08)' }}>
         {/* Main nav */}
         <div className="px-3 pt-3 pb-1">
           {navItems.map(item => (
@@ -229,8 +232,8 @@ export default function AppShell() {
               onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] mb-0.5 transition-all text-left ${
                 isNavActive(item.path)
-                  ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-semibold'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white font-medium'
+                  ? 'bg-brand-50 dark:bg-white/[0.08] text-brand-600 dark:text-white font-semibold'
+                  : 'text-gray-500 dark:text-white/50 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
               <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
@@ -239,13 +242,13 @@ export default function AppShell() {
           ))}
         </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800 mx-3 my-2" />
+        <div className="h-px mx-3 my-2" style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
 
         {/* My fields */}
         <div className="flex-1 overflow-y-auto px-3 min-h-0 pb-1">
           {proDiscs.length > 0 && (
             <>
-              <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 pt-1 pb-2">My fields</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest px-3 pt-1 pb-2" style={{ color: darkMode ? 'rgba(255,255,255,0.35)' : '#8e8e93' }}>My fields</p>
               {proDiscs.map(d => (
                 <button
                   key={d.key}
@@ -264,45 +267,24 @@ export default function AppShell() {
           )}
         </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800 mx-3 my-2" />
+        <div className="h-px mx-3 my-2" style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
 
         {/* New post */}
         <div className="px-3 mb-3">
           <button
             onClick={() => setShowUpload(true)}
-            className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl px-4 py-4 text-[15px] font-semibold transition-colors shadow-lg"
+            className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl px-4 py-4 text-[15px] font-semibold transition-colors"
+            style={{ boxShadow: '0 4px 14px rgba(128,0,32,0.35)' }}
           >
             <span className="flex w-4 h-4"><Icon.Plus /></span>
             New post
           </button>
         </div>
 
-        {/* User area */}
-        <div className="border-t border-gray-100 dark:border-gray-800 px-3 pt-3 pb-3">
-          <button
-            onClick={() => navigate('/profile')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-bold text-blue-700 dark:text-blue-300 overflow-hidden shrink-0">
-              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <div className="text-[14px] font-semibold text-gray-900 dark:text-white truncate">{profile?.full_name}</div>
-              <div className="text-[12px] text-gray-400 dark:text-gray-500 truncate">{profile?.role_title || 'General account'}</div>
-            </div>
-          </button>
-          <button
-            onClick={signOut}
-            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl transition-colors mt-0.5"
-          >
-            <span className="flex w-4 h-4"><Icon.LogOut /></span>
-            Sign out
-          </button>
-        </div>
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="overflow-y-auto overflow-x-hidden" style={{ gridColumn: '2', gridRow: '2', background: 'var(--apple-bg)' }}>
+      <main className="overflow-y-auto overflow-x-hidden" style={{ gridColumn: '2', gridRow: '2', background: darkMode ? '#111111' : '#f5f5f7' }}>
         <Routes>
           <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
           <Route path="/explore"           element={<ExplorePage />} />
@@ -317,7 +299,7 @@ export default function AppShell() {
       </main>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="app-right-panel overflow-y-auto" style={{ gridColumn: '3', gridRow: '2', background: 'var(--apple-bg)', borderLeft: '0.5px solid rgba(0,0,0,0.08)' }}>
+      <div className="app-right-panel overflow-y-auto" style={{ gridColumn: '3', gridRow: '2', background: darkMode ? '#111111' : '#f5f5f7', borderLeft: darkMode ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.08)' }}>
         <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} onOpenChat={setChatWithProfile} />
       </div>
 

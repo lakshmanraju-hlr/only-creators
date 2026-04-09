@@ -596,34 +596,61 @@ export default function PostCard({ post, onUpdated }: Props) {
       <AnimatePresence>
         {mediaLightbox && (
           <motion.div
-            className="fixed inset-0 bg-black/92 flex items-center justify-center z-[2000] p-4"
+            className="fixed inset-0 z-[2000] flex items-center justify-center p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
             onClick={() => setMediaLightbox(null)}
+            style={{
+              backdropFilter: 'blur(28px) saturate(160%) brightness(0.45)',
+              WebkitBackdropFilter: 'blur(28px) saturate(160%) brightness(0.45)',
+              background: 'rgba(0, 0, 0, 0.55)',
+            }}
           >
+            {/* Close button */}
             <button
               onClick={() => setMediaLightbox(null)}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
+              className="absolute top-5 right-5 w-10 h-10 rounded-full flex items-center justify-center transition-all z-10"
+              style={{
+                background: 'rgba(255,255,255,0.12)',
+                border: '0.5px solid rgba(255,255,255,0.18)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+              }}
             >
-              <span className="flex w-5 h-5 text-white"><Icon.X /></span>
+              <span className="flex w-[18px] h-[18px] text-white"><Icon.X /></span>
             </button>
-            {mediaLightbox.type === 'photo' ? (
-              <img
-                src={mediaLightbox.url}
-                alt=""
-                onClick={e => e.stopPropagation()}
-                className="max-w-full max-h-[90vh] object-contain rounded-xl"
-              />
-            ) : (
-              <video
-                src={mediaLightbox.url}
-                controls
-                autoPlay
-                onClick={e => e.stopPropagation()}
-                className="max-w-full max-h-[90vh] rounded-xl"
-              />
-            )}
+
+            {/* Media container */}
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0, y: 24 }}
+              animate={{ scale: 1,    opacity: 1, y: 0  }}
+              exit={{    scale: 0.92, opacity: 0, y: 12 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              onClick={e => e.stopPropagation()}
+              className="relative max-w-[90vw] max-h-[88vh] rounded-3xl overflow-hidden"
+              style={{
+                boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)',
+              }}
+            >
+              {mediaLightbox.type === 'photo' ? (
+                <img
+                  src={mediaLightbox.url}
+                  alt=""
+                  className="max-w-full max-h-[88vh] object-contain block"
+                  style={{ borderRadius: '24px' }}
+                />
+              ) : (
+                <video
+                  src={mediaLightbox.url}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[88vh] block"
+                  style={{ borderRadius: '24px' }}
+                />
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
