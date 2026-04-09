@@ -213,7 +213,7 @@ export default function ProfilePage() {
       >
         {/* ── Media area ── */}
         <div
-          className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer rounded-t-2xl"
+          className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
           onClick={() => setPostLightbox(post)}
         >
           {post.content_type === 'photo' && post.media_url ? (
@@ -685,7 +685,7 @@ export default function ProfilePage() {
                 <img
                   src={postLightbox.media_url}
                   alt=""
-                  className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl"
+                  className="max-w-[90vw] max-h-[85vh] object-contain"
                   style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
                 />
               ) : postLightbox.content_type === 'video' && postLightbox.media_url ? (
@@ -693,16 +693,16 @@ export default function ProfilePage() {
                   src={postLightbox.media_url}
                   controls
                   autoPlay
-                  className="max-w-[90vw] max-h-[85vh] rounded-2xl"
+                  className="max-w-[90vw] max-h-[85vh]"
                   style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
                 />
               ) : postLightbox.content_type === 'poem' ? (
-                <div className="rounded-3xl p-10 max-w-lg" style={{ background: 'rgba(255,248,230,0.10)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.15)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
+                <div className="p-10 max-w-lg" style={{ background: 'rgba(255,248,230,0.10)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.15)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
                   <p className="text-5xl text-amber-300/50 leading-none mb-4">"</p>
                   <p className="text-white/90 text-[17px] italic leading-relaxed">{postLightbox.poem_text}</p>
                 </div>
               ) : (
-                <div className="rounded-3xl p-10 max-w-lg" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.15)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
+                <div className="p-10 max-w-lg" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.15)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
                   <p className="text-white/90 text-[16px] leading-relaxed">{postLightbox.caption}</p>
                 </div>
               )}
@@ -912,8 +912,11 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
 
           {/* Professional fields */}
           {personas.length > 0 && (
-            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-              <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Professional fields</p>
+            <div className="pt-1">
+              <div className="flex items-center gap-3 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 shrink-0">Professional fields</p>
+                <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+              </div>
               <div className="space-y-3">
                 {personas.map(p => {
                   const meta = getProfMeta(p.discipline)

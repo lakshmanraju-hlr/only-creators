@@ -629,7 +629,7 @@ export default function PostCard({ post, onUpdated }: Props) {
               exit={{    scale: 0.92, opacity: 0, y: 12 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               onClick={e => e.stopPropagation()}
-              className="relative max-w-[90vw] max-h-[88vh] rounded-3xl overflow-hidden"
+              className="relative max-w-[90vw] max-h-[88vh] overflow-hidden"
               style={{
                 boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)',
               }}
@@ -639,7 +639,6 @@ export default function PostCard({ post, onUpdated }: Props) {
                   src={mediaLightbox.url}
                   alt=""
                   className="max-w-full max-h-[88vh] object-contain block"
-                  style={{ borderRadius: '24px' }}
                 />
               ) : (
                 <video
@@ -647,7 +646,6 @@ export default function PostCard({ post, onUpdated }: Props) {
                   controls
                   autoPlay
                   className="max-w-full max-h-[88vh] block"
-                  style={{ borderRadius: '24px' }}
                 />
               )}
             </motion.div>
