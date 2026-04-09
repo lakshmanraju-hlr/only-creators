@@ -200,7 +200,7 @@ export default function PostCard({ post, onUpdated }: Props) {
   return (
     <div
       id={'post-' + post.id}
-      className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl mb-3 overflow-hidden shadow-xs hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-card transition-all"
+      className="apple-card mb-4 overflow-hidden"
     >
       {/* ── Header ── */}
       <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5">

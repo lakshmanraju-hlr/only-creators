@@ -10,6 +10,7 @@ import NotificationsPage from '@/pages/NotificationsPage'
 import FriendsPage from '@/pages/FriendsPage'
 import MessagesPage from '@/pages/MessagesPage'
 import RightPanel from '@/components/RightPanel'
+import FloatingChat from '@/components/FloatingChat'
 import UploadModal from '@/components/UploadModal'
 import SearchModal from '@/components/SearchModal'
 import GroupPage from '@/pages/GroupPage'
@@ -53,6 +54,7 @@ export default function AppShell() {
   })
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onlineFriends, setOnlineFriends] = useState<Profile[]>([])
+  const [chatWithProfile, setChatWithProfile] = useState<Profile | null>(null)
 
   const path = location.pathname
 
@@ -116,12 +118,10 @@ export default function AppShell() {
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   const navItems = [
-    { path: '/',              icon: <Icon.Feed />,          label: 'Feed' },
-    { path: '/explore',       icon: <Icon.Explore />,       label: 'Explore' },
-    { path: '/messages',      icon: <Icon.MessageCircle />, label: 'Messages',      badge: 0 },
-    { path: '/notifications', icon: <Icon.Bell />,          label: 'Notifications', badge: unreadNotifCount },
-    { path: '/bookmarks',     icon: <Icon.Bookmark />,      label: 'Bookmarks' },
-    { path: '/profile',       icon: <Icon.Profile />,       label: 'Profile' },
+    { path: '/',          icon: <Icon.Feed />,     label: 'Feed' },
+    { path: '/explore',   icon: <Icon.Explore />,  label: 'Explore' },
+    { path: '/bookmarks', icon: <Icon.Bookmark />, label: 'Bookmarks' },
+    { path: '/profile',   icon: <Icon.Profile />,  label: 'Profile' },
   ]
 
   const myPersonaDisciplineKeys = new Set(myPersonas.map(p => p.discipline))
@@ -136,52 +136,91 @@ export default function AppShell() {
   return (
     <div className="app-shell">
       {/* ── TOPBAR ── */}
-      <header className="col-span-full flex items-center gap-3 px-5 h-[56px] bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50" style={{ gridColumn: '1 / -1' }}>
-        <div className="font-display text-[18px] font-bold text-gray-900 dark:text-white tracking-tight select-none mr-auto">
-          only <em className="not-italic text-brand-600">creators</em>
+      <header
+        className="col-span-full flex items-center h-[64px] px-6 sticky top-0 z-50"
+        style={{
+          gridColumn: '1 / -1',
+          background: 'rgba(255,255,255,0.82)',
+          backdropFilter: 'saturate(180%) blur(20px)',
+          WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+          borderBottom: '0.5px solid rgba(0,0,0,0.1)',
+        }}
+      >
+        {/* Left: Logo */}
+        <div className="w-[240px] flex-shrink-0 flex items-center">
+          <span
+            className="font-display text-[20px] font-extrabold tracking-tight text-gray-900 dark:text-white select-none cursor-pointer"
+            onClick={() => navigate('/')}
+          >
+            only<em className="not-italic text-brand-600">creators</em>
+          </span>
         </div>
-        <div className="flex items-center gap-1 ml-auto">
+
+        {/* Center: Search + Browse Fields */}
+        <div className="flex-1 flex items-center justify-center gap-3 max-w-2xl mx-auto">
           <button
-            onClick={() => setDarkMode(d => !d)}
-            title={darkMode ? 'Switch to light' : 'Switch to dark'}
-            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
+            className="flex-1 flex items-center gap-3 bg-black/[0.05] rounded-full px-4 py-2.5 text-[14px] text-gray-400 hover:bg-black/[0.07] transition-colors cursor-text text-left"
           >
-            <span className="flex w-[18px] h-[18px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
+            <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
+            <span>Search creators or fields...</span>
           </button>
           <button
-            onClick={() => setShowUpload(true)}
-            title="New post"
-            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+            onClick={() => navigate('/explore')}
+            className="flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full px-5 py-2.5 text-[13px] font-bold whitespace-nowrap hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-sm shrink-0"
           >
-            <span className="flex w-[18px] h-[18px]"><Icon.Plus /></span>
+            <span className="flex w-[15px] h-[15px]"><Icon.Layers /></span>
+            Browse Fields
           </button>
-          <button
-            onClick={() => navigate('/messages')}
-            title="Messages"
-            className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+        </div>
+
+        {/* Right: Icons + User pill */}
+        <div className="w-[288px] flex-shrink-0 flex items-center justify-end">
+          <div
+            className="flex items-center gap-1 rounded-full py-1 pl-4 pr-1"
+            style={{ background: 'rgba(0,0,0,0.03)', border: '0.5px solid rgba(0,0,0,0.06)' }}
           >
-            <span className="flex w-[18px] h-[18px]"><Icon.MessageCircle /></span>
-          </button>
-          <button
-            onClick={() => navigate('/notifications')}
-            title="Notifications"
-            className="relative w-[34px] h-[34px] rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <span className="flex w-[18px] h-[18px]"><Icon.Bell /></span>
-            {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-brand-600 border border-white" />}
-          </button>
-          <button
-            onClick={() => navigate('/profile')}
-            title="Profile"
-            className="w-[30px] h-[30px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 border-[1.5px] border-gray-200 dark:border-gray-700 hover:border-brand-500 transition-colors ml-0.5"
-          >
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
-          </button>
+            <div className="flex items-center gap-0.5 mr-2">
+              <button
+                onClick={() => setDarkMode(d => !d)}
+                title={darkMode ? 'Light mode' : 'Dark mode'}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-colors"
+              >
+                <span className="flex w-[17px] h-[17px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
+              </button>
+              <button
+                onClick={() => navigate('/messages')}
+                title="Messages"
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-colors"
+              >
+                <span className="flex w-[17px] h-[17px]"><Icon.MessageCircle /></span>
+              </button>
+              <button
+                onClick={() => navigate('/notifications')}
+                title="Notifications"
+                className="relative w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-colors"
+              >
+                <span className="flex w-[17px] h-[17px]"><Icon.Bell /></span>
+                {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-[#f5f5f7]" />}
+              </button>
+            </div>
+            <div
+              className="flex items-center gap-2.5 cursor-pointer px-1 py-0.5 rounded-full hover:bg-white transition-colors"
+              onClick={() => navigate('/profile')}
+            >
+              <span className="text-[14px] font-bold text-gray-900 dark:text-white hidden md:block leading-none">
+                {profile?.full_name?.split(' ')[0]}
+              </span>
+              <div className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-bold text-blue-700 dark:text-blue-300 border border-white shadow-sm">
+                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(profile?.full_name || '')}
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside className="app-sidebar bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden" style={{ gridColumn: '1', gridRow: '2' }}>
+      <aside className="app-sidebar flex flex-col overflow-hidden" style={{ gridColumn: '1', gridRow: '2', background: '#ffffff', borderRight: '0.5px solid rgba(0,0,0,0.08)' }}>
         {/* Main nav */}
         <div className="px-3 pt-3 pb-1">
           {navItems.map(item => (
@@ -196,11 +235,6 @@ export default function AppShell() {
             >
               <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
               <span className="flex-1 min-w-0 truncate">{item.label}</span>
-              {item.badge != null && item.badge > 0 && (
-                <span className="text-[11px] font-bold bg-brand-600 text-white px-1.5 py-px rounded-full min-w-[20px] text-center">
-                  {item.badge}
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -236,7 +270,7 @@ export default function AppShell() {
         <div className="px-3 mb-3">
           <button
             onClick={() => setShowUpload(true)}
-            className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full px-4 py-3 text-[15px] font-semibold transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl px-4 py-4 text-[15px] font-semibold transition-colors shadow-lg"
           >
             <span className="flex w-4 h-4"><Icon.Plus /></span>
             New post
@@ -268,7 +302,7 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-gray-900" style={{ gridColumn: '2', gridRow: '2' }}>
+      <main className="overflow-y-auto overflow-x-hidden" style={{ gridColumn: '2', gridRow: '2', background: 'var(--apple-bg)' }}>
         <Routes>
           <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
           <Route path="/explore"           element={<ExplorePage />} />
@@ -283,8 +317,8 @@ export default function AppShell() {
       </main>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="app-right-panel bg-white dark:bg-gray-950 border-l border-gray-100 dark:border-gray-800 overflow-y-auto" style={{ gridColumn: '3', gridRow: '2' }}>
-        <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} />
+      <div className="app-right-panel overflow-y-auto" style={{ gridColumn: '3', gridRow: '2', background: 'var(--apple-bg)', borderLeft: '0.5px solid rgba(0,0,0,0.08)' }}>
+        <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} onOpenChat={setChatWithProfile} />
       </div>
 
       {/* ── BOTTOM NAV (mobile) ── */}
@@ -301,9 +335,6 @@ export default function AppShell() {
           >
             <span className="relative flex w-[22px] h-[22px]">
               {item.icon}
-              {item.badge != null && item.badge > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-brand-600" />
-              )}
             </span>
             <span className="text-[10px] font-medium">{item.label}</span>
           </button>
@@ -312,6 +343,7 @@ export default function AppShell() {
 
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} />}
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {chatWithProfile && <FloatingChat chatWith={chatWithProfile} onClose={() => setChatWithProfile(null)} />}
       {showOnboarding && profile && (
         <OnboardingModal onDone={() => { setShowOnboarding(false); if (profile) localStorage.setItem('onboarding_done_' + profile.id, '1') }} />
       )}

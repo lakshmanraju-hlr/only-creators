@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase, Post, Profile, getCanonicalDiscipline, PROFESSIONS } from '@/lib/supabase'
+import { supabase, Post, Profile, PROFESSIONS } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { getFriends } from '@/lib/friends'
 import PostCard from '@/components/PostCard'
@@ -62,7 +61,7 @@ function isNewcomerPost(post: Post): boolean {
 
 export default function FeedPage({ onPost }: Props) {
   const { profile } = useAuth()
-  const navigate = useNavigate()
+
   const [tab, setTab] = useState<FeedTab>('all')
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -314,34 +313,14 @@ export default function FeedPage({ onPost }: Props) {
   return (
     <div className="max-w-[700px] mx-auto px-8 py-6">
 
-      {/* ── Search + Browse row ── */}
-      <div className="flex items-center gap-3 mb-5">
-        <button
-          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-          className="flex items-center gap-3 flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-full px-5 py-3.5 text-[14px] text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-text shadow-sm"
-        >
-          <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-          <span>Search creators, projects...</span>
-        </button>
-        <button
-          onClick={() => navigate('/explore')}
-          className="flex items-center gap-2.5 px-5 py-3.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-[14px] font-semibold text-gray-800 dark:text-white hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0 shadow-sm"
-        >
-          <span className="flex w-[18px] h-[18px] text-brand-600"><Icon.Layers /></span>
-          Browse Fields
-        </button>
-      </div>
-
-      {/* ── Welcome banner ── */}
-      <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-gray-950 border border-brand-100 dark:border-brand-900/40 rounded-2xl px-5 py-4 mb-5">
-        <div>
-          <p className="text-[15px] font-semibold text-gray-900 dark:text-white">
-            Good {greeting}, <strong>{profile?.full_name?.split(' ')[0] || 'Creator'}</strong>
-          </p>
-          <p className="text-[14px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-            Explore, create, and connect across professional fields.
-          </p>
-        </div>
+      {/* ── Greeting ── */}
+      <div className="mb-6">
+        <h1 className="text-[28px] font-bold tracking-tight text-gray-900 dark:text-white">
+          Good {greeting}, {profile?.full_name?.split(' ')[0] || 'Creator'}
+        </h1>
+        <p className="text-[15px] text-gray-500 dark:text-gray-400 mt-1">
+          Discover what's happening in your creative fields today.
+        </p>
       </div>
 
       {/* ── Feed tabs ── */}
@@ -362,43 +341,43 @@ export default function FeedPage({ onPost }: Props) {
       </div>
 
       {/* ── Composer ── */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl px-4 py-3.5 mb-4 shadow-xs focus-within:border-gray-200 dark:focus-within:border-gray-700 focus-within:shadow-card transition-all">
-        <div className="flex gap-3">
-          <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+      <div className="apple-card px-6 py-5 mb-6">
+        <div className="flex gap-4">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[13px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
               : initials(profile?.full_name || '')}
           </div>
           <textarea
-            className="flex-1 bg-transparent border-none outline-none text-[14px] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-none min-h-[52px] leading-relaxed pt-0.5"
-            placeholder="Share something with the world…"
+            className="flex-1 bg-transparent border-none outline-none text-[17px] text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 resize-none min-h-[52px] leading-relaxed pt-1"
+            placeholder="Share your latest project or thought..."
             value={composerText}
             onChange={e => setComposerText(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-1 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800">
-          {[
-            { icon: <Icon.Camera />, title: 'Photo' },
-            { icon: <Icon.Music />, title: 'Audio' },
-            { icon: <Icon.Video />, title: 'Video' },
-            { icon: <Icon.PenLine />, title: 'Poem' },
-          ].map(({ icon, title }) => (
-            <button
-              key={title}
-              title={title}
-              onClick={onPost}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              <span className="flex w-[15px] h-[15px]">{icon}</span>
-            </button>
-          ))}
-          <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-600">{composerText.length}/500</span>
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
+          <div className="flex items-center gap-5 text-[14px] text-gray-400">
+            {[
+              { icon: <Icon.Camera />, label: 'Image' },
+              { icon: <Icon.Video />,  label: 'Video' },
+              { icon: <Icon.Calendar />, label: 'Event' },
+            ].map(({ icon, label }) => (
+              <button
+                key={label}
+                onClick={onPost}
+                className="flex items-center gap-2 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <span className="flex w-[18px] h-[18px]">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={quickPost}
             disabled={posting || !composerText.trim()}
-            className="ml-2.5 px-4 py-1.5 bg-brand-600 text-white text-[13px] font-medium rounded-full hover:bg-brand-700 transition-colors disabled:opacity-40 flex items-center gap-1.5"
+            className="px-7 py-2 bg-brand-600 hover:bg-brand-700 text-white text-[14px] font-semibold rounded-full transition-colors disabled:opacity-40"
           >
-            {posting ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Post'}
+            {posting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Post'}
           </button>
         </div>
       </div>
