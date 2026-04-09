@@ -137,7 +137,7 @@ export default function AppShell() {
     <div className="app-shell">
       {/* ── TOPBAR ── */}
       <header
-        className="col-span-full flex items-center h-[56px] sm:h-[64px] px-4 sm:px-6 sticky top-0 z-50"
+        className="col-span-full flex items-center h-[56px] md:h-[64px] px-4 md:px-6 sticky top-0 z-50"
         style={{
           gridColumn: '1 / -1',
           background: darkMode ? 'rgba(28,28,30,0.92)' : 'rgba(255,255,255,0.88)',
@@ -155,7 +155,7 @@ export default function AppShell() {
         </span>
 
         {/* Center: Search + Browse Fields — hidden on mobile */}
-        <div className="hidden sm:flex flex-1 items-center justify-center gap-3 max-w-2xl mx-auto px-4">
+        <div className="hidden md:flex flex-1 items-center justify-center gap-3 max-w-2xl mx-auto px-4">
           <button
             onClick={() => setShowSearch(true)}
             className={`flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left ${darkMode ? 'bg-white/[0.08] text-white/40 hover:bg-white/[0.11]' : 'bg-black/[0.05] text-gray-400 hover:bg-black/[0.07]'}`}
@@ -177,7 +177,7 @@ export default function AppShell() {
           {/* Search icon — mobile only */}
           <button
             onClick={() => setShowSearch(true)}
-            className={`sm:hidden w-9 h-9 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+            className={`md:hidden w-9 h-9 flex items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
           >
             <span className="flex w-[18px] h-[18px]"><Icon.Search /></span>
           </button>
@@ -186,21 +186,21 @@ export default function AppShell() {
           <button
             onClick={() => setDarkMode(d => !d)}
             title={darkMode ? 'Light mode' : 'Dark mode'}
-            className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+            className={`hidden md:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
           >
             <span className="flex w-[17px] h-[17px]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
           </button>
           <button
             onClick={() => navigate('/messages')}
             title="Messages"
-            className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+            className={`hidden md:flex w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
           >
             <span className="flex w-[17px] h-[17px]"><Icon.MessageCircle /></span>
           </button>
           <button
             onClick={() => navigate('/notifications')}
             title="Notifications"
-            className={`hidden sm:flex relative w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
+            className={`hidden md:flex relative w-8 h-8 items-center justify-center rounded-full transition-colors ${darkMode ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-black/5'}`}
           >
             <span className="flex w-[17px] h-[17px]"><Icon.Bell /></span>
             {unreadNotifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" style={{ border: `2px solid ${darkMode ? '#1c1c1e' : '#f5f5f7'}` }} />}
@@ -208,7 +208,7 @@ export default function AppShell() {
 
           {/* Name + avatar pill */}
           <div
-            className="flex items-center gap-2 sm:gap-3 ml-1 pl-2 sm:pl-4 pr-1.5 py-1.5 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
+            className="flex items-center gap-2 md:gap-3 ml-1 pl-2 md:pl-4 pr-1.5 py-1.5 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
             style={{
               background: darkMode ? 'rgba(255,255,255,0.07)' : '#ffffff',
               border: darkMode ? '0.5px solid rgba(255,255,255,0.10)' : '0.5px solid rgba(0,0,0,0.08)',
@@ -217,13 +217,13 @@ export default function AppShell() {
             onClick={() => navigate('/profile')}
           >
             <span
-              className="text-[13px] sm:text-[14px] font-bold leading-none hidden sm:block"
+              className="text-[13px] md:text-[14px] font-bold leading-none hidden md:block"
               style={{ color: darkMode ? 'rgba(255,255,255,0.88)' : '#111111' }}
             >
               {profile?.full_name}
             </span>
             <div
-              className="w-[32px] h-[32px] sm:w-[36px] sm:h-[36px] rounded-xl overflow-hidden bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-700 shrink-0"
+              className="w-[32px] h-[32px] md:w-[36px] md:h-[36px] rounded-xl overflow-hidden bg-blue-100 flex items-center justify-center text-[11px] font-bold text-blue-700 shrink-0"
               style={{ border: darkMode ? '0.5px solid rgba(255,255,255,0.12)' : '0.5px solid rgba(0,0,0,0.06)' }}
             >
               {profile?.avatar_url
@@ -317,7 +317,7 @@ export default function AppShell() {
 
       {/* ── BOTTOM NAV (mobile) ── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 flex items-center justify-around z-50 sm:hidden"
+        className="fixed bottom-0 left-0 right-0 flex items-center justify-around z-50 md:hidden"
         style={{
           background: darkMode ? 'rgba(28,28,30,0.96)' : 'rgba(255,255,255,0.96)',
           backdropFilter: 'blur(20px) saturate(180%)',

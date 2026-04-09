@@ -314,11 +314,11 @@ export default function FeedPage({ onPost }: Props) {
     <div className="max-w-[700px] mx-auto px-4 md:px-8 py-4 md:py-6">
 
       {/* ── Greeting ── */}
-      <div className="mb-6">
-        <h1 className="text-[28px] font-bold tracking-tight text-gray-900 dark:text-white">
+      <div className="mb-5">
+        <h1 className="text-[22px] md:text-[28px] font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
           Good {greeting}, {profile?.full_name?.split(' ')[0] || 'Creator'}
         </h1>
-        <p className="text-[15px] text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-[13.5px] md:text-[15px] text-gray-500 dark:text-gray-400 mt-1">
           Discover what's happening in your creative fields today.
         </p>
       </div>
@@ -341,22 +341,22 @@ export default function FeedPage({ onPost }: Props) {
       </div>
 
       {/* ── Composer ── */}
-      <div className="apple-card px-6 py-5 mb-6">
-        <div className="flex gap-4">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[13px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+      <div className="apple-card px-4 md:px-6 py-4 md:py-5 mb-5">
+        <div className="flex gap-3 md:gap-4">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
               : initials(profile?.full_name || '')}
           </div>
           <textarea
-            className="flex-1 bg-transparent border-none outline-none text-[17px] text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 resize-none min-h-[52px] leading-relaxed pt-1"
+            className="flex-1 bg-transparent border-none outline-none text-[15px] md:text-[17px] text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 resize-none min-h-[44px] leading-relaxed pt-1"
             placeholder="Share your latest project or thought..."
             value={composerText}
             onChange={e => setComposerText(e.target.value)}
           />
         </div>
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
-          <div className="flex items-center gap-5 text-[14px] text-gray-400">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50 dark:border-gray-800">
+          <div className="flex items-center gap-3 md:gap-5 text-gray-400">
             {[
               { icon: <Icon.Camera />,  label: 'Image' },
               { icon: <Icon.Video />,   label: 'Video' },
@@ -365,17 +365,17 @@ export default function FeedPage({ onPost }: Props) {
               <button
                 key={label}
                 onClick={onPost}
-                className="flex items-center gap-2 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="flex items-center gap-1.5 text-[13px] md:text-[14px] hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <span className="flex w-[18px] h-[18px]">{icon}</span>
-                {label}
+                <span className="flex w-[17px] h-[17px]">{icon}</span>
+                <span className="hidden xs:inline sm:inline">{label}</span>
               </button>
             ))}
           </div>
           <button
             onClick={quickPost}
             disabled={posting || !composerText.trim()}
-            className="px-7 py-2 bg-brand-600 hover:bg-brand-700 text-white text-[14px] font-semibold rounded-full transition-colors disabled:opacity-40"
+            className="px-5 md:px-7 py-2 bg-brand-600 hover:bg-brand-700 text-white text-[13px] md:text-[14px] font-semibold rounded-full transition-colors disabled:opacity-40 shrink-0"
           >
             {posting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Post'}
           </button>
