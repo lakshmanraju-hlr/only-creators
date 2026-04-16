@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { uploadPhoto } from '@/utils/uploadPhoto'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
@@ -59,11 +60,9 @@ export default function OnboardingModal({ onDone }: Props) {
     setSaving(true)
     let avatarUrl = profile.avatar_url
     if (avatarFile) {
-      const ext = avatarFile.name.split('.').pop()
-      const path = profile.id + '/avatar.' + ext
-      await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      avatarUrl = data.publicUrl + '?t=' + Date.now()
+      const fileName = profile.id + '/avatar'
+      const { thumbUrl } = await uploadPhoto(avatarFile, 'avatars', fileName)
+      avatarUrl = thumbUrl + '?t=' + Date.now()
     }
     await supabase.from('profiles').update({
       avatar_url: avatarUrl,
@@ -120,7 +119,7 @@ export default function OnboardingModal({ onDone }: Props) {
                   <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                   <div className="w-[72px] h-[72px] rounded-full overflow-hidden bg-brand-50 dark:bg-brand-600/10 border-2 border-dashed border-brand-600 flex items-center justify-center text-[22px] font-bold text-brand-600">
                     {avatarPreview
-                      ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                      ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       : initials(profile?.full_name || '')}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-brand-600 flex items-center justify-center">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLazyLoad } from '@/hooks/useLazyLoad'
 import { useNavigate } from 'react-router-dom'
 import { supabase, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -137,7 +138,7 @@ export default function SearchModal({ onClose }: Props) {
                     className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[15px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
                     onClick={() => goToProfile(p.username)}
                   >
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(p.full_name)}
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(p.full_name)}
                   </button>
                   <button className="flex-1 min-w-0 text-left" onClick={() => goToProfile(p.username)}>
                     <div className="flex items-center gap-1.5">

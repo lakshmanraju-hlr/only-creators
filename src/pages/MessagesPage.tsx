@@ -180,7 +180,7 @@ export default function MessagesPage() {
             }`}
           >
             <div className="w-[38px] h-[38px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[13px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
+              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-[13.5px] text-gray-900 dark:text-white truncate">{f.full_name}</p>
@@ -206,7 +206,7 @@ export default function MessagesPage() {
                 className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
                 onClick={() => navigate('/profile/' + selectedFriend.username)}
               >
-                {selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(selectedFriend.full_name)}
+                {selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(selectedFriend.full_name)}
               </button>
               <button className="flex-1 text-left" onClick={() => navigate('/profile/' + selectedFriend.username)}>
                 <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{selectedFriend.full_name}</p>
@@ -230,7 +230,7 @@ export default function MessagesPage() {
                         onClick={() => navigate('/profile/' + selectedFriend.username)}
                       >
                         {(m.sender as any)?.avatar_url
-                          ? <img src={(m.sender as any).avatar_url} alt="" className="w-full h-full object-cover" />
+                          ? <img src={(m.sender as any).avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                           : initials((m.sender as any)?.full_name || '?')}
                       </button>
                     )}

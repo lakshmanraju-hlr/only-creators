@@ -110,7 +110,7 @@ export default function FriendsPage() {
               return (
                 <div key={req.id} className="flex items-center gap-3.5 px-4 py-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs">
                   <button onClick={() => sender?.username && navigate('/profile/' + sender.username)} className="w-12 h-12 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[15px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                    {sender?.avatar_url ? <img src={sender.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(sender?.full_name || '?')}
+                    {sender?.avatar_url ? <img src={sender.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(sender?.full_name || '?')}
                   </button>
                   <button className="flex-1 min-w-0 text-left" onClick={() => sender?.username && navigate('/profile/' + sender.username)}>
                     <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{sender?.full_name}</p>
@@ -143,7 +143,7 @@ export default function FriendsPage() {
             {friends.map(f => (
               <div key={f.id} className="flex items-center gap-3.5 px-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xs hover:border-gray-200 dark:hover:border-gray-700 transition-all">
                 <button onClick={() => navigate('/profile/' + f.username)} className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[14px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                  {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
+                  {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
                 </button>
                 <button className="flex-1 min-w-0 text-left" onClick={() => navigate('/profile/' + f.username)}>
                   <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{f.full_name}</p>

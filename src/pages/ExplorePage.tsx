@@ -244,7 +244,7 @@ export default function ExplorePage() {
                 className="w-full apple-card flex items-center gap-3.5 px-4 py-3.5 transition-all text-left"
               >
                 <div className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[14px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(c.full_name)}
+                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(c.full_name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{c.full_name}</p>

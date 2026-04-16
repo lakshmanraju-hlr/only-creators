@@ -1,5 +1,6 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useLazyLoad } from '@/hooks/useLazyLoad'
 import { useAuth } from '@/lib/AuthContext'
 import { supabase, Profile, DisciplinePersona } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
@@ -242,7 +243,7 @@ export default function AppShell() {
               style={{ border: darkMode ? '0.5px solid rgba(255,255,255,0.12)' : '0.5px solid rgba(0,0,0,0.06)' }}
             >
               {profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 : initials(profile?.full_name || '')}
             </button>
           </div>

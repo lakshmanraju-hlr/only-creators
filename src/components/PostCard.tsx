@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useLazyLoad } from '@/hooks/useLazyLoad'
 import { useNavigate, Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -48,6 +49,11 @@ export default function PostCard({ post, onUpdated }: Props) {
   const authorDiscipline = getCanonicalDiscipline(author?.profession)
   const [canProUpvote, setCanProUpvote] = useState(false)
   const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
+
+  const { ref: mediaRef, isVisible: mediaVisible } = useLazyLoad()
+  const thumbSrc = useMemo(() => post.thumb_url || post.media_url || '', [post.thumb_url, post.media_url])
+  const displaySrc = useMemo(() => post.display_url || post.media_url || '', [post.display_url, post.media_url])
+  const authorAvatarSrc = useMemo(() => author?.avatar_url || '', [author?.avatar_url])
 
   useEffect(() => {
     if (!showMenu) return
@@ -208,7 +214,7 @@ export default function PostCard({ post, onUpdated }: Props) {
           onClick={goToAuthor}
           className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
         >
-          {author?.avatar_url ? <img src={author.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(author?.full_name || '?')}
+          {authorAvatarSrc ? <img src={authorAvatarSrc} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(author?.full_name || '?')}
         </button>
 
         <div className="flex-1 min-w-0">
@@ -262,10 +268,11 @@ export default function PostCard({ post, onUpdated }: Props) {
       {/* ── Media ── */}
       {post.content_type === 'photo' && post.media_url && (
         <div
+          ref={mediaRef}
           className="cursor-zoom-in bg-gray-50 dark:bg-gray-800 border-y border-gray-100 dark:border-gray-800 flex items-center justify-center min-h-[200px]"
-          onClick={() => setMediaLightbox({ url: post.media_url!, type: 'photo' })}
+          onClick={() => setMediaLightbox({ url: displaySrc, type: 'photo' })}
         >
-          <img src={post.media_url} alt="post" className="w-full max-h-[480px] object-cover block" />
+          {mediaVisible && <img src={thumbSrc} alt="post" className="w-full max-h-[480px] object-cover block" loading="lazy" decoding="async" />}
         </div>
       )}
       {post.content_type === 'video' && post.media_url && (
@@ -406,7 +413,7 @@ export default function PostCard({ post, onUpdated }: Props) {
                     {upvoterPreview.map(u => (
                       <div key={u.id} className="flex items-center gap-2 px-3 py-1.5">
                         <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[9px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                          {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(u.full_name)}
+                          {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(u.full_name)}
                         </div>
                         <span className="text-[12.5px] font-medium text-gray-900 dark:text-white truncate">{u.full_name}</span>
                       </div>
@@ -460,7 +467,7 @@ export default function PostCard({ post, onUpdated }: Props) {
                           onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}
                           className="w-7 h-7 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[9px] font-semibold text-blue-700 dark:text-blue-300 shrink-0 mt-0.5"
                         >
-                          {c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(c.profiles?.full_name || '?')}
+                          {c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(c.profiles?.full_name || '?')}
                         </button>
                         <div className={`flex-1 min-w-0 px-3 py-2 rounded-xl rounded-tl-sm text-[13px] border ${
                           isPro
@@ -507,7 +514,7 @@ export default function PostCard({ post, onUpdated }: Props) {
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${i === mentionIndex ? 'bg-gray-50 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                     >
                       <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[9px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                        {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(r.full_name)}
+                        {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(r.full_name)}
                       </div>
                       <span className="font-medium text-gray-900 dark:text-white text-[13px]">{r.full_name}</span>
                       <span className="text-[12px] text-gray-400 dark:text-gray-500 ml-auto">@{r.username}</span>
@@ -578,7 +585,7 @@ export default function PostCard({ post, onUpdated }: Props) {
                     className="w-full flex items-center gap-3 py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-1 px-1 rounded-lg transition-colors"
                   >
                     <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                      {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(u.full_name)}
+                      {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(u.full_name)}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <div className="text-[13.5px] font-semibold text-gray-900 dark:text-white">{u.full_name}</div>
@@ -639,6 +646,8 @@ export default function PostCard({ post, onUpdated }: Props) {
                   src={mediaLightbox.url}
                   alt=""
                   className="max-w-full max-h-[88vh] object-contain block"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <video
@@ -691,7 +700,7 @@ export default function PostCard({ post, onUpdated }: Props) {
                       {friends.map(f => (
                         <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                            {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
+                            {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-[13px] font-medium text-gray-900 dark:text-white truncate">{f.full_name}</div>

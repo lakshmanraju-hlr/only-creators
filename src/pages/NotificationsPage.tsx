@@ -109,7 +109,7 @@ export default function NotificationsPage() {
                     className="w-8 h-8 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
                     onClick={e => { e.stopPropagation(); if (actor.username) navigate('/profile/' + actor.username) }}
                   >
-                    {actor.avatar_url ? <img src={actor.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(actor.full_name)}
+                    {actor.avatar_url ? <img src={actor.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(actor.full_name)}
                   </button>
                 )}
                 <div className="flex-1 min-w-0">

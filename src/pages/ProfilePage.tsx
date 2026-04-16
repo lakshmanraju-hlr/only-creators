@@ -1,7 +1,9 @@
 import toast from 'react-hot-toast'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { uploadPhoto } from '@/utils/uploadPhoto'
+import { useLazyLoad } from '@/hooks/useLazyLoad'
 import { supabase, Profile, Post, getProfMeta, DisciplinePersona } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
@@ -178,11 +180,9 @@ export default function ProfilePage() {
     const file = e.target.files?.[0]
     if (!file || !myProfile) return
     setUploadingAvatar(true)
-    const ext = file.name.split('.').pop()
-    const path = myProfile.id + '/avatar.' + ext
-    await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-    const avatarUrl = data.publicUrl + '?t=' + Date.now()
+    const fileName = myProfile.id + '/avatar'
+    const { thumbUrl } = await uploadPhoto(file, 'avatars', fileName)
+    const avatarUrl = thumbUrl + '?t=' + Date.now()
     await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', myProfile.id)
     await refreshProfile()
     setProfile(p => p ? { ...p, avatar_url: avatarUrl } : p)
@@ -202,9 +202,12 @@ export default function ProfilePage() {
     const [showMenu, setShowMenu] = useState(false)
     const year = new Date(post.created_at).getFullYear()
     const title = post.caption || (post.content_type === 'poem' ? 'Poem' : post.content_type === 'audio' ? 'Audio' : post.content_type === 'video' ? 'Video' : post.content_type === 'document' ? 'Document' : 'Post')
+    const { ref: cellRef, isVisible: cellVisible } = useLazyLoad()
+    const gridThumbSrc = useMemo(() => post.thumb_url || post.media_url || '', [post.thumb_url, post.media_url])
 
     return (
       <motion.div
+        ref={cellRef}
         className="apple-card overflow-hidden group"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => { setHovered(false); setShowMenu(false) }}
@@ -216,8 +219,8 @@ export default function ProfilePage() {
           className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
           onClick={() => setPostLightbox(post)}
         >
-          {post.content_type === 'photo' && post.media_url ? (
-            <img src={post.media_url} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          {post.content_type === 'photo' && post.media_url && cellVisible ? (
+            <img src={gridThumbSrc} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async" />
           ) : post.content_type === 'video' && post.media_url ? (
             <>
               <video src={post.media_url} className="w-full h-full object-cover" muted />
@@ -351,7 +354,7 @@ export default function ProfilePage() {
                   <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xl font-bold text-blue-700 dark:text-blue-300">
                   {initials(profile.full_name)}
@@ -644,6 +647,8 @@ export default function ProfilePage() {
                 alt={profile.full_name}
                 className="rounded-full max-w-[80vw] max-h-[80vh] object-contain"
                 style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
+                loading="lazy"
+                decoding="async"
               />
             </motion.div>
           </motion.div>
@@ -683,10 +688,12 @@ export default function ProfilePage() {
             >
               {postLightbox.content_type === 'photo' && postLightbox.media_url ? (
                 <img
-                  src={postLightbox.media_url}
+                  src={postLightbox.display_url || postLightbox.media_url}
                   alt=""
                   className="max-w-[90vw] max-h-[85vh] object-contain"
                   style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.12)' }}
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : postLightbox.content_type === 'video' && postLightbox.media_url ? (
                 <video
@@ -788,11 +795,9 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
     setSaving(true)
     let avatarUrl = profile.avatar_url
     if (avatarFile) {
-      const ext = avatarFile.name.split('.').pop()
-      const path = myProfile.id + '/avatar.' + ext
-      await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      avatarUrl = data.publicUrl + '?t=' + Date.now()
+      const fileName = myProfile.id + '/avatar'
+      const { thumbUrl } = await uploadPhoto(avatarFile, 'avatars', fileName)
+      avatarUrl = thumbUrl + '?t=' + Date.now()
     }
     const { error } = await supabase.from('profiles').update({
       full_name: fullName,
@@ -855,7 +860,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-bold text-blue-700 dark:text-blue-300 shrink-0">
               {avatarPreview
-                ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 : initials(fullName)
               }
             </div>

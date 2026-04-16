@@ -345,7 +345,7 @@ export default function FeedPage({ onPost }: Props) {
         <div className="flex gap-3 md:gap-4">
           <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
             {profile?.avatar_url
-              ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               : initials(profile?.full_name || '')}
           </div>
           <textarea

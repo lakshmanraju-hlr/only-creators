@@ -75,6 +75,8 @@ export interface Post {
   poem_text: string
   media_url: string
   media_path: string
+  thumb_url?: string
+  display_url?: string
   tags: string[]
   like_count: number
   comment_count: number

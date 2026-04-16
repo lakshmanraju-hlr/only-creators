@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { uploadPhoto } from '@/utils/uploadPhoto'
 import { supabase, ContentType, Group, Profile, DisciplinePersona, getProfMeta, FIELD_CONTENT_PROFILES } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
@@ -190,16 +191,20 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     if (postType === 'pro' && !effectiveDiscipline) return toast.error('Choose a field for your Pro post')
 
     setUploading(true); setProgress(10)
-    let mediaUrl = '', mediaPath = ''
+    let mediaUrl = '', mediaPath = '', thumbUrl = '', displayUrl = ''
     if (file && needsFile) {
-      const ext = file.name.split('.').pop()
-      const path = `${profile.id}/${Date.now()}.${ext}`
+      const fileName = `${profile.id}/${Date.now()}`
       setProgress(30)
-      const { error } = await supabase.storage.from('posts').upload(path, file, { cacheControl: '3600', upsert: false })
-      if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return }
+      try {
+        const urls = await uploadPhoto(file, 'posts', fileName)
+        thumbUrl = urls.thumbUrl
+        displayUrl = urls.displayUrl
+        mediaUrl = displayUrl
+        mediaPath = fileName
+      } catch (err: any) {
+        toast.error(err.message ?? 'Upload failed'); setUploading(false); return
+      }
       setProgress(70)
-      const { data } = supabase.storage.from('posts').getPublicUrl(path)
-      mediaUrl = data.publicUrl; mediaPath = path
     }
     setProgress(85)
 
@@ -219,6 +224,8 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
       poem_text: poemText.trim(),
       media_url: mediaUrl,
       media_path: mediaPath,
+      thumb_url: thumbUrl,
+      display_url: displayUrl,
       tags: tagArray,
       post_type: postType,
       is_pro_post: postType === 'pro',
@@ -283,7 +290,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                     onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}
                   >
                     <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[8px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                      {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : r.full_name?.slice(0, 2).toUpperCase()}
+                      {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : r.full_name?.slice(0, 2).toUpperCase()}
                     </div>
                     <span className="font-medium text-[13px] text-gray-900 dark:text-white">{r.full_name}</span>
                     <span className="text-[12px] text-gray-400">@{r.username}</span>
@@ -319,7 +326,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                 onClick={() => fileRef.current?.click()}
               >
                 {filePreview
-                  ? <img src={filePreview} alt="" className="max-h-[160px] rounded-lg mx-auto" />
+                  ? <img src={filePreview} alt="" className="max-h-[160px] rounded-lg mx-auto" loading="lazy" decoding="async" />
                   : <>
                     <span className="flex w-5 h-5 text-brand-600 mx-auto mb-2">{currentCT.icon}</span>
                     <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">{file ? file.name : 'Click to browse or drag & drop'}</p>

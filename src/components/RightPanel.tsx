@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLazyLoad } from '@/hooks/useLazyLoad'
 import { useNavigate } from 'react-router-dom'
 import { supabase, Profile, Group, getCanonicalDiscipline } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -129,7 +130,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends, onOpenChat
                     >
                       <div className="relative shrink-0">
                         <div className={`w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-bold ${avatarColors[i % avatarColors.length]}`}>
-                          {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
+                          {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
                         </div>
                         {isActive && <span className="absolute -bottom-px -right-px w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-900" />}
                       </div>
@@ -174,7 +175,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends, onOpenChat
                             style={{ marginLeft: fi === 0 ? 0 : -8, zIndex: groupFriends.length - fi }}
                             className={`relative w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-[8px] font-bold border-2 border-white dark:border-gray-900 ${avatarColors[(gi + fi) % avatarColors.length]}`}
                           >
-                            {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(f.full_name)}
+                            {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
                           </div>
                         )) : (
                           <div className="w-7 h-7 rounded-full bg-brand-50 dark:bg-brand-950/30 flex items-center justify-center text-[11px]">◈</div>
@@ -208,7 +209,7 @@ export default function RightPanel({ onlineFriends, setOnlineFriends, onOpenChat
                   onClick={() => navigate(`/profile/${c.username}`)}
                   className={`w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-bold shrink-0 ${avatarColors[i % avatarColors.length]}`}
                 >
-                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(c.full_name)}
+                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(c.full_name)}
                 </button>
                 <button
                   className="flex-1 min-w-0 text-left"

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useLazyLoad } from '@/hooks/useLazyLoad'
 import { supabase, Profile, Message } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
@@ -102,7 +103,7 @@ export default function FloatingChat({ chatWith, onClose }: Props) {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-300 overflow-hidden">
-              {chatWith.avatar_url ? <img src={chatWith.avatar_url} alt="" className="w-full h-full object-cover" /> : initials(chatWith.full_name)}
+              {chatWith.avatar_url ? <img src={chatWith.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(chatWith.full_name)}
             </div>
             <span className="absolute -bottom-px -right-px w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-900" />
           </div>
