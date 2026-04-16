@@ -1,16 +1,11 @@
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 
-/**
- * Compresses a photo to thumb + display sizes, uploads both to Supabase Storage,
- * and returns the public URLs.
- *
- * @param {File}   file      - Original file from an <input type="file">
- * @param {string} bucket    - Supabase Storage bucket name (e.g. 'posts', 'avatars')
- * @param {string} fileName  - Base file name without extension (e.g. userId + '/' + Date.now())
- * @returns {{ thumbUrl: string, displayUrl: string }}
- */
-export async function uploadPhoto(file, bucket, fileName) {
+export async function uploadPhoto(
+  file: File,
+  bucket: string,
+  fileName: string
+): Promise<{ thumbUrl: string; displayUrl: string }> {
   const thumbFile = await imageCompression(file, {
     maxSizeMB: 0.1,
     maxWidthOrHeight: 400,

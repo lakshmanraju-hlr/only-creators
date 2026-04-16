@@ -50,7 +50,7 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [canProUpvote, setCanProUpvote] = useState(false)
   const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
 
-  const { ref: mediaRef, isVisible: mediaVisible } = useLazyLoad()
+  const { ref: mediaRef, isVisible: mediaVisible } = useLazyLoad<HTMLDivElement>()
   const thumbSrc = useMemo(() => post.thumb_url || post.media_url || '', [post.thumb_url, post.media_url])
   const displaySrc = useMemo(() => post.display_url || post.media_url || '', [post.display_url, post.media_url])
   const authorAvatarSrc = useMemo(() => author?.avatar_url || '', [author?.avatar_url])

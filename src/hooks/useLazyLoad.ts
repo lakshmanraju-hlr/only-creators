@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
-/**
- * Observes an element and returns whether it has entered the viewport.
- * The IntersectionObserver is disconnected once the element becomes visible
- * so it only fires once.
- *
- * Usage:
- *   const { ref, isVisible } = useLazyLoad()
- *   return <div ref={ref}>{isVisible && <img src={url} />}</div>
- */
-export function useLazyLoad(options = {}) {
-  const ref = useRef(null)
+export function useLazyLoad<T extends HTMLElement = HTMLElement>(
+  options: IntersectionObserverInit = {}
+): { ref: React.RefObject<T>; isVisible: boolean } {
+  const ref = useRef<T>(null)
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {

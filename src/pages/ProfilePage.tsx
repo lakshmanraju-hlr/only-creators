@@ -202,7 +202,7 @@ export default function ProfilePage() {
     const [showMenu, setShowMenu] = useState(false)
     const year = new Date(post.created_at).getFullYear()
     const title = post.caption || (post.content_type === 'poem' ? 'Poem' : post.content_type === 'audio' ? 'Audio' : post.content_type === 'video' ? 'Video' : post.content_type === 'document' ? 'Document' : 'Post')
-    const { ref: cellRef, isVisible: cellVisible } = useLazyLoad()
+    const { ref: cellRef, isVisible: cellVisible } = useLazyLoad<HTMLDivElement>()
     const gridThumbSrc = useMemo(() => post.thumb_url || post.media_url || '', [post.thumb_url, post.media_url])
 
     return (
