@@ -109,15 +109,27 @@ export default function PostCard({ post, onUpdated }: Props) {
     if (!canProUpvote || !profile) return
     const was = proUpvoted; setProUpvoted(!was); setProCount(c => was ? c - 1 : c + 1)
     if (was) {
-      const { error } = await supabase.from('pro_upvotes').delete().match({ user_id: profile.id, post_id: post.id })
-      if (error) { setProUpvoted(true); setProCount(c => c + 1); toast.error('Failed to remove upvote') }
+      const { data, error } = await supabase.rpc('remove_pro_vote', { p_post_id: post.id })
+      if (error || data?.error) {
+        setProUpvoted(true); setProCount(c => c + 1)
+        toast.error('Failed to remove vote')
+      }
     } else {
-      const profession = post.persona_discipline || profile.profession || 'general'
-      const { error } = await supabase.from('pro_upvotes').insert({ user_id: profile.id, post_id: post.id, profession })
-      if (error) { setProUpvoted(false); setProCount(c => c - 1); toast.error('Failed to upvote') ; return }
-      if (post.user_id !== profile.id) await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: profile.id, type: 'pro_upvote', post_id: post.id })
-      if (authorDiscipline) supabase.rpc('increment_discipline_score', { p_user_id: profile.id, p_discipline: authorDiscipline, p_delta: 5 })
-      toast.success('Pro Upvote given!')
+      const { data, error } = await supabase.rpc('cast_pro_vote', { p_post_id: post.id })
+      if (error || data?.error) {
+        setProUpvoted(false); setProCount(c => c - 1)
+        const msg = data?.detail ?? data?.error ?? 'Failed to Pro Vote'
+        toast.error(msg === 'insufficient_tier' ? 'Expert or Authority tier required' : msg)
+        return
+      }
+      if (data?.new_vote_count !== undefined) setProCount(data.new_vote_count)
+      if (post.user_id !== profile.id) {
+        await supabase.from('notifications').insert({
+          user_id: post.user_id, actor_id: profile.id,
+          type: 'pro_upvote', post_id: post.id,
+        })
+      }
+      toast.success('Pro Vote cast!')
     }
   }
 
