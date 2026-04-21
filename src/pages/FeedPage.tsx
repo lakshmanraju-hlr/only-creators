@@ -940,7 +940,7 @@ export default function FeedPage({ onPost }: Props) {
         <div className="flex justify-center py-16">
           <div className="w-7 h-7 border-2 border-border-strong border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : postCount === 0 && feedItems.length === 0 ? (
+      ) : postCount === 0 ? (
         tab === 'following' ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <span className="flex w-10 h-10 mb-3 text-border-strong"><Icon.Feed /></span>
