@@ -142,10 +142,10 @@ export default function AppShell() {
         className="col-span-full relative flex items-center h-[56px] md:h-[64px] px-4 md:px-6 sticky top-0 z-50"
         style={{
           gridColumn: '1 / -1',
-          background: 'rgba(255,255,255,0.92)',
+          background: 'rgba(249,249,247,0.95)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-          borderBottom: '1px solid #E5E7EB',
+          borderBottom: '1px solid #E8E8E4',
         }}
       >
         {/* Logo */}
@@ -161,14 +161,14 @@ export default function AppShell() {
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 w-[400px]">
           <button
             onClick={() => setShowSearch(true)}
-            className="flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left bg-[#F8F8F6] border border-[#E5E7EB] text-[#9CA3AF] hover:bg-[#F0F0EE]"
+            className="flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left bg-[#F3F3F0] border border-[#E8E8E4] text-[#9CA3AF] hover:bg-[#EBEBEA]"
           >
             <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
             <span>Search creators or fields...</span>
           </button>
           <button
             onClick={() => navigate('/explore')}
-            className="flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#333333] text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors shrink-0"
+            className="flex items-center gap-2 bg-[#18181B] hover:bg-[#3F3F46] text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors shrink-0"
           >
             <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
             Browse Fields
@@ -189,8 +189,8 @@ export default function AppShell() {
           <div
             className="flex items-center ml-1 pl-1 pr-1 py-1 rounded-full"
             style={{
-              background: '#ffffff',
-              border: '1px solid #E5E7EB',
+              background: '#FFFFFF',
+              border: '1px solid #E8E8E4',
               boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
             }}
           >
@@ -248,9 +248,9 @@ export default function AppShell() {
             <div
               className="absolute right-0 top-[calc(100%+8px)] z-[999] w-[220px] rounded-[12px] overflow-hidden py-1.5"
               style={{
-                background: '#ffffff',
-                border: '1px solid #E5E7EB',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
+                background: '#FFFFFF',
+                border: '1px solid #E8E8E4',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.10)',
               }}
             >
               <button
@@ -283,7 +283,7 @@ export default function AppShell() {
       {/* ── LEFT SIDEBAR ── */}
       <aside
         className="app-sidebar flex flex-col overflow-hidden"
-        style={{ gridColumn: '1', gridRow: '2', background: '#ffffff', borderRight: '1px solid #E5E7EB' }}
+        style={{ gridColumn: '1', gridRow: '2', background: '#FFFFFF', borderRight: '1px solid #E8E8E4' }}
       >
         {/* Main nav */}
         <div className="px-3 pt-3 pb-1">
@@ -295,11 +295,11 @@ export default function AppShell() {
                 onClick={() => navigate(item.path)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[15px] mb-0.5 transition-all text-left"
                 style={{
-                  background: active ? '#EFF6FF' : 'transparent',
-                  color: active ? '#2563EB' : '#6B7280',
+                  background: active ? '#F4F4F5' : 'transparent',
+                  color: active ? '#18181B' : '#6B7280',
                   fontWeight: active ? 600 : 500,
                 }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F6' }}
+                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
                 onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
               >
                 <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
@@ -309,7 +309,7 @@ export default function AppShell() {
           })}
         </div>
 
-        <div className="h-px mx-3 my-2 bg-[#E5E7EB]" />
+        <div className="h-px mx-3 my-2 bg-[#E8E8E4]" />
 
         {/* My fields */}
         <div className="flex-1 overflow-y-auto px-3 min-h-0 pb-1">
@@ -324,11 +324,11 @@ export default function AppShell() {
                     onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[14.5px] mb-0.5 transition-all text-left"
                     style={{
-                      background: active ? '#EFF6FF' : 'transparent',
-                      color: active ? '#2563EB' : '#6B7280',
+                      background: active ? '#F4F4F5' : 'transparent',
+                      color: active ? '#18181B' : '#6B7280',
                       fontWeight: active ? 600 : 500,
                     }}
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F6' }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
                     onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                   >
                     <span className="flex w-[18px] h-[18px] shrink-0">{d.icon}</span>
@@ -343,7 +343,7 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="app-main" style={{ background: '#F8F8F6' }}>
+      <main className="app-main" style={{ background: '#F9F9F7' }}>
         <Routes>
           <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
           <Route path="/explore"           element={<ExplorePage />} />
@@ -360,7 +360,7 @@ export default function AppShell() {
       {/* ── RIGHT PANEL ── */}
       <div
         className="app-right-panel overflow-y-auto"
-        style={{ gridColumn: '3', gridRow: '2', background: '#F8F8F6', borderLeft: '1px solid #E5E7EB' }}
+        style={{ gridColumn: '3', gridRow: '2', background: '#F9F9F7', borderLeft: '1px solid #E8E8E4' }}
       >
         <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} onOpenChat={setChatWithProfile} />
       </div>
@@ -372,7 +372,7 @@ export default function AppShell() {
           height: 64,
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           background: '#FFFFFF',
-          borderTop: '1px solid #E5E7EB',
+          borderTop: '1px solid #E8E8E4',
         }}
       >
         <MobileNavBtn
@@ -391,7 +391,7 @@ export default function AppShell() {
         <button
           onClick={() => setShowUpload(true)}
           className="flex items-center justify-center rounded-full transition-all active:scale-95"
-          style={{ width: 52, height: 52, background: '#1A1A1A' }}
+          style={{ width: 52, height: 52, background: '#18181B', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
           aria-label="Create post"
         >
           <span className="flex w-6 h-6 text-white"><Icon.Plus /></span>
@@ -444,11 +444,11 @@ function MobileNavBtn({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors"
-      style={{ color: active ? '#1A1A1A' : '#9CA3AF' }}
+      className="flex flex-col items-center gap-0.5 px-3 py-1.5 transition-colors"
+      style={{ color: active ? '#111111' : '#9CA3AF' }}
     >
       <span className="flex w-[22px] h-[22px]">{icon}</span>
-      <span className="text-[11px] font-semibold">{label}</span>
+      <span className={`text-[11px] ${active ? 'font-bold' : 'font-normal'}`}>{label}</span>
     </button>
   )
 }
