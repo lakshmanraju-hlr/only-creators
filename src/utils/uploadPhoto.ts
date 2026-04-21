@@ -13,8 +13,8 @@ export async function uploadPhoto(
   })
 
   const displayFile = await imageCompression(file, {
-    maxSizeMB: 0.5,
-    maxWidthOrHeight: 1080,
+    maxSizeMB: 1.5,
+    maxWidthOrHeight: 1440,
     useWebWorker: true,
   })
 

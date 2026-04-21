@@ -322,11 +322,13 @@ export default function PostCard({ post, onUpdated }: Props) {
         >
           {mediaVisible && (
             <img
-              src={thumbSrc}
+              src={displaySrc}
               alt="post"
               className="w-full h-full object-cover block"
               loading="lazy"
               decoding="async"
+              style={{ opacity: 0, transition: 'opacity 0.2s ease' }}
+              onLoad={e => { (e.currentTarget as HTMLImageElement).style.opacity = '1' }}
             />
           )}
         </div>
