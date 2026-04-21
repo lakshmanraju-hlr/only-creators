@@ -89,6 +89,7 @@ export interface Post {
   group_id?: string | null
   group?: Group
   created_at: string
+  expires_at?: string | null
   profiles?: Profile
   user_liked?: boolean
   user_pro_upvoted?: boolean

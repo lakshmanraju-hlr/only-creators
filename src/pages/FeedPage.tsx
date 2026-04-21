@@ -6,6 +6,7 @@ import { getFriends } from '@/lib/friends'
 import PostCard from '@/components/PostCard'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
+import { DUMMY_FEED_ITEMS } from '@/lib/dummyFeed'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -563,7 +564,7 @@ function FeedHeaderStrip({
 // Main FeedPage
 // ─────────────────────────────────────────────────────────────
 
-const POST_FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,thumb_url,display_url,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,post_type,persona_discipline,visibility,group_id,created_at'
+const POST_FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,thumb_url,display_url,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,post_type,persona_discipline,visibility,group_id,created_at,expires_at'
 
 export default function FeedPage({ onPost }: Props) {
   const { profile } = useAuth()
@@ -572,8 +573,6 @@ export default function FeedPage({ onPost }: Props) {
   const [tab,          setTab]          = useState<FeedTab>('all')
   const [feedItems,    setFeedItems]    = useState<FeedItem[]>([])
   const [loading,      setLoading]      = useState(true)
-  const [composerText, setComposerText] = useState('')
-  const [posting,      setPosting]      = useState(false)
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const [friendIds,    setFriendIds]    = useState<string[]>([])
   const [myFieldSet,   setMyFieldSet]   = useState<Set<string>>(new Set())
@@ -669,9 +668,11 @@ export default function FeedPage({ onPost }: Props) {
       return sb - sa
     })
 
-    // Filter out expired general posts
+    // Filter out expired general posts (via expires_at, or score-based fallback for legacy posts)
     const filtered = posts.filter(p =>
-      p.post_type === 'pro' || scoreGeneralPost(p, now, friendSet, followingSet) >= 0
+      p.post_type === 'pro' ||
+      (!p.expires_at && scoreGeneralPost(p, now, friendSet, followingSet) >= 0) ||
+      (p.expires_at && new Date(p.expires_at) > new Date())
     )
 
     setFeedItems(filtered.map(p => ({
@@ -1027,25 +1028,7 @@ export default function FeedPage({ onPost }: Props) {
     return () => window.removeEventListener('oc:post-created', handler)
   }, [fetchPosts, profile?.id])
 
-  // ── Quick text post ────────────────────────────────────────
-  async function quickPost() {
-    if (!profile || !composerText.trim()) return
-    setPosting(true)
-    const { error } = await supabase.from('posts').insert({
-      user_id: profile.id,
-      content_type: 'text',
-      caption: composerText.trim(),
-      post_type: 'general',
-    })
-    if (!error) {
-      setComposerText('')
-      toast.success('Posted! ✦')
-      window.dispatchEvent(new CustomEvent('oc:post-created'))
-    } else {
-      toast.error(error.message)
-    }
-    setPosting(false)
-  }
+  // Quick post is handled via UploadModal (enforces field selection requirement)
 
   // ── Render helpers ─────────────────────────────────────────
   function initials(name: string) {
@@ -1111,12 +1094,12 @@ export default function FeedPage({ onPost }: Props) {
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               : initials(profile?.full_name || '')}
           </div>
-          <textarea
-            className="flex-1 bg-transparent border-none outline-none text-[15px] md:text-[17px] text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 resize-none min-h-[44px] leading-relaxed pt-1"
-            placeholder="Share your latest project or thought..."
-            value={composerText}
-            onChange={e => setComposerText(e.target.value)}
-          />
+          <button
+            onClick={onPost}
+            className="flex-1 text-left text-[15px] md:text-[17px] text-gray-300 dark:text-gray-600 leading-relaxed pt-1 bg-transparent border-none outline-none cursor-text"
+          >
+            Share your latest project or thought…
+          </button>
         </div>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50 dark:border-gray-800">
           <div className="flex items-center gap-3 md:gap-5 text-gray-400">
@@ -1136,13 +1119,10 @@ export default function FeedPage({ onPost }: Props) {
             ))}
           </div>
           <button
-            onClick={quickPost}
-            disabled={posting || !composerText.trim()}
-            className="px-5 md:px-7 py-2 bg-brand-600 hover:bg-brand-700 text-white text-[13px] md:text-[14px] font-semibold rounded-full transition-colors disabled:opacity-40 shrink-0"
+            onClick={onPost}
+            className="px-5 md:px-7 py-2 bg-brand-600 hover:bg-brand-700 text-white text-[13px] md:text-[14px] font-semibold rounded-full transition-colors shrink-0"
           >
-            {posting
-              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : 'Post'}
+            Post
           </button>
         </div>
       </div>
@@ -1166,18 +1146,36 @@ export default function FeedPage({ onPost }: Props) {
           <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : postCount === 0 && feedItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-          <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Feed /></span>
-          <p className="font-semibold text-gray-600 dark:text-gray-400">
-            {tab === 'following' ? 'Follow some creators to see their posts here' : 'Be the first to post'}
-          </p>
-          <button
-            onClick={onPost}
-            className="mt-4 px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-full hover:bg-brand-700 transition-colors"
-          >
-            Create a post
-          </button>
-        </div>
+        tab === 'following' ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Feed /></span>
+            <p className="font-semibold text-gray-600 dark:text-gray-400">Follow some creators to see their posts here</p>
+            <button
+              onClick={() => navigate('/explore')}
+              className="mt-4 px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-full hover:bg-brand-700 transition-colors"
+            >
+              Explore creators
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+              <span className="flex w-3.5 h-3.5 text-gray-400"><Icon.Info /></span>
+              <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                Showing sample posts — be the first to share your work!
+              </p>
+              <button
+                onClick={onPost}
+                className="ml-auto text-[12px] font-semibold text-brand-600 dark:text-brand-400 hover:underline shrink-0"
+              >
+                Post now →
+              </button>
+            </div>
+            {DUMMY_FEED_ITEMS.map(item => (
+              <PostCard key={item.post.id} post={item.post} onUpdated={() => {}} />
+            ))}
+          </>
+        )
       ) : (
         feedItems.map((item, idx) => {
           if (item.type === 'pro_post' || item.type === 'general_post') {
