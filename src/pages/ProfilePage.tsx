@@ -15,6 +15,9 @@ import {
   getFriendStatus, sendFriendRequest,
   acceptFriendRequest, declineFriendRequest, unfriend,
 } from '@/lib/friends'
+import BottomSheet, { SheetRow, SheetCancel } from '@/components/BottomSheet'
+import ConfirmSheet from '@/components/ConfirmSheet'
+import ReportSheet from '@/components/ReportSheet'
 
 // ── Discipline display map ───────────────────────────────────────────────────
 const DISCIPLINE_MAP: Record<string, { label: string; IconComp: () => JSX.Element }> = {
@@ -90,6 +93,15 @@ export default function ProfilePage() {
   const [endorsedFields, setEndorsedFields] = useState<Set<string>>(new Set())
   const [endorseCounts, setEndorseCounts] = useState<Record<string, number>>({})
   const [endorsing, setEndorsing] = useState<string | null>(null)
+  const [endorseConfirmField, setEndorseConfirmField] = useState<string | null>(null)
+
+  // Profile 3-dot menu + block/report state
+  const [showProfile3Dot, setShowProfile3Dot] = useState(false)
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false)
+  const [showProfileReport, setShowProfileReport] = useState(false)
+  const [blocking, setBlocking] = useState(false)
+  const [showFriendSheet, setShowFriendSheet] = useState(false)
+  const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false)
 
   // List modal (friends / followers)
   const [listModal, setListModal] = useState<'friends' | 'followers' | null>(null)
@@ -327,6 +339,44 @@ export default function ProfilePage() {
     setFriendStatus('friends')
     toast.success(`You and ${profile.full_name} are now friends!`)
     setSocialActing(false)
+  }
+
+  async function handleDeclineFriendHeader() {
+    if (!myProfile || !profile) return
+    setSocialActing(true)
+    await declineFriendRequest(myProfile.id, profile.id)
+    setFriendStatus('none')
+    setSocialActing(false)
+  }
+
+  async function handleRemoveFriend() {
+    if (!myProfile || !profile) return
+    setSocialActing(true)
+    await unfriend(myProfile.id, profile.id)
+    setFriendStatus('none')
+    setShowFriendSheet(false)
+    toast.success(`You unfollowed @${profile.username}`)
+    setSocialActing(false)
+  }
+
+  async function handleBlockUser() {
+    if (!myProfile || !profile) return
+    setBlocking(true)
+    try {
+      await supabase.from('blocks').insert({ blocker_id: myProfile.id, blocked_id: profile.id })
+      toast.success(`@${profile.username} is now blocked`)
+      setShowBlockConfirm(false)
+    } catch {
+      toast.error('Failed to block user')
+    } finally {
+      setBlocking(false)
+    }
+  }
+
+  function copyProfileLink() {
+    navigator.clipboard.writeText(`${window.location.origin}/profile/${profile?.username}`)
+    toast.success('Profile link copied!')
+    setShowProfile3Dot(false)
   }
 
   async function handlePin(postId: string) {
@@ -742,21 +792,112 @@ export default function ProfilePage() {
                 {isOwnProfile ? (
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="px-5 py-2 text-sm font-semibold rounded-full transition-colors tracking-wide bg-black/[0.06] dark:bg-white/[0.10] text-gray-900 dark:text-white/90 border border-black/[0.08] dark:border-white/[0.12] hover:bg-black/[0.09] dark:hover:bg-white/[0.14]"
-                    style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+                    className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-colors"
                   >
                     Edit Profile
                   </button>
                 ) : socialLoading ? (
-                  <div className="w-24 h-9 rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                  <div className="w-32 h-9 rounded-[8px] bg-[#F0F0EE] animate-pulse" />
                 ) : (
-                  <button
-                    onClick={ctxBtn.onClick}
-                    disabled={socialActing}
-                    className={ctxBtn.className + ' disabled:opacity-60'}
-                  >
-                    {ctxBtn.label}
-                  </button>
+                  <>
+                    {/* State 2: no connection */}
+                    {friendStatus === 'none' && !isFollowing && (
+                      <>
+                        <button
+                          onClick={handleSendFriendRequest}
+                          disabled={socialActing}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95 disabled:opacity-50"
+                          style={{ background: '#1A1A1A' }}
+                        >
+                          Add Friend
+                        </button>
+                        <button
+                          onClick={handleToggleFollow}
+                          disabled={socialActing}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all disabled:opacity-50"
+                        >
+                          Follow
+                        </button>
+                      </>
+                    )}
+                    {/* State 3: pending sent */}
+                    {friendStatus === 'pending_sent' && (
+                      <button
+                        onClick={handleCancelFriendRequest}
+                        disabled={socialActing}
+                        className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F8F8F6] transition-all disabled:opacity-50"
+                      >
+                        Request Sent
+                      </button>
+                    )}
+                    {/* State 4: pending received */}
+                    {friendStatus === 'pending_received' && (
+                      <>
+                        <button
+                          onClick={handleAcceptFriend}
+                          disabled={socialActing}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                          style={{ background: '#10B981' }}
+                        >
+                          <span className="flex w-4 h-4"><Icon.Check /></span>
+                          Accept
+                        </button>
+                        <button
+                          onClick={handleDeclineFriendHeader}
+                          disabled={socialActing}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <span className="flex w-4 h-4"><Icon.X /></span>
+                          Decline
+                        </button>
+                      </>
+                    )}
+                    {/* State 5: friends */}
+                    {friendStatus === 'friends' && (
+                      <>
+                        <button
+                          onClick={() => navigate('/messages?with=' + profile!.id)}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95"
+                          style={{ background: '#1A1A1A' }}
+                        >
+                          Message
+                        </button>
+                        <button
+                          onClick={() => setShowFriendSheet(true)}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all"
+                        >
+                          Friends ✓
+                        </button>
+                      </>
+                    )}
+                    {/* State 6: following only */}
+                    {friendStatus === 'none' && isFollowing && (
+                      <>
+                        <button
+                          onClick={handleSendFriendRequest}
+                          disabled={socialActing}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95 disabled:opacity-50"
+                          style={{ background: '#1A1A1A' }}
+                        >
+                          Add Friend
+                        </button>
+                        <button
+                          onClick={() => setShowUnfollowConfirm(true)}
+                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all"
+                        >
+                          Following ✓
+                        </button>
+                      </>
+                    )}
+
+                    {/* 3-dot menu button */}
+                    <button
+                      onClick={() => setShowProfile3Dot(true)}
+                      className="h-9 w-9 flex items-center justify-center rounded-[8px] border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F8F8F6] transition-colors"
+                    >
+                      <span className="flex w-5 h-5"><Icon.MoreHorizontal /></span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -896,19 +1037,19 @@ export default function ProfilePage() {
               </span>
             </div>
 
-            {/* Endorse button (visitor only, if Expert or Authority in this field) */}
+            {/* Endorse button — opens confirmation sheet */}
             {canEndorse && (
               <button
-                onClick={() => !endorsedFields.has(activeTab) && handleEndorse(activeTab)}
-                disabled={endorsing === activeTab || endorsedFields.has(activeTab)}
-                className={`flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-full border transition-colors ${
-                  endorsedFields.has(activeTab)
-                    ? 'border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 cursor-default'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
+                onClick={() => !endorsedFields.has(activeTab) && setEndorseConfirmField(activeTab)}
+                disabled={endorsedFields.has(activeTab)}
+                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-full border transition-colors"
+                style={endorsedFields.has(activeTab)
+                  ? { borderColor: '#10B981', color: '#10B981', background: '#ECFDF5', cursor: 'default' }
+                  : { borderColor: '#E5E7EB', color: '#1A1A1A', background: 'transparent' }
+                }
               >
-                <span className="flex w-3.5 h-3.5"><Icon.ThumbsUp /></span>
-                {endorsedFields.has(activeTab) ? 'Endorsed' : endorsing === activeTab ? 'Endorsing…' : 'Endorse'}
+                <span className="flex w-3.5 h-3.5"><Icon.Medal /></span>
+                {endorsedFields.has(activeTab) ? 'Endorsed ✓' : endorsing === activeTab ? 'Endorsing…' : `Endorse in ${DISCIPLINE_MAP[activeTab]?.label ?? activeTab}`}
               </button>
             )}
           </div>
@@ -1300,6 +1441,94 @@ export default function ProfilePage() {
           }}
         />
       )}
+
+      {/* ── Profile 3-dot bottom sheet ── */}
+      <BottomSheet open={showProfile3Dot} onClose={() => setShowProfile3Dot(false)}>
+        <SheetRow icon={<Icon.CopyLink />} label="Copy profile link" onClick={copyProfileLink} />
+        <SheetRow
+          icon={<Icon.Prohibit />}
+          label={`Block @${profile?.username}`}
+          danger
+          onClick={() => { setShowProfile3Dot(false); setShowBlockConfirm(true) }}
+        />
+        <SheetRow
+          icon={<Icon.Flag />}
+          label="Report profile"
+          danger
+          onClick={() => { setShowProfile3Dot(false); setShowProfileReport(true) }}
+        />
+        <SheetCancel onClose={() => setShowProfile3Dot(false)} />
+      </BottomSheet>
+
+      {/* ── Block confirmation ── */}
+      <ConfirmSheet
+        open={showBlockConfirm}
+        onClose={() => setShowBlockConfirm(false)}
+        onConfirm={handleBlockUser}
+        title={`Block @${profile?.username}?`}
+        description="They won't be able to see your profile or posts."
+        confirmLabel="Block"
+        loading={blocking}
+      />
+
+      {/* ── Report profile ── */}
+      {profile && (
+        <ReportSheet
+          open={showProfileReport}
+          onClose={() => setShowProfileReport(false)}
+          targetType="profile"
+          targetId={profile.id}
+        />
+      )}
+
+      {/* ── Friends menu sheet ── */}
+      <BottomSheet open={showFriendSheet} onClose={() => setShowFriendSheet(false)}>
+        <SheetRow
+          icon={<Icon.UserCheck />}
+          label="Unfollow"
+          onClick={() => { setShowFriendSheet(false); setShowUnfollowConfirm(true) }}
+        />
+        <SheetRow
+          icon={<Icon.UserPlus />}
+          label="Remove friend"
+          danger
+          onClick={() => { setShowFriendSheet(false); setShowUnfollowConfirm(true) }}
+        />
+        <SheetCancel onClose={() => setShowFriendSheet(false)} />
+      </BottomSheet>
+
+      {/* ── Unfollow / Remove friend confirmation ── */}
+      <ConfirmSheet
+        open={showUnfollowConfirm}
+        onClose={() => setShowUnfollowConfirm(false)}
+        onConfirm={async () => {
+          setShowUnfollowConfirm(false)
+          if (friendStatus === 'friends') {
+            await handleRemoveFriend()
+          } else {
+            await handleToggleFollow()
+          }
+        }}
+        title={friendStatus === 'friends' ? 'Remove friend?' : 'Unfollow?'}
+        description={`You'll unfollow @${profile?.username}. You can follow again anytime.`}
+        confirmLabel={friendStatus === 'friends' ? 'Remove' : 'Unfollow'}
+      />
+
+      {/* ── Endorse confirmation sheet ── */}
+      <ConfirmSheet
+        open={!!endorseConfirmField}
+        onClose={() => setEndorseConfirmField(null)}
+        onConfirm={async () => {
+          if (endorseConfirmField) {
+            await handleEndorse(endorseConfirmField)
+            setEndorseConfirmField(null)
+          }
+        }}
+        title={`Endorse @${profile?.username} in ${DISCIPLINE_MAP[endorseConfirmField ?? '']?.label ?? endorseConfirmField}?`}
+        description="Your endorsement is public and permanent."
+        confirmLabel="Endorse"
+        loading={endorsing === endorseConfirmField}
+      />
     </div>
   )
 }

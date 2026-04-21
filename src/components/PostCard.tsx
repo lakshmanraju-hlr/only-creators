@@ -8,6 +8,9 @@ import { supabase, Post, Comment, getCanonicalDiscipline, Profile } from '@/lib/
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
+import BottomSheet, { SheetRow, SheetCancel } from '@/components/BottomSheet'
+import ConfirmSheet from '@/components/ConfirmSheet'
+import ReportSheet from '@/components/ReportSheet'
 
 interface Props { post: Post; onUpdated?: () => void }
 
@@ -39,7 +42,11 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [mentionIndex, setMentionIndex] = useState(0)
   const [mentionStart, setMentionStart] = useState(-1)
   const [showMenu, setShowMenu] = useState(false)
+  const [showMenuSheet, setShowMenuSheet] = useState(false)
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+  const [showReport, setShowReport] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
   const [mediaLightbox, setMediaLightbox] = useState<{ url: string; type: 'photo' | 'video' } | null>(null)
   const commentRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -64,6 +71,13 @@ export default function PostCard({ post, onUpdated }: Props) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showMenu])
 
+  // Load bookmark state
+  useEffect(() => {
+    if (!profile) return
+    supabase.from('bookmarks').select('id', { count: 'exact', head: true }).eq('user_id', profile.id).eq('post_id', post.id)
+      .then(({ count }) => setBookmarked((count ?? 0) > 0))
+  }, [profile?.id, post.id])
+
   useEffect(() => {
     if (!profile || !post.persona_discipline || post.user_id === profile.id || post.post_type !== 'pro') {
       setCanProUpvote(false); return
@@ -87,11 +101,30 @@ export default function PostCard({ post, onUpdated }: Props) {
 
   async function deletePost() {
     if (!profile || !isOwnPost) return
-    setDeleting(true); setShowMenu(false)
+    setDeleting(true)
     const { error } = await supabase.from('posts').delete().eq('id', post.id)
     if (error) { toast.error('Failed to delete: ' + error.message); setDeleting(false); return }
     if (post.media_path) await supabase.storage.from('posts').remove([post.media_path])
-    toast.success('Post deleted'); onUpdated?.()
+    toast.success('Post deleted'); setShowConfirmDelete(false); onUpdated?.()
+  }
+
+  async function toggleBookmark() {
+    if (!profile) return toast.error('Sign in to bookmark posts')
+    const was = bookmarked; setBookmarked(!was)
+    if (was) {
+      await supabase.from('bookmarks').delete().match({ user_id: profile.id, post_id: post.id })
+      toast.success('Removed from bookmarks')
+    } else {
+      await supabase.from('bookmarks').insert({ user_id: profile.id, post_id: post.id })
+      toast.success('Saved to bookmarks')
+    }
+  }
+
+  function copyPostLink() {
+    const url = `${window.location.origin}/profile/${author?.username}#post-${post.id}`
+    navigator.clipboard.writeText(url)
+    toast.success('Link copied!')
+    setShowMenuSheet(false)
   }
 
   async function toggleLike() {
@@ -238,43 +271,15 @@ export default function PostCard({ post, onUpdated }: Props) {
           </div>
         </div>
 
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setShowMenu(v => !v)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-base font-bold tracking-widest"
-          >
-            ···
-          </button>
-          <AnimatePresence>
-            {showMenu && (
-              <motion.div
-                className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-modal py-1 z-20"
-                initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                transition={{ duration: 0.1 }}
-              >
-                {isOwnPost ? (
-                  <button
-                    onClick={deletePost}
-                    disabled={deleting}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
-                  >
-                    <span className="flex w-3.5 h-3.5"><Icon.Trash /></span>
-                    {deleting ? 'Deleting…' : 'Delete post'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowMenu(false)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Report
-                  </button>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* 3-dot menu button */}
+        <button
+          onClick={() => setShowMenuSheet(true)}
+          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+          style={{ color: '#6B7280' }}
+          title="More options"
+        >
+          <span className="flex w-5 h-5"><Icon.MoreHorizontal /></span>
+        </button>
       </div>
 
       {/* ── Media ── */}
@@ -347,32 +352,51 @@ export default function PostCard({ post, onUpdated }: Props) {
       )}
 
       {/* ── Actions ── */}
-      <div className="flex items-center px-2.5 py-1.5 border-t border-gray-100 dark:border-gray-800 gap-1">
+      <div className="flex items-center px-2.5 py-1.5 border-t border-[#E5E7EB] gap-0.5">
+        {/* Like */}
         <button
           onClick={toggleLike}
-          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[14px] transition-colors ${
-            liked
-              ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30'
-              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300'
-          }`}
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-[8px] text-[13px] transition-colors"
+          style={{ color: liked ? '#EF4444' : '#6B7280' }}
+          onMouseEnter={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F6' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
         >
-          <span className="flex w-4 h-4">{liked ? <Icon.Heart filled /> : <Icon.Heart />}</span>
+          <span className="flex w-4 h-4"><Icon.Heart filled={liked} /></span>
           <span className="tabular-nums">{likeCount}</span>
         </button>
 
+        {/* Comment */}
         <button
           onClick={loadComments}
-          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[14px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-[8px] text-[13px] transition-colors"
+          style={{ color: '#6B7280' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F6' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
         >
           <span className="flex w-4 h-4"><Icon.MessageCircle /></span>
           <span className="tabular-nums">{post.comment_count}</span>
         </button>
 
+        {/* Share */}
         <button
           onClick={openShare}
-          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[14px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-[8px] text-[13px] transition-colors"
+          style={{ color: '#6B7280' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F6' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
         >
           <span className="flex w-4 h-4"><Icon.Share /></span>
+        </button>
+
+        {/* Bookmark */}
+        <button
+          onClick={toggleBookmark}
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-[8px] text-[13px] transition-colors"
+          style={{ color: bookmarked ? '#2563EB' : '#6B7280' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F6' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+        >
+          <span className="flex w-4 h-4">{bookmarked ? <Icon.BookmarkFill /> : <Icon.Bookmark />}</span>
         </button>
 
         {/* Pro upvote */}
@@ -545,8 +569,9 @@ export default function PostCard({ post, onUpdated }: Props) {
                 />
                 <button
                   onClick={submitComment}
-                  disabled={submitting}
-                  className="w-9 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+                  disabled={submitting || !commentText.trim()}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-40"
+                  style={{ background: commentText.trim() ? '#1A1A1A' : '#D1D5DB' }}
                 >
                   {submitting
                     ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -674,54 +699,113 @@ export default function PostCard({ post, onUpdated }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── Share Modal ── */}
+      {/* ── 3-dot Bottom Sheet ── */}
+      <BottomSheet open={showMenuSheet} onClose={() => setShowMenuSheet(false)}>
+        {isOwnPost ? (
+          <>
+            <SheetRow
+              icon={<Icon.CopyLink />}
+              label="Copy link"
+              onClick={copyPostLink}
+            />
+            <SheetRow
+              icon={<Icon.Trash />}
+              label="Delete post"
+              danger
+              onClick={() => { setShowMenuSheet(false); setShowConfirmDelete(true) }}
+            />
+          </>
+        ) : (
+          <>
+            <SheetRow
+              icon={<Icon.EyeSlash />}
+              label="Not interested"
+              onClick={() => { toast.success("Got it. We'll show fewer posts like this."); setShowMenuSheet(false) }}
+            />
+            <SheetRow
+              icon={<Icon.CopyLink />}
+              label="Copy link"
+              onClick={copyPostLink}
+            />
+            <SheetRow
+              icon={<Icon.Flag />}
+              label="Report post"
+              danger
+              onClick={() => { setShowMenuSheet(false); setShowReport(true) }}
+            />
+          </>
+        )}
+        <SheetCancel onClose={() => setShowMenuSheet(false)} />
+      </BottomSheet>
+
+      {/* ── Delete Confirmation ── */}
+      <ConfirmSheet
+        open={showConfirmDelete}
+        onClose={() => setShowConfirmDelete(false)}
+        onConfirm={deletePost}
+        title="Delete this post?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        loading={deleting}
+      />
+
+      {/* ── Report Sheet ── */}
+      <ReportSheet
+        open={showReport}
+        onClose={() => setShowReport(false)}
+        targetType="post"
+        targetId={post.id}
+      />
+
+      {/* ── Share Bottom Sheet ── */}
       <AnimatePresence>
         {showShare && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowShare(false)}
-          >
+          <>
             <motion.div
-              className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden"
-              initial={{ scale: 0.97, y: 8 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.97, y: 8 }}
-              onClick={e => e.stopPropagation()}
+              className="fixed inset-0 z-[800]"
+              style={{ background: 'rgba(0,0,0,0.4)' }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setShowShare(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 z-[801]"
+              style={{ background: '#FFFFFF', borderRadius: '16px 16px 0 0', boxShadow: '0 -4px 24px rgba(0,0,0,0.08)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="font-semibold text-gray-900 dark:text-white">Share post</div>
-                <button onClick={() => setShowShare(false)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  <span className="flex w-3.5 h-3.5 text-gray-500"><Icon.X /></span>
-                </button>
-              </div>
-              <div className="p-4">
+              <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-[#E5E7EB]" /></div>
+              <div className="px-4 pb-2">
+                <p className="text-[17px] font-semibold text-[#111111] pb-2 pt-1">Share</p>
+
+                {/* Copy link */}
                 <button
-                  onClick={() => { navigator.clipboard.writeText(window.location.origin + '/profile/' + author?.username); toast.success('Link copied!'); setShowShare(false) }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors mb-4"
+                  onClick={() => { copyPostLink(); setShowShare(false) }}
+                  className="w-full flex items-center gap-3 px-4 h-12 rounded-[8px] text-[15px] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-colors"
                 >
-                  <span className="flex w-4 h-4"><Icon.Link /></span>
+                  <span className="flex w-5 h-5 text-[#6B7280]"><Icon.CopyLink /></span>
                   Copy link
                 </button>
+
+                {/* Send via DM */}
                 {friends.length > 0 && (
                   <>
-                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Send to a friend</p>
-                    <div className="space-y-1.5">
+                    <p className="text-[12px] font-semibold text-[#9CA3AF] uppercase tracking-widest px-4 pt-3 pb-1">Send to a friend</p>
+                    <div className="space-y-1 max-h-56 overflow-y-auto">
                       {friends.map(f => (
-                        <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                        <div key={f.id} className="flex items-center gap-3 px-4 py-2.5 rounded-[8px] hover:bg-[#F8F8F6]">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-[#DBEAFE] flex items-center justify-center text-[11px] font-semibold text-[#1D4ED8] shrink-0">
                             {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[13px] font-medium text-gray-900 dark:text-white truncate">{f.full_name}</div>
-                            <div className="text-[11.5px] text-gray-400 dark:text-gray-500">@{f.username}</div>
+                            <div className="text-[13px] font-semibold text-[#111111] truncate">{f.full_name}</div>
+                            <div className="text-[12px] text-[#9CA3AF]">@{f.username}</div>
                           </div>
                           <button
                             onClick={() => shareToFriend(f)}
                             disabled={sharing === f.id}
-                            className="px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-full hover:bg-brand-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                            className="px-3 py-1.5 text-white text-[12px] font-semibold rounded-full transition-colors disabled:opacity-50 flex items-center gap-1"
+                            style={{ background: '#1A1A1A' }}
                           >
                             {sharing === f.id ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : 'Send'}
                           </button>
@@ -730,12 +814,17 @@ export default function PostCard({ post, onUpdated }: Props) {
                     </div>
                   </>
                 )}
-                {friends.length === 0 && (
-                  <p className="text-center text-[13px] text-gray-400 dark:text-gray-500 py-4">Add friends to share posts with them</p>
-                )}
+
+                <div className="h-px bg-[#E5E7EB] mx-2 my-1" />
+                <button
+                  onClick={() => setShowShare(false)}
+                  className="w-full flex items-center justify-center h-12 rounded-[8px] text-[15px] font-semibold text-[#1A1A1A] hover:bg-[#F8F8F6] transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </motion.div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
