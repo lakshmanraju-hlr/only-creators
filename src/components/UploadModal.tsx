@@ -47,11 +47,12 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
   const [progress, setProgress]         = useState(0)
   const [softPromptDismissed, setSoftPromptDismissed] = useState(false)
 
-  // ── Field & post type state ───────────────────────────────────────────────
-  // Post type always defaults to 'general' per spec
+  // ── Post type: general by default, pro when badge clicked ─────────────────
   const [postType, setPostType]         = useState<'general' | 'pro'>('general')
   const [personas, setPersonas]         = useState<DisciplinePersona[]>([])
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(defaultDiscipline ?? null)
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(
+    defaultDiscipline ?? null
+  )
   const [fieldOpen, setFieldOpen]       = useState(false)
   const [fieldSearch, setFieldSearch]   = useState('')
   const [originalWorkChecked, setOriginalWorkChecked] = useState(false)
@@ -67,16 +68,19 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
   const [mentionIndex, setMentionIndex]   = useState(0)
   const [mentionStart, setMentionStart]   = useState(-1)
 
-  const fileRef    = useRef<HTMLInputElement>(null)
-  const captionRef = useRef<HTMLTextAreaElement>(null)
+  const fileRef        = useRef<HTMLInputElement>(null)
+  const captionRef     = useRef<HTMLTextAreaElement>(null)
   const fieldSearchRef = useRef<HTMLInputElement>(null)
 
   // Auto-focus caption on open
   useEffect(() => { captionRef.current?.focus() }, [])
 
-  // Clear checkbox when switching away from Pro
+  // Reset checkbox and discipline when switching away from Pro
   useEffect(() => {
-    if (postType === 'general') setOriginalWorkChecked(false)
+    if (postType === 'general') {
+      setOriginalWorkChecked(false)
+      // keep selectedDiscipline so user doesn't lose it if they toggle back
+    }
   }, [postType])
 
   // ── Load user's personas ──────────────────────────────────────────────────
@@ -199,21 +203,31 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     setFieldSearch('')
   }
 
+  function togglePro() {
+    if (postType === 'pro') {
+      setPostType('general')
+    } else {
+      setPostType('pro')
+    }
+  }
+
   // ── Share eligibility ─────────────────────────────────────────────────────
-  // Field required for both types; Pro also requires the checkbox
-  const canShare = selectedDiscipline !== null &&
-    (postType === 'general' || originalWorkChecked)
+  // General: always shareable (no field required)
+  // Pro: requires a field + original work checkbox
+  const canShare = postType === 'general'
+    ? true
+    : (selectedDiscipline !== null && originalWorkChecked)
 
   // ── Submit ────────────────────────────────────────────────────────────────
-  const currentCT  = CONTENT_TYPES.find(c => c.type === contentType)!
-  const needsFile  = ['photo', 'audio', 'video', 'document'].includes(contentType)
+  const currentCT = CONTENT_TYPES.find(c => c.type === contentType)!
+  const needsFile = ['photo', 'audio', 'video', 'document'].includes(contentType)
 
   async function handleSubmit() {
     if (!profile) return
     if (needsFile && !file) return toast.error('Please select a file')
     if (contentType === 'poem' && !poemText.trim()) return toast.error('Please write your poem')
     if (!caption.trim() && contentType === 'text') return toast.error('Please write something')
-    if (!selectedDiscipline) return toast.error('Please select a Field')
+    if (postType === 'pro' && !selectedDiscipline) return toast.error('Please select a Field')
     if (postType === 'pro' && !originalWorkChecked) return toast.error('Please confirm this is your original work')
 
     setUploading(true); setProgress(10)
@@ -238,15 +252,15 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     setProgress(85)
 
     // Auto-create persona on first Pro post in a discipline
-    if (postType === 'pro') {
+    if (postType === 'pro' && selectedDiscipline) {
       await supabase.from('discipline_personas').upsert(
         { user_id: profile.id, discipline: selectedDiscipline, level: 'newcomer' },
         { onConflict: 'user_id,discipline', ignoreDuplicates: true }
       )
     }
 
-    const tagArray   = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
-    const expiresAt  = postType === 'general'
+    const tagArray  = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
+    const expiresAt = postType === 'general'
       ? new Date(Date.now() + TWENTY_FOUR_HOURS).toISOString()
       : null
 
@@ -273,8 +287,8 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     if (error) {
       toast.error('Failed to post: ' + error.message)
     } else {
-      const fieldLabel = getProfMeta(selectedDiscipline)?.label ?? selectedDiscipline
-      if (postType === 'pro') {
+      if (postType === 'pro' && selectedDiscipline) {
+        const fieldLabel = getProfMeta(selectedDiscipline)?.label ?? selectedDiscipline
         toast.success(`Pro Post published to your ${fieldLabel} portfolio`)
       } else {
         toast.success('Posted')
@@ -412,7 +426,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
             </div>
           )}
 
-          {/* Soft prompt for off-profile content types */}
+          {/* Soft prompt for off-profile content types (pro only) */}
           {postType === 'pro' && !softPromptDismissed && (() => {
             if (!selectedDiscipline) return null
             const fieldProfile = FIELD_CONTENT_PROFILES[selectedDiscipline]
@@ -446,156 +460,131 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
             </div>
           )}
 
-          {/* ── Field, Group & Post Type section ── */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-visible">
+          {/* ── Pro section: field + group + confirmation (only when Pro mode active) ── */}
+          {postType === 'pro' && (
+            <div className="border border-amber-200 dark:border-amber-800/60 rounded-2xl overflow-visible bg-amber-50/40 dark:bg-amber-950/20">
 
-            {/* Field selector */}
-            <div className="p-3.5 border-b border-gray-100 dark:border-gray-800">
-              <p className="text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
-                Field <span className="text-red-400">*</span>
-              </p>
-
-              {availableDisciplines.length === 0 ? (
-                <div className="text-[13px] text-gray-500 dark:text-gray-400 leading-snug">
-                  You haven't joined any Fields yet.{' '}
-                  <button
-                    className="text-brand-600 dark:text-brand-400 font-medium hover:underline"
-                    onClick={() => { onClose(); navigate('/explore') }}
-                  >
-                    Go to Explore
-                  </button>{' '}
-                  to join your first Field.
-                </div>
-              ) : (
-                <div className="relative">
-                  <button
-                    onClick={() => { setFieldOpen(v => !v); setTimeout(() => fieldSearchRef.current?.focus(), 50) }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-[13.5px] font-medium transition-colors ${
-                      selectedDiscipline
-                        ? 'border-brand-300 dark:border-brand-700 bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {selectedDiscipline ? (
-                        <>
-                          <span className="text-[15px]">{getProfMeta(selectedDiscipline)?.icon ?? '✦'}</span>
-                          <span>{getProfMeta(selectedDiscipline)?.label ?? selectedDiscipline}</span>
-                        </>
-                      ) : (
-                        'Select a Field…'
-                      )}
-                    </span>
-                    <span className={`flex w-4 h-4 transition-transform ${fieldOpen ? 'rotate-180' : ''}`}>
-                      <Icon.ChevronDown />
-                    </span>
-                  </button>
-
-                  {fieldOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-30 overflow-hidden">
-                      {/* Search input */}
-                      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
-                        <span className="flex w-3.5 h-3.5 text-gray-400 shrink-0"><Icon.Search /></span>
-                        <input
-                          ref={fieldSearchRef}
-                          className="flex-1 text-[13px] bg-transparent outline-none placeholder:text-gray-400 text-gray-900 dark:text-white"
-                          placeholder="Search fields…"
-                          value={fieldSearch}
-                          onChange={e => setFieldSearch(e.target.value)}
-                        />
-                      </div>
-                      {/* Options list */}
-                      <div className="max-h-44 overflow-y-auto">
-                        {filteredDisciplines.length === 0 ? (
-                          <div className="px-4 py-4 text-center text-[13px] text-gray-400">No fields found</div>
-                        ) : filteredDisciplines.map(d => {
-                          const meta = getProfMeta(d)
-                          const isSelected = selectedDiscipline === d
-                          const isNew = !personas.some(p => p.discipline === d)
-                          return (
-                            <button
-                              key={d}
-                              onClick={() => pickDiscipline(d)}
-                              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13.5px] transition-colors ${
-                                isSelected
-                                  ? 'bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300'
-                                  : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200'
-                              }`}
-                            >
-                              <span className="text-[16px]">{meta?.icon ?? '✦'}</span>
-                              <span className="flex-1">{meta?.label ?? d}</span>
-                              {isNew && (
-                                <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full">new</span>
-                              )}
-                              {isSelected && (
-                                <span className="flex w-3.5 h-3.5 text-brand-600"><Icon.CheckCircle /></span>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Group selector (shown when groups exist for the selected field) */}
-            {availableGroups.length > 0 && (
-              <div className="p-3.5 border-b border-gray-100 dark:border-gray-800">
-                <p className="text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
-                  Group <span className="text-[10px] font-normal normal-case tracking-normal text-gray-400">(optional)</span>
-                  {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
-                    <span className="text-brand-600 dark:text-brand-400 font-medium normal-case tracking-normal ml-1.5">suggested</span>
-                  )}
+              {/* Pro info banner */}
+              <div className="px-4 pt-3.5 pb-3 border-b border-amber-100 dark:border-amber-800/40">
+                <p className="text-[12.5px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                  <span className="font-semibold">Pro Posts are permanent</span> and represent your professional work. They are eligible for Pro Votes from Experts and Authorities.
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button className={visBtn(!selectedGroup)} onClick={() => setSelectedGroup(null)}>None</button>
-                  {availableGroups.map(g => (
-                    <button key={g.id} className={visBtn(selectedGroup?.id === g.id)} onClick={() => setSelectedGroup(g)}>
-                      {g.name}
+              </div>
+
+              {/* Field selector */}
+              <div className="p-3.5 border-b border-amber-100 dark:border-amber-800/40">
+                <p className="text-[10.5px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-500 mb-2">
+                  Field <span className="text-red-400">*</span>
+                </p>
+
+                {availableDisciplines.length === 0 ? (
+                  <div className="text-[13px] text-gray-500 dark:text-gray-400 leading-snug">
+                    You haven't joined any Fields yet.{' '}
+                    <button
+                      className="text-brand-600 dark:text-brand-400 font-medium hover:underline"
+                      onClick={() => { onClose(); navigate('/explore') }}
+                    >
+                      Go to Explore
+                    </button>{' '}
+                    to join your first Field.
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setFieldOpen(v => !v); setTimeout(() => fieldSearchRef.current?.focus(), 50) }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-[13.5px] font-medium transition-colors ${
+                        selectedDiscipline
+                          ? 'border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        {selectedDiscipline ? (
+                          <>
+                            <span className="text-[15px]">{getProfMeta(selectedDiscipline)?.icon ?? '✦'}</span>
+                            <span>{getProfMeta(selectedDiscipline)?.label ?? selectedDiscipline}</span>
+                          </>
+                        ) : (
+                          'Select a Field…'
+                        )}
+                      </span>
+                      <span className={`flex w-4 h-4 text-gray-400 transition-transform ${fieldOpen ? 'rotate-180' : ''}`}>
+                        <Icon.ChevronDown />
+                      </span>
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Post type toggle */}
-            <div className="p-3.5">
-              <p className="text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2.5">Post type</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPostType('general')}
-                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all ${
-                    postType === 'general'
-                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  General Post
-                </button>
-                <button
-                  onClick={() => setPostType('pro')}
-                  className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all ${
-                    postType === 'pro'
-                      ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  Pro Post ✦
-                </button>
+                    {fieldOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-30 overflow-hidden">
+                        {/* Search input */}
+                        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
+                          <span className="flex w-3.5 h-3.5 text-gray-400 shrink-0"><Icon.Search /></span>
+                          <input
+                            ref={fieldSearchRef}
+                            className="flex-1 text-[13px] bg-transparent outline-none placeholder:text-gray-400 text-gray-900 dark:text-white"
+                            placeholder="Search fields…"
+                            value={fieldSearch}
+                            onChange={e => setFieldSearch(e.target.value)}
+                          />
+                        </div>
+                        {/* Options list */}
+                        <div className="max-h-44 overflow-y-auto">
+                          {filteredDisciplines.length === 0 ? (
+                            <div className="px-4 py-4 text-center text-[13px] text-gray-400">No fields found</div>
+                          ) : filteredDisciplines.map(d => {
+                            const meta = getProfMeta(d)
+                            const isSelected = selectedDiscipline === d
+                            const isNew = !personas.some(p => p.discipline === d)
+                            return (
+                              <button
+                                key={d}
+                                onClick={() => pickDiscipline(d)}
+                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13.5px] transition-colors ${
+                                  isSelected
+                                    ? 'bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300'
+                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200'
+                                }`}
+                              >
+                                <span className="text-[16px]">{meta?.icon ?? '✦'}</span>
+                                <span className="flex-1">{meta?.label ?? d}</span>
+                                {isNew && (
+                                  <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full">new</span>
+                                )}
+                                {isSelected && (
+                                  <span className="flex w-3.5 h-3.5 text-brand-600"><Icon.CheckCircle /></span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Pro Post info banner */}
-              {postType === 'pro' && (
-                <div className="mt-3 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-[12.5px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                  <span className="font-semibold">Pro Posts are permanent</span> and represent your professional work in this Field. They are eligible for Pro Votes from Experts and Authorities.
+              {/* Group selector (shown when groups exist for the selected field) */}
+              {availableGroups.length > 0 && (
+                <div className="p-3.5 border-b border-amber-100 dark:border-amber-800/40">
+                  <p className="text-[10.5px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-500 mb-2">
+                    Group <span className="text-[10px] font-normal normal-case tracking-normal text-gray-400">(optional)</span>
+                    {groupSuggestion && selectedGroup?.id === groupSuggestion.id && (
+                      <span className="text-brand-600 dark:text-brand-400 font-medium normal-case tracking-normal ml-1.5">suggested</span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button className={visBtn(!selectedGroup)} onClick={() => setSelectedGroup(null)}>None</button>
+                    {availableGroups.map(g => (
+                      <button key={g.id} className={visBtn(selectedGroup?.id === g.id)} onClick={() => setSelectedGroup(g)}>
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Original work checkbox — required for Pro Posts */}
-              {postType === 'pro' && (
-                <label className="flex items-start gap-2.5 mt-3.5 cursor-pointer select-none">
+              {/* Original work checkbox */}
+              <div className="p-3.5">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={originalWorkChecked}
@@ -606,9 +595,9 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                     This is my original work
                   </span>
                 </label>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tags */}
           <input
@@ -631,6 +620,8 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
 
         {/* ── Action bar ── */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
+
+          {/* Left: visibility (general only) + Pro badge */}
           <div className="flex items-center gap-2">
             {postType === 'general' && (
               <button
@@ -642,8 +633,22 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                 {postVisibility === 'friends' ? 'Friends' : 'Public'}
               </button>
             )}
+
+            {/* Pro badge toggle */}
+            <button
+              onClick={togglePro}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all border ${
+                postType === 'pro'
+                  ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-amber-300 dark:hover:border-amber-700 hover:text-amber-600 dark:hover:text-amber-400'
+              }`}
+              title={postType === 'pro' ? 'Switch to General Post' : 'Make this a Pro Post'}
+            >
+              ✦ Pro
+            </button>
           </div>
 
+          {/* Right: Cancel + Share */}
           <div className="flex items-center gap-2">
             <button
               className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -657,8 +662,8 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
               onClick={handleSubmit}
               disabled={uploading || !canShare}
               title={
-                !selectedDiscipline
-                  ? 'Select a Field to post'
+                postType === 'pro' && !selectedDiscipline
+                  ? 'Select a Field to publish your Pro Post'
                   : postType === 'pro' && !originalWorkChecked
                   ? 'Confirm this is your original work'
                   : undefined
