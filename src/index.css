@@ -9,10 +9,17 @@
 
 @layer components {
   .field-input-tw {
-    @apply w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none transition-colors;
+    @apply w-full px-4 text-[15px] bg-surface border border-border rounded-input outline-none transition-colors;
+    height: 48px;
+    color: var(--color-text-primary);
   }
+  .field-input-tw::placeholder { color: var(--color-text-hint); }
   .field-input-tw:focus {
-    @apply border-brand-400 bg-white;
+    border-color: var(--color-accent);
+  }
+  .field-input-tw:disabled {
+    background: var(--color-surface-elevated);
+    color: var(--color-text-disabled);
   }
 }
 
@@ -24,93 +31,69 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── Brand blue (primary action color) ── */
-  --blue-50:  #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
+  /* ═══════════════════════════════════════════════════
+     ONLY CREATORS — Design System v3
+     Chalk White & Indigo-Black · Gallery-editorial tone
+     Single source of truth — no other colors permitted
+     ═══════════════════════════════════════════════════ */
 
-  /* ── Neutral grays (Apple SF-inspired) ── */
-  --gray-0:   #ffffff;
-  --gray-25:  #fafafa;
-  --gray-50:  #f5f5f7;
-  --apple-bg: #f5f5f7;
-  --gray-100: #e8e8ed;
-  --gray-200: #d1d1d6;
-  --gray-300: #aeaeb2;
-  --gray-400: #8e8e93;
-  --gray-500: #636366;
-  --gray-600: #48484a;
-  --gray-700: #3a3a3c;
-  --gray-800: #2c2c2e;
-  --gray-900: #1c1c1e;
+  /* ── Core surfaces ── */
+  --color-background:       #F9F9F7;   /* Chalk white — app background */
+  --color-surface:          #FFFFFF;   /* Cards, inputs, modals */
+  --color-surface-elevated: #F3F3F0;   /* Elevated surfaces, hover states */
 
-  /* ── Semantic colors ── */
-  --red-50:    #fef2f2;
-  --red-100:   #fee2e2;
-  --red-400:   #f87171;
-  --red-500:   #ef4444;
-  --red-600:   #dc2626;
-  --red-700:   #b91c1c;
+  /* ── Text ── */
+  --color-text-primary:   #111111;   /* Headings, body text */
+  --color-text-secondary: #6B7280;   /* Metadata, timestamps, captions */
+  --color-text-disabled:  #D1D5DB;   /* Disabled states */
+  --color-text-inverse:   #FFFFFF;   /* Text on dark backgrounds */
+  --color-text-hint:      #9CA3AF;   /* Placeholder text */
 
-  --green-50:  #f0fdf4;
-  --green-400: #4ade80;
-  --green-500: #22c55e;
-  --green-600: #16a34a;
+  /* Convenience aliases */
+  --color-bg:     var(--color-background);
+  --color-text:   var(--color-text-primary);
+  --color-text-2: var(--color-text-secondary);
+  --color-text-3: var(--color-text-hint);
 
-  --amber-50:  #fffbeb;
-  --amber-400: #fbbf24;
-  --amber-500: #f59e0b;
-  --amber-600: #d97706;
+  /* ── Accent — all CTAs, active nav, buttons, links ── */
+  --color-accent:        #18181B;   /* Zinc-900 */
+  --color-accent-hover:  #3F3F46;   /* Zinc-700 */
+  --color-accent-subtle: #F4F4F5;   /* Zinc-100 */
 
-  --purple-50:  #faf5ff;
-  --purple-400: #c084fc;
-  --purple-500: #a855f7;
-  --purple-600: #9333ea;
+  /* Legacy alias for components not yet migrated */
+  --color-primary:       var(--color-accent);
+  --color-primary-hover: var(--color-accent-hover);
 
-  --teal-50:   #f0fdfa;
-  --teal-400:  #2dd4bf;
-  --teal-500:  #14b8a6;
+  /* ── Borders ── */
+  --color-border:        #E8E8E4;   /* Default border */
+  --color-border-strong: #D1D1CB;   /* Inputs focus, dividers */
 
-  /* ── Semantic tokens (Design System 2.0) ── */
-  --color-bg:          #F8F8F6;
-  --color-bg-secondary:#F0F0EE;
-  --color-bg-tertiary: #E8E8E6;
-  --color-surface:     #FFFFFF;
-  --color-border:      #E5E7EB;
-  --color-border-md:   #D1D5DB;
-  --color-border-strong:#9CA3AF;
+  /* ── Pro Gold — recognition elements ONLY ── */
+  --color-pro-gradient:      linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #D97706 100%);
+  --color-pro-gradient-text: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  --color-pro-glow:          0 0 12px rgba(245, 158, 11, 0.45);
+  --color-pro-subtle:        #FEF3C7;
+  --color-pro-border:        #F59E0B;
+  /* Raw values for inline usage */
+  --pro-gold-start: #F59E0B;
+  --pro-gold-mid:   #FCD34D;
+  --pro-gold-end:   #D97706;
 
-  --color-text:        #111111;
-  --color-text-2:      #6B7280;
-  --color-text-3:      #9CA3AF;
-  --color-text-hint:   #D1D5DB;
+  /* Legacy alias */
+  --color-pro:       #F59E0B;
+  --color-pro-light: #FEF3C7;
 
-  /* Primary = near-black (CTAs, headings) */
-  --color-primary:      #1A1A1A;
-  --color-primary-hover:#333333;
-  --color-primary-light:rgba(26, 26, 26, 0.05);
-  --color-primary-mid:  rgba(26, 26, 26, 0.10);
+  /* ── Semantic ── */
+  --color-success:        #10B981;
+  --color-success-subtle: #D1FAE5;
+  --color-error:          #EF4444;
+  --color-error-subtle:   #FEE2E2;
+  --color-warning:        #F59E0B;   /* Warnings only — not Pro Gold usage */
+  --color-like:           #EF4444;
 
-  /* Accent = blue (active states, links, follow) */
-  --color-accent:       #2563EB;
-  --color-accent-light: #EFF6FF;
-  --color-accent-hover: #1D4ED8;
-
-  /* Pro upvote = amber */
-  --color-pro:         var(--amber-500);
-  --color-pro-light:   var(--amber-50);
-  --color-pro-border:  #fde68a;
-
-  /* Friends = green */
-  --color-friend:      var(--green-600);
-  --color-friend-light:var(--green-50);
-
-  /* Like = red */
-  --color-like:        var(--red-500);
+  /* ── Overlay ── */
+  --color-overlay:       rgba(0, 0, 0, 0.4);
+  --color-overlay-light: rgba(0, 0, 0, 0.08);
 
   /* ── Typography ── */
   --font-sans:    'Inter', ui-sans-serif, system-ui, sans-serif;
@@ -118,25 +101,24 @@
   --font-mono:    ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
 
   /* ── Radii ── */
-  --r-xs:   4px;
-  --r-sm:   8px;
-  --r-md:   12px;
-  --r-lg:   16px;
-  --r-xl:   20px;
-  --r-2xl:  24px;
-  --r-full: 9999px;
+  --r-xs:   4px;    /* Micro gap */
+  --r-sm:   8px;    /* Buttons, inputs, images */
+  --r-sm2:  6px;    /* Small buttons, tooltips */
+  --r-md:   12px;   /* Cards */
+  --r-lg:   16px;   /* Sheets, modals */
+  --r-full: 9999px; /* Pills, avatars */
 
   /* ── Shadows ── */
-  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.04);
-  --shadow-xl: 0 24px 48px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.06);
+  --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sheet: 0 -4px 24px rgba(0,0,0,0.08);
+  --shadow-modal: 0 20px 60px rgba(0,0,0,0.10);
+  --shadow-pro:   0 0 12px rgba(245, 158, 11, 0.45);
+  /* No shadow on buttons — flat only */
 
   /* ── Transitions ── */
-  --ease:    cubic-bezier(0.16, 1, 0.3, 1);
-  --t-fast:  120ms;
-  --t-med:   200ms;
+  --ease:   cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 120ms;
+  --t-med:  200ms;
 
   /* ── Layout ── */
   --sidebar-w: 240px;
@@ -144,8 +126,8 @@
 }
 
 /* ── BASE ── */
-html { font-size: 14px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
-body { font-family: var(--font-sans); background: var(--color-bg, #F8F8F6); color: var(--color-text); line-height: 1.5; overflow-x: hidden; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+body { font-family: var(--font-sans); background: var(--color-background); color: var(--color-text-primary); line-height: 1.6; overflow-x: hidden; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 input, textarea, select { font-family: inherit; }
 a { color: inherit; text-decoration: none; }
