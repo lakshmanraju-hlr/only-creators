@@ -130,6 +130,11 @@ export default function ProfilePage() {
   const isOwnProfile = !username || profile?.id === myProfile?.id
   const isFriend = friendStatus === 'friends'
 
+  // Default to 'personal' for own profile, 'all' for everyone else
+  useEffect(() => {
+    setActiveTab(isOwnProfile ? 'personal' : 'all')
+  }, [isOwnProfile])
+
   // ── Computed: Personal tab — non-pro posts, pinned first ──
   const personalPosts = useMemo(() => {
     const nonPro = posts.filter(p => !p.is_pro_post && p.post_type !== 'pro')
@@ -1095,9 +1100,11 @@ export default function ProfilePage() {
       {/* ── TABS ── */}
       <div className="sticky top-[56px] md:top-0 border-b frosted-bar z-10">
         <div className="flex px-4 md:px-8">
-          {(isOwnProfile || isFriend
-            ? (['all', 'personal', 'portfolio', 'featured'] as const)
-            : (['all', 'portfolio', 'featured'] as const)
+          {(isOwnProfile
+            ? (['personal', 'portfolio', 'featured'] as const)
+            : isFriend
+              ? (['all', 'personal', 'portfolio', 'featured'] as const)
+              : (['all', 'portfolio', 'featured'] as const)
           ).map(t => {
             const label = t === 'featured' ? 'Featured In' : t.charAt(0).toUpperCase() + t.slice(1)
             return (
