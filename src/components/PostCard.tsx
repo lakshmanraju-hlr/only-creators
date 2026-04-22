@@ -4,12 +4,13 @@ import { useNavigate, Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { supabase, Post, Comment, getProfMeta, Profile } from '@/lib/supabase'
+import { supabase, Post, Comment, getProfMeta, Profile, Group } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
 import ConfirmSheet from '@/components/ConfirmSheet'
 import ReportSheet from '@/components/ReportSheet'
+import CommunityPickerModal from '@/components/CommunityPickerModal'
 
 interface Props { post: Post; onUpdated?: () => void }
 
@@ -46,6 +47,7 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
   const [pinning, setPinning] = useState(false)
+  const [showCommunityEditor, setShowCommunityEditor] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [bookmarked, setBookmarked] = useState(false)
   const [mediaLightbox, setMediaLightbox] = useState<{ url: string; type: 'photo' | 'video' } | null>(null)
@@ -379,6 +381,15 @@ export default function PostCard({ post, onUpdated }: Props) {
                       <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.Pin /></span>
                       {pinning ? '…' : isPinned ? 'Unpin from profile' : 'Pin to profile'}
                     </button>
+                    {post.post_type === 'pro' && (
+                      <button
+                        className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                        onClick={() => { setShowMenuSheet(false); setShowCommunityEditor(true) }}
+                      >
+                        <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.MapPin /></span>
+                        Edit community
+                      </button>
+                    )}
                     <button
                       className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
                       onClick={copyPostLink}
@@ -935,6 +946,16 @@ export default function PostCard({ post, onUpdated }: Props) {
         targetType="post"
         targetId={post.id}
       />
+
+      {/* ── Community editor ─────────────────────────────────── */}
+      {showCommunityEditor && (
+        <CommunityPickerModal
+          postId={post.id}
+          postDiscipline={post.persona_discipline ?? null}
+          onClose={() => setShowCommunityEditor(false)}
+          onSaved={() => onUpdated?.()}
+        />
+      )}
 
       {/* ── Share Bottom Sheet ──────────────────────────────── */}
       <AnimatePresence>

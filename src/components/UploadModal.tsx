@@ -756,7 +756,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline, 
                     const filtered = availableGroups.filter(g =>
                       !communitySearch || g.name.toLowerCase().includes(communitySearch.toLowerCase())
                     )
-                    const showCreate = communitySearch.trim().length >= 2 && filtered.length === 0
+                    const searchTrimmed = communitySearch.trim()
                     return (
                       <div className="max-h-36 overflow-y-auto flex flex-col gap-1">
                         {filtered.map(g => {
@@ -782,16 +782,24 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline, 
                             </button>
                           )
                         })}
-                        {showCreate && (
-                          <button
-                            onClick={handleCreateCommunity}
-                            disabled={creatingCommunity}
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-[13px] text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors font-medium disabled:opacity-50"
-                          >
-                            <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Plus /></span>
-                            {creatingCommunity ? 'Creating…' : `Create "${communitySearch.trim()}" community`}
-                          </button>
+                        {/* No results message */}
+                        {filtered.length === 0 && searchTrimmed.length >= 2 && (
+                          <div className="px-3 py-2 text-[12.5px] text-gray-400 italic">No results found</div>
                         )}
+                        {/* Persistent create option — always visible at bottom */}
+                        <button
+                          onClick={handleCreateCommunity}
+                          disabled={creatingCommunity || searchTrimmed.length < 2}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-[13px] text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors font-medium disabled:opacity-40"
+                        >
+                          <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Plus /></span>
+                          {creatingCommunity
+                            ? 'Creating…'
+                            : searchTrimmed.length >= 2
+                              ? `Create "${searchTrimmed}"`
+                              : 'New community'
+                          }
+                        </button>
                       </div>
                     )
                   })()}

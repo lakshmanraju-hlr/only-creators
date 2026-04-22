@@ -19,6 +19,9 @@ export default function GroupPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showNewSubgroup, setShowNewSubgroup] = useState(false)
+  const [newSubgroupName, setNewSubgroupName] = useState('')
+  const [creatingSubgroup, setCreatingSubgroup] = useState(false)
   const groupIdRef = useRef<string | null>(null)
   const groupRef = useRef<Group | null>(null)
 
@@ -129,6 +132,28 @@ export default function GroupPage() {
 
   function initials(n: string | undefined) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
+  async function handleCreateSubgroup() {
+    if (!newSubgroupName.trim() || !group || !profile) return
+    setCreatingSubgroup(true)
+    const name = newSubgroupName.trim()
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36)
+    const { data, error } = await supabase.from('groups').insert({
+      discipline: group.discipline,
+      name,
+      slug,
+      description: '',
+      is_seeded: false,
+      is_user_created: true,
+      created_by: profile.id,
+      parent_group_id: group.id,
+    }).select('*').single()
+    setCreatingSubgroup(false)
+    if (error) { toast.error('Could not create subgroup'); return }
+    setShowNewSubgroup(false)
+    setNewSubgroupName('')
+    navigate('/c/' + (data as { slug: string }).slug)
+  }
+
   if (loading) return (
     <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
   )
@@ -154,13 +179,50 @@ export default function GroupPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-[22px] font-bold text-gray-900 dark:text-white tracking-tight">{group.name}</h1>
             {group.description && <p className="text-[13.5px] text-gray-500 dark:text-gray-400 mt-1">{group.description}</p>}
-            <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-2">
-              {group.post_count} post{group.post_count === 1 ? '' : 's'}
-              {' · '}
-              {group.member_count} member{group.member_count === 1 ? '' : 's'}
-              {' · '}
+            <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-2 flex-wrap">
+              <span>{group.post_count} post{group.post_count === 1 ? '' : 's'}</span>
+              <span>·</span>
+              <span>{group.member_count} member{group.member_count === 1 ? '' : 's'}</span>
+              <span>·</span>
               <span>{getProfMeta(group.discipline)?.label ?? group.discipline}</span>
+              {profile && (
+                <>
+                  <span>·</span>
+                  <button
+                    onClick={() => setShowNewSubgroup(v => !v)}
+                    className="flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                  >
+                    <span className="flex w-3 h-3"><Icon.Plus /></span>
+                    New subgroup
+                  </button>
+                </>
+              )}
             </p>
+            {showNewSubgroup && (
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  autoFocus
+                  className="flex-1 px-3 py-1.5 text-[13px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none placeholder:text-gray-400 text-gray-900 dark:text-white"
+                  placeholder="Subgroup name…"
+                  value={newSubgroupName}
+                  onChange={e => setNewSubgroupName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateSubgroup(); if (e.key === 'Escape') setShowNewSubgroup(false) }}
+                />
+                <button
+                  onClick={handleCreateSubgroup}
+                  disabled={creatingSubgroup || !newSubgroupName.trim()}
+                  className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white rounded-lg text-[13px] font-medium transition-colors flex items-center gap-1.5"
+                >
+                  {creatingSubgroup ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : 'Create'}
+                </button>
+                <button
+                  onClick={() => { setShowNewSubgroup(false); setNewSubgroupName('') }}
+                  className="text-[13px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {profile && (isMember || isCreator) && (

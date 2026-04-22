@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { supabase, Post, Profile, Group, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
@@ -33,6 +34,9 @@ export default function CommunityPage() {
   const [creators, setCreators]     = useState<Profile[]>([])
   const [loading, setLoading]       = useState(true)
   const [showUpload, setShowUpload] = useState(false)
+  const [showNewSubgroup, setShowNewSubgroup] = useState(false)
+  const [newSubgroupName, setNewSubgroupName] = useState('')
+  const [creatingSubgroup, setCreatingSubgroup] = useState(false)
 
   // ── Load community ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -127,6 +131,28 @@ export default function CommunityPage() {
     setFollowing(false)
   }
 
+  async function handleCreateSubgroup() {
+    if (!newSubgroupName.trim() || !community || !myProfile) return
+    setCreatingSubgroup(true)
+    const name = newSubgroupName.trim()
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36)
+    const { data, error } = await supabase.from('groups').insert({
+      discipline: community.discipline,
+      name,
+      slug,
+      description: '',
+      is_seeded: false,
+      is_user_created: true,
+      created_by: myProfile.id,
+      parent_group_id: community.id,
+    }).select('*').single()
+    setCreatingSubgroup(false)
+    if (error) { toast.error('Could not create subgroup'); return }
+    setShowNewSubgroup(false)
+    setNewSubgroupName('')
+    navigate('/c/' + (data as { slug: string }).slug)
+  }
+
   if (!community && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-6">
@@ -170,7 +196,7 @@ export default function CommunityPage() {
                 {community.description}
               </p>
             )}
-            <div className="flex items-center gap-4 mt-3 text-[13px] text-text-secondary">
+            <div className="flex items-center gap-4 mt-3 text-[13px] text-text-secondary flex-wrap">
               <span>
                 <span className="font-semibold text-text-primary">
                   {(community?.follower_count ?? 0).toLocaleString()}
@@ -183,7 +209,44 @@ export default function CommunityPage() {
                 </span>{' '}
                 posts
               </span>
+              {myProfile && (
+                <button
+                  onClick={() => setShowNewSubgroup(v => !v)}
+                  className="flex items-center gap-1 text-accent hover:underline font-medium text-[12px]"
+                >
+                  <span className="flex w-3 h-3"><Icon.Plus /></span>
+                  New subgroup
+                </button>
+              )}
             </div>
+            {showNewSubgroup && (
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  autoFocus
+                  className="flex-1 px-3 py-1.5 text-[13px] bg-white dark:bg-gray-900 border border-border rounded-lg outline-none placeholder:text-text-secondary text-text-primary"
+                  placeholder="Subgroup name…"
+                  value={newSubgroupName}
+                  onChange={e => setNewSubgroupName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateSubgroup(); if (e.key === 'Escape') setShowNewSubgroup(false) }}
+                />
+                <button
+                  onClick={handleCreateSubgroup}
+                  disabled={creatingSubgroup || !newSubgroupName.trim()}
+                  className="px-3.5 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white rounded-lg text-[13px] font-medium transition-colors flex items-center gap-1.5"
+                >
+                  {creatingSubgroup
+                    ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                    : 'Create'
+                  }
+                </button>
+                <button
+                  onClick={() => { setShowNewSubgroup(false); setNewSubgroupName('') }}
+                  className="text-[13px] text-text-secondary hover:text-text-primary"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-end gap-2 shrink-0">

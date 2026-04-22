@@ -10,6 +10,7 @@ import {
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
 import UploadModal from '@/components/UploadModal'
+import CommunityPickerModal from '@/components/CommunityPickerModal'
 import { Icon } from '@/lib/icons'
 import {
   getFriendStatus, sendFriendRequest,
@@ -86,6 +87,8 @@ export default function ProfilePage() {
 
   // Portfolio: post_id → communities (groups) it belongs to
   const [postSubgroupMap, setPostSubgroupMap] = useState<Record<string, Array<{ id: string; name: string; slug: string; discipline: string }>>>({})
+  // Community editor: which post is being re-tagged
+  const [communityEditorPost, setCommunityEditorPost] = useState<{ id: string; discipline: string | null } | null>(null)
   // Featured In: pending tag requests (own profile only)
   const [pendingFeatures, setPendingFeatures] = useState<PostFeature[]>([])
   // Portfolio: which field pill is active (from header or tab filter)
@@ -1383,7 +1386,7 @@ export default function ProfilePage() {
                       {/* "Add to community" prompt for uncategorized (owner only) */}
                       {discipline === '__uncategorized__' && isOwnProfile && (
                         <span className="ml-2 text-[11.5px] text-[#9CA3AF] italic">
-                          Tag these in a community to organize your portfolio
+                          Tap a post below to tag it
                         </span>
                       )}
                     </div>
@@ -1392,6 +1395,7 @@ export default function ProfilePage() {
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {dPosts.map(p => {
                           const comm = communityForPost[p.id]
+                          const isUncategorized = discipline === '__uncategorized__'
                           return (
                             <div key={p.id} className="flex flex-col gap-1">
                               <GridCell
@@ -1401,14 +1405,22 @@ export default function ProfilePage() {
                                 tierClassName={tier.className}
                                 onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
                               />
-                              {comm && (
+                              {comm ? (
                                 <button
                                   onClick={() => navigate('/c/' + comm.slug)}
                                   className="text-[11px] text-[#9CA3AF] hover:text-[#6B7280] text-center truncate transition-colors px-1"
                                 >
                                   {comm.name}
                                 </button>
-                              )}
+                              ) : isUncategorized && isOwnProfile ? (
+                                <button
+                                  onClick={() => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null })}
+                                  className="text-[11px] text-[#9CA3AF] hover:text-brand-600 dark:hover:text-brand-400 text-center transition-colors px-1 flex items-center justify-center gap-1"
+                                >
+                                  <span className="flex w-3 h-3"><Icon.Plus /></span>
+                                  Tag community
+                                </button>
+                              ) : null}
                             </div>
                           )
                         })}
@@ -1417,9 +1429,10 @@ export default function ProfilePage() {
                       <div className="max-w-[700px] mx-auto">
                         {dPosts.map(p => {
                           const comm = communityForPost[p.id]
+                          const isUncategorized = discipline === '__uncategorized__'
                           return (
                             <div key={p.id} className="relative">
-                              {comm && (
+                              {comm ? (
                                 <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
                                   <button
                                     onClick={() => navigate('/c/' + comm.slug)}
@@ -1428,7 +1441,17 @@ export default function ProfilePage() {
                                     {comm.name}
                                   </button>
                                 </div>
-                              )}
+                              ) : isUncategorized && isOwnProfile ? (
+                                <div className="flex items-center gap-1 pt-2 pb-1 px-1">
+                                  <button
+                                    onClick={() => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null })}
+                                    className="text-[11.5px] text-[#9CA3AF] hover:text-brand-600 dark:hover:text-brand-400 transition-colors flex items-center gap-1"
+                                  >
+                                    <span className="flex w-3 h-3"><Icon.Plus /></span>
+                                    Tag community
+                                  </button>
+                                </div>
+                              ) : null}
                               <PostCard
                                 post={p}
                                 onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
@@ -1794,6 +1817,27 @@ export default function ProfilePage() {
                   if (data) setPosts((data as any[]).map(p => ({ ...p, profiles: profile })) as Post[])
                 })
             }
+          }}
+        />
+      )}
+
+      {/* ── Community editor (portfolio re-tagging) ── */}
+      {communityEditorPost && (
+        <CommunityPickerModal
+          postId={communityEditorPost.id}
+          postDiscipline={communityEditorPost.discipline}
+          onClose={() => setCommunityEditorPost(null)}
+          onSaved={async () => {
+            // Refresh subgroup map for this post only
+            const { data: sgData } = await supabase
+              .from('post_subgroups')
+              .select('post_id, groups:subgroup_id(id, name, slug, discipline)')
+              .eq('post_id', communityEditorPost.id)
+            setPostSubgroupMap(prev => ({
+              ...prev,
+              [communityEditorPost.id]: (sgData || []).flatMap((r: any) => r.groups ? [r.groups] : []),
+            }))
+            setCommunityEditorPost(null)
           }}
         />
       )}
