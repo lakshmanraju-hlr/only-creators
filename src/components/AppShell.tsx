@@ -18,6 +18,28 @@ import GroupPage from '@/pages/GroupPage'
 import CommunityPage from '@/pages/CommunityPage'
 import OnboardingModal from '@/components/OnboardingModal'
 
+const DISC_COLORS: Record<string, string> = {
+  'photographer':  '#5BA4CF',
+  'singer':        '#F4A261',
+  'musician':      '#8B5CF6',
+  'poet':          '#F472B6',
+  'visual-artist': '#10B981',
+  'filmmaker':     '#B5936A',
+  'dancer':        '#6366F1',
+  'comedian':      '#F59E0B',
+  'culinary':      '#EF4444',
+  'fitness':       '#14B8A6',
+  'technology':    '#64748B',
+  'fashion':       '#EC4899',
+  'architecture':  '#78716C',
+  'medicine':      '#22C55E',
+  'education':     '#3B82F6',
+  'law':           '#6B7280',
+  'science':       '#06B6D4',
+  'business':      '#8B1A2C',
+  'wellness':      '#A78BFA',
+}
+
 const ALL_DISCIPLINES = [
   { key: 'photographer',  icon: <Icon.Camera />,     label: 'Photography' },
   { key: 'singer',        icon: <Icon.Mic />,        label: 'Vocals & Singing' },
@@ -58,6 +80,7 @@ export default function AppShell() {
   const [onlineFriends, setOnlineFriends] = useState<Profile[]>([])
   const [chatWithProfile, setChatWithProfile] = useState<Profile | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0)
 
   const path = location.pathname
 
@@ -94,12 +117,14 @@ export default function AppShell() {
   useEffect(() => {
     if (!profile) return
     async function loadCounts() {
-      const [f, n] = await Promise.all([
+      const [f, n, m] = await Promise.all([
         supabase.from('friend_requests').select('id', { count: 'exact', head: true }).eq('receiver_id', profile!.id).eq('status', 'pending'),
         supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', profile!.id).eq('is_read', false),
+        supabase.from('messages').select('id', { count: 'exact', head: true }).eq('is_read', false).neq('sender_id', profile!.id),
       ])
       setPendingFriendCount(f.count || 0)
       setUnreadNotifCount(n.count || 0)
+      setUnreadMsgCount(m.count || 0)
     }
     loadCounts()
     const ch = supabase.channel('badges')
@@ -121,10 +146,11 @@ export default function AppShell() {
   function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 
   const navItems = [
-    { path: '/',          icon: <Icon.Feed />,     label: 'Feed' },
-    { path: '/explore',   icon: <Icon.Explore />,  label: 'Explore' },
-    { path: '/bookmarks', icon: <Icon.Bookmark />, label: 'Bookmarks' },
-    { path: '/profile',   icon: <Icon.Profile />,  label: 'Profile' },
+    { path: '/',              icon: <Icon.Feed />,          label: 'Home',          badge: 0 },
+    { path: '/explore',       icon: <Icon.Explore />,       label: 'Explore',       badge: 0 },
+    { path: '/notifications', icon: <Icon.Bell />,          label: 'Notifications', badge: unreadNotifCount },
+    { path: '/messages',      icon: <Icon.MessageCircle />, label: 'Messages',      badge: unreadMsgCount },
+    { path: '/bookmarks',     icon: <Icon.Bookmark />,      label: 'Saved',         badge: 0 },
   ]
 
   const myPersonaDisciplineKeys = new Set(myPersonas.map(p => p.discipline))
@@ -176,108 +202,14 @@ export default function AppShell() {
           </button>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center justify-end gap-1 ml-auto relative">
-          {/* Search icon — mobile only */}
+        {/* Right — mobile search only */}
+        <div className="flex items-center justify-end gap-1 ml-auto">
           <button
             onClick={() => setShowSearch(true)}
             className="md:hidden w-9 h-9 flex items-center justify-center rounded-full transition-colors text-[#6B7280] hover:text-[#111111] hover:bg-[#F0F0EE]"
           >
             <span className="flex w-[18px] h-[18px]"><Icon.Search /></span>
           </button>
-
-          {/* Pill: messages + notifs + name + avatar */}
-          <div
-            className="flex items-center ml-1 pl-1 pr-1 py-1 rounded-full"
-            style={{
-              background: '#FFFFFF',
-              border: '1px solid #E8E8E4',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-            }}
-          >
-            {/* Messages — desktop only */}
-            <button
-              onClick={(e) => { e.stopPropagation(); navigate('/messages') }}
-              title="Messages"
-              className="hidden md:flex w-8 h-8 items-center justify-center rounded-full transition-colors text-[#6B7280] hover:text-[#111111] hover:bg-[#F0F0EE]"
-            >
-              <span className="flex w-[16px] h-[16px]"><Icon.MessageCircle /></span>
-            </button>
-
-            {/* Notifications — desktop only */}
-            <button
-              onClick={(e) => { e.stopPropagation(); navigate('/notifications') }}
-              title="Notifications"
-              className="hidden md:flex relative w-8 h-8 items-center justify-center rounded-full transition-colors text-[#6B7280] hover:text-[#111111] hover:bg-[#F0F0EE]"
-            >
-              <span className="flex w-[16px] h-[16px]"><Icon.Bell /></span>
-              {unreadNotifCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#EF4444]" style={{ border: '2px solid white' }} />
-              )}
-            </button>
-
-            {/* Divider — desktop only */}
-            <div className="hidden md:block w-px h-4 mx-1 shrink-0 bg-[#E5E7EB]" />
-
-            {/* Name — desktop only */}
-            <span
-              className="text-[14px] font-semibold leading-none hidden md:block px-2 cursor-pointer select-none text-[#111111]"
-              onClick={() => navigate('/profile')}
-            >
-              {profile?.full_name}
-            </span>
-
-            {/* Avatar — click opens menu */}
-            <button
-              onClick={() => setShowProfileMenu(v => !v)}
-              className="w-[32px] h-[32px] md:w-[36px] md:h-[36px] rounded-full overflow-hidden bg-[#DBEAFE] flex items-center justify-center text-[11px] font-bold text-[#1D4ED8] shrink-0 transition-opacity hover:opacity-80"
-              style={{ border: '1px solid #E5E7EB' }}
-            >
-              {profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                : initials(profile?.full_name || '')}
-            </button>
-          </div>
-
-          {/* Backdrop */}
-          {showProfileMenu && (
-            <div className="fixed inset-0 z-[998]" onClick={() => setShowProfileMenu(false)} />
-          )}
-
-          {/* Profile dropdown menu */}
-          {showProfileMenu && (
-            <div
-              className="absolute right-0 top-[calc(100%+8px)] z-[999] w-[220px] rounded-[12px] overflow-hidden py-1.5"
-              style={{
-                background: '#FFFFFF',
-                border: '1px solid #E8E8E4',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.10)',
-              }}
-            >
-              <button
-                onClick={() => { navigate('/profile'); setShowProfileMenu(false) }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-[#111111] hover:bg-[#F8F8F6]"
-              >
-                <span className="flex w-4 h-4 shrink-0 text-[#6B7280]"><Icon.Profile /></span>
-                Edit profile
-              </button>
-              <button
-                onClick={() => setDarkMode(d => !d)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-[#111111] hover:bg-[#F8F8F6]"
-              >
-                <span className="flex w-4 h-4 shrink-0 text-[#6B7280]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
-                {darkMode ? 'Light mode' : 'Dark mode'}
-              </button>
-              <div className="h-px mx-3 my-1" style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
-              <button
-                onClick={() => { signOut(); setShowProfileMenu(false) }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-red-500 ${darkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-red-50'}`}
-              >
-                <span className="flex w-4 h-4 shrink-0 text-red-500"><Icon.LogOut /></span>
-                Sign out
-              </button>
-            </div>
-          )}
         </div>
       </header>
 
@@ -288,37 +220,74 @@ export default function AppShell() {
       >
         {/* Main nav */}
         <div className="px-3 pt-3 pb-1">
-          {navItems.map(item => {
+          {navItems.map((item, i) => {
             const active = isNavActive(item.path)
             return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[15px] mb-0.5 transition-all text-left"
-                style={{
-                  background: active ? '#F4F4F5' : 'transparent',
-                  color: active ? '#18181B' : '#6B7280',
-                  fontWeight: active ? 600 : 500,
-                }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
-                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-              >
-                <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
-                <span className="flex-1 min-w-0 truncate">{item.label}</span>
-              </button>
+              <div key={item.path}>
+                {/* Insert Search between Explore and Notifications */}
+                {i === 2 && (
+                  <button
+                    onClick={() => setShowSearch(true)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[15px] mb-0.5 transition-all text-left"
+                    style={{ color: '#6B7280', fontWeight: 500 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                  >
+                    <span className="flex w-[19px] h-[19px] shrink-0"><Icon.Search /></span>
+                    <span className="flex-1 min-w-0 truncate">Search</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate(item.path)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[15px] mb-0.5 transition-all text-left"
+                  style={{
+                    background: active ? '#F4F4F5' : 'transparent',
+                    color: active ? '#18181B' : '#6B7280',
+                    fontWeight: active ? 600 : 500,
+                  }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                >
+                  <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
+                  <span className="flex-1 min-w-0 truncate">{item.label}</span>
+                  {item.badge > 0 && (
+                    <span
+                      className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center text-white"
+                      style={{ background: '#18181B' }}
+                    >
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </button>
+              </div>
             )
           })}
         </div>
 
-        <div className="h-px mx-3 my-2 bg-[#E8E8E4]" />
+        {/* Create button */}
+        <div className="px-3 pt-1 pb-3">
+          <button
+            onClick={() => setShowUpload(true)}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-[8px] text-[15px] font-semibold transition-all"
+            style={{ background: '#18181B', color: '#FFFFFF' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#3F3F46' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#18181B' }}
+          >
+            <span className="flex w-[18px] h-[18px] shrink-0"><Icon.Plus /></span>
+            Create
+          </button>
+        </div>
 
-        {/* My fields */}
-        <div className="flex-1 overflow-y-auto px-3 min-h-0 pb-1">
+        <div className="h-px mx-3 bg-[#E8E8E4]" />
+
+        {/* Your Communities */}
+        <div className="flex-1 overflow-y-auto px-3 min-h-0 py-2">
           {proDiscs.length > 0 && (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-widest px-3 pt-1 pb-2 text-[#9CA3AF]">My fields</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest px-3 pt-1 pb-2 text-[#9CA3AF]">Your Communities</p>
               {proDiscs.map(d => {
                 const active = path.includes('discipline=' + d.key)
+                const dotColor = DISC_COLORS[d.key] ?? '#9CA3AF'
                 return (
                   <button
                     key={d.key}
@@ -332,7 +301,10 @@ export default function AppShell() {
                     onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
                     onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                   >
-                    <span className="flex w-[18px] h-[18px] shrink-0">{d.icon}</span>
+                    <span
+                      className="w-5 h-5 rounded-full shrink-0"
+                      style={{ background: dotColor, opacity: active ? 1 : 0.85 }}
+                    />
                     <span className="flex-1 min-w-0 truncate">{d.label}</span>
                   </button>
                 )
@@ -341,6 +313,78 @@ export default function AppShell() {
           )}
         </div>
 
+        <div className="h-px mx-3 bg-[#E8E8E4]" />
+
+        {/* Profile card at bottom */}
+        <div className="relative px-3 py-3">
+          {/* Dropdown opens upward */}
+          {showProfileMenu && (
+            <>
+              <div className="fixed inset-0 z-[48]" onClick={() => setShowProfileMenu(false)} />
+              <div
+                className="absolute left-3 right-3 bottom-full mb-2 z-[49] rounded-[12px] overflow-hidden py-1.5"
+                style={{ background: '#FFFFFF', border: '1px solid #E8E8E4', boxShadow: '0 -8px 32px rgba(0,0,0,0.10)' }}
+              >
+                <button
+                  onClick={() => { navigate('/profile'); setShowProfileMenu(false) }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-[#111111] hover:bg-[#F8F8F6]"
+                >
+                  <span className="flex w-4 h-4 shrink-0 text-[#6B7280]"><Icon.Profile /></span>
+                  Edit profile
+                </button>
+                <button
+                  onClick={() => setDarkMode(d => !d)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-[#111111] hover:bg-[#F8F8F6]"
+                >
+                  <span className="flex w-4 h-4 shrink-0 text-[#6B7280]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
+                  {darkMode ? 'Light mode' : 'Dark mode'}
+                </button>
+                <div className="h-px mx-3 my-1" style={{ background: 'rgba(0,0,0,0.06)' }} />
+                <button
+                  onClick={() => { signOut(); setShowProfileMenu(false) }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-red-500 hover:bg-red-50"
+                >
+                  <span className="flex w-4 h-4 shrink-0 text-red-500"><Icon.LogOut /></span>
+                  Sign out
+                </button>
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center gap-2.5">
+            {/* Avatar */}
+            <button
+              onClick={() => navigate('/profile')}
+              className="w-9 h-9 rounded-full overflow-hidden bg-burgundy-100 flex items-center justify-center text-[12px] font-bold text-burgundy-700 shrink-0 transition-opacity hover:opacity-80"
+              style={{ border: '1px solid #E5E7EB' }}
+            >
+              {profile?.avatar_url
+                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                : initials(profile?.full_name || '')}
+            </button>
+
+            {/* Name + label */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[13.5px] font-semibold text-[#111111] truncate leading-snug">
+                {profile?.full_name}
+              </p>
+              <button
+                onClick={() => navigate('/profile')}
+                className="text-[11.5px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors leading-snug font-mono"
+              >
+                @{profile?.username}
+              </button>
+            </div>
+
+            {/* 3-dot */}
+            <button
+              onClick={() => setShowProfileMenu(v => !v)}
+              className="w-7 h-7 flex items-center justify-center rounded-full text-[#9CA3AF] hover:text-[#111111] hover:bg-[#F3F3F0] transition-colors shrink-0"
+            >
+              <span className="flex w-4 h-4"><Icon.MoreHorizontal /></span>
+            </button>
+          </div>
+        </div>
       </aside>
 
       {/* ── MAIN ── */}

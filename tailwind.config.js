@@ -33,6 +33,34 @@ export default {
           subtle:  '#F4F4F5',   // Zinc-100
         },
 
+        // ── Burgundy — blue replacement accent ──
+        burgundy: {
+          50:  '#FDF2F4',
+          100: '#FBDDE2',
+          200: '#F5B8C2',
+          300: '#EC8898',
+          400: '#DC5A6F',
+          600: '#8B1A2C',
+          700: '#6E1221',
+          800: '#540D19',
+          900: '#3D0910',
+          950: '#220508',
+        },
+
+        // ── Brand — alias for burgundy, used across app ──
+        brand: {
+          DEFAULT: '#8B1A2C',
+          50:  '#FDF2F4',
+          100: '#FBDDE2',
+          200: '#F5B8C2',
+          300: '#EC8898',
+          400: '#DC5A6F',
+          600: '#8B1A2C',
+          700: '#6E1221',
+          800: '#540D19',
+          950: '#220508',
+        },
+
         // ── Borders ──
         border: {
           DEFAULT: '#E8E8E4',

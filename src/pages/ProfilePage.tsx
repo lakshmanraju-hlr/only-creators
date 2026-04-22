@@ -47,7 +47,7 @@ type TierKey = 'newcomer' | 'contributor' | 'expert' | 'authority'
 const TIER_DISPLAY: Record<TierKey, { label: string; className: string }> = {
   newcomer:    { label: 'General',   className: 'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400' },
   contributor: { label: 'General',   className: 'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400' },
-  expert:      { label: 'Expert',    className: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-400' },
+  expert:      { label: 'Expert',    className: 'text-burgundy-600 bg-burgundy-50 dark:bg-burgundy-950/40 dark:text-burgundy-400' },
   authority:   { label: 'Authority', className: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400' },
 }
 
@@ -777,7 +777,7 @@ export default function ProfilePage() {
                 if (isOwnProfile && !profile.avatar_url) avatarInputRef.current?.click()
                 else if (profile.avatar_url) setAvatarLightbox(true)
               }}
-              className="w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
+              className="w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
             >
               {uploadingAvatar ? (
                 <div className="w-full h-full flex items-center justify-center">
@@ -786,7 +786,7 @@ export default function ProfilePage() {
               ) : profile.avatar_url ? (
                 <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-bold text-blue-700 dark:text-blue-300">
+                <div className="w-full h-full flex items-center justify-center text-xl font-bold text-burgundy-700 dark:text-burgundy-300">
                   {initials(profile.full_name)}
                 </div>
               )}
@@ -1313,10 +1313,10 @@ export default function ProfilePage() {
                       onClick={() => { setListModal(null); navigate('/profile/' + u.username) }}
                       className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 shrink-0">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 shrink-0">
                         {u.avatar_url
                           ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                          : <div className="w-full h-full flex items-center justify-center text-sm font-bold text-blue-700 dark:text-blue-300">{initials(u.full_name)}</div>
+                          : <div className="w-full h-full flex items-center justify-center text-sm font-bold text-burgundy-700 dark:text-burgundy-300">{initials(u.full_name)}</div>
                         }
                       </div>
                       <div className="text-left min-w-0">
@@ -1678,7 +1678,7 @@ function EditProfileModal({ profile, onClose, onSaved }: { profile: Profile; onC
         <div className="px-6 py-5 space-y-4">
           {/* Avatar */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-bold text-blue-700 dark:text-blue-300 shrink-0">
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-xl font-bold text-burgundy-700 dark:text-burgundy-300 shrink-0">
               {avatarPreview
                 ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 : initials(fullName)

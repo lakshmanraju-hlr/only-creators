@@ -527,7 +527,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                     className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 text-left transition-colors ${i === mentionIndex ? 'bg-brand-50 dark:bg-brand-600/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                     onMouseDown={e => { e.preventDefault(); pickMention(r.username) }}
                   >
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[8px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[8px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0">
                       {r.avatar_url
                         ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         : r.full_name?.slice(0, 2).toUpperCase()

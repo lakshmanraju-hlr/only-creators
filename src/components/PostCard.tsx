@@ -8,7 +8,6 @@ import { supabase, Post, Comment, getProfMeta, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
 import { getFriends } from '@/lib/friends'
-import BottomSheet, { SheetRow, SheetCancel } from '@/components/BottomSheet'
 import ConfirmSheet from '@/components/ConfirmSheet'
 import ReportSheet from '@/components/ReportSheet'
 
@@ -45,6 +44,9 @@ export default function PostCard({ post, onUpdated }: Props) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [isPinned, setIsPinned] = useState(false)
+  const [pinning, setPinning] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [bookmarked, setBookmarked] = useState(false)
   const [mediaLightbox, setMediaLightbox] = useState<{ url: string; type: 'photo' | 'video' } | null>(null)
   const [canProUpvote, setCanProUpvote] = useState(false)
@@ -75,6 +77,26 @@ export default function PostCard({ post, onUpdated }: Props) {
       .eq('user_id', profile.id).eq('discipline', post.persona_discipline)
       .then(res => setCanProUpvote((res.count ?? 0) > 0))
   }, [profile?.id, post.persona_discipline, post.user_id, post.post_type])
+
+  // Fetch pin state for own posts
+  useEffect(() => {
+    if (!profile || !isOwnPost) return
+    supabase.from('pinned_posts').select('post_id', { count: 'exact', head: true })
+      .eq('user_id', profile.id).eq('post_id', post.id)
+      .then(({ count }) => setIsPinned((count ?? 0) > 0))
+  }, [profile?.id, post.id, isOwnPost])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!showMenuSheet) return
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenuSheet(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMenuSheet])
 
   useEffect(() => {
     if (!mentionQuery || mentionStart === -1 || !profile) { setMentionResults([]); return }
@@ -117,6 +139,32 @@ export default function PostCard({ post, onUpdated }: Props) {
     navigator.clipboard.writeText(url)
     toast.success('Link copied!')
     setShowMenuSheet(false)
+  }
+
+  async function handlePinPost() {
+    if (!profile || !isOwnPost) return
+    setShowMenuSheet(false)
+    setPinning(true)
+    if (isPinned) {
+      await supabase.from('pinned_posts').delete().match({ user_id: profile.id, post_id: post.id })
+      setIsPinned(false)
+      toast('Unpinned from profile')
+    } else {
+      const { count } = await supabase.from('pinned_posts')
+        .select('*', { count: 'exact', head: true }).eq('user_id', profile.id)
+      if ((count ?? 0) >= 3) {
+        toast.error('You can only pin 3 posts — unpin one first.')
+        setPinning(false); return
+      }
+      const { data: existing } = await supabase.from('pinned_posts')
+        .select('pin_order').eq('user_id', profile.id)
+      const usedOrders = new Set((existing || []).map((p: any) => p.pin_order as number))
+      const nextOrder = ([1, 2, 3] as const).find(n => !usedOrders.has(n)) ?? 1
+      await supabase.from('pinned_posts').insert({ user_id: profile.id, post_id: post.id, pin_order: nextOrder })
+      setIsPinned(true)
+      toast.success('Pinned to your profile')
+    }
+    setPinning(false)
   }
 
   async function toggleLike() {
@@ -304,13 +352,79 @@ export default function PostCard({ post, onUpdated }: Props) {
         </div>
 
         {/* ··· more */}
-        <button
-          onClick={() => setShowMenuSheet(true)}
-          className="shrink-0 w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors rounded-full"
-          title="More options"
-        >
-          <span className="flex w-[18px] h-[18px]"><Icon.MoreHorizontal /></span>
-        </button>
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            onClick={() => setShowMenuSheet(v => !v)}
+            className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors rounded-full"
+            title="More options"
+          >
+            <span className="flex w-[18px] h-[18px]"><Icon.MoreHorizontal /></span>
+          </button>
+          <AnimatePresence>
+            {showMenuSheet && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                transition={{ duration: 0.12 }}
+                className="absolute right-0 top-full mt-1.5 bg-surface border border-border rounded-xl shadow-modal py-1 z-50 min-w-[168px]"
+              >
+                {isOwnPost ? (
+                  <>
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                      onClick={handlePinPost}
+                      disabled={pinning}
+                    >
+                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.Pin /></span>
+                      {pinning ? '…' : isPinned ? 'Unpin from profile' : 'Pin to profile'}
+                    </button>
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                      onClick={copyPostLink}
+                    >
+                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.CopyLink /></span>
+                      Copy link
+                    </button>
+                    <div className="my-1 border-t border-border" />
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-error hover:bg-error-subtle flex items-center gap-3 transition-colors"
+                      onClick={() => { setShowMenuSheet(false); setShowConfirmDelete(true) }}
+                    >
+                      <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Trash /></span>
+                      Delete post
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                      onClick={() => { toast.success("Got it. We'll show fewer posts like this."); setShowMenuSheet(false) }}
+                    >
+                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.EyeSlash /></span>
+                      Not interested
+                    </button>
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                      onClick={copyPostLink}
+                    >
+                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.CopyLink /></span>
+                      Copy link
+                    </button>
+                    <div className="my-1 border-t border-border" />
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-error hover:bg-error-subtle flex items-center gap-3 transition-colors"
+                      onClick={() => { setShowMenuSheet(false); setShowReport(true) }}
+                    >
+                      <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Flag /></span>
+                      Report post
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* ── Media ───────────────────────────────────────────── */}
@@ -802,36 +916,6 @@ export default function PostCard({ post, onUpdated }: Props) {
         )}
       </AnimatePresence>
 
-      {/* ── 3-dot Bottom Sheet ──────────────────────────────── */}
-      <BottomSheet open={showMenuSheet} onClose={() => setShowMenuSheet(false)}>
-        {isOwnPost ? (
-          <>
-            <SheetRow icon={<Icon.CopyLink />} label="Copy link" onClick={copyPostLink} />
-            <SheetRow
-              icon={<Icon.Trash />}
-              label="Delete post"
-              danger
-              onClick={() => { setShowMenuSheet(false); setShowConfirmDelete(true) }}
-            />
-          </>
-        ) : (
-          <>
-            <SheetRow
-              icon={<Icon.EyeSlash />}
-              label="Not interested"
-              onClick={() => { toast.success("Got it. We'll show fewer posts like this."); setShowMenuSheet(false) }}
-            />
-            <SheetRow icon={<Icon.CopyLink />} label="Copy link" onClick={copyPostLink} />
-            <SheetRow
-              icon={<Icon.Flag />}
-              label="Report post"
-              danger
-              onClick={() => { setShowMenuSheet(false); setShowReport(true) }}
-            />
-          </>
-        )}
-        <SheetCancel onClose={() => setShowMenuSheet(false)} />
-      </BottomSheet>
 
       {/* ── Delete Confirmation ─────────────────────────────── */}
       <ConfirmSheet

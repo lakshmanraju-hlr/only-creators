@@ -135,7 +135,7 @@ export default function SearchModal({ onClose }: Props) {
                   className={`flex items-center gap-3.5 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${i < results.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
                 >
                   <button
-                    className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[15px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
+                    className="w-11 h-11 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[15px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0"
                     onClick={() => goToProfile(p.username)}
                   >
                     {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(p.full_name)}

@@ -179,7 +179,7 @@ export default function MessagesPage() {
                 : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
             }`}
           >
-            <div className="w-[38px] h-[38px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[13px] font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+            <div className="w-[38px] h-[38px] rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[13px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0">
               {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
             </div>
             <div className="flex-1 min-w-0">
@@ -203,7 +203,7 @@ export default function MessagesPage() {
             {/* Chat header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
               <button
-                className="w-[34px] h-[34px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[12px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
+                className="w-[34px] h-[34px] rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[12px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0"
                 onClick={() => navigate('/profile/' + selectedFriend.username)}
               >
                 {selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(selectedFriend.full_name)}
@@ -226,7 +226,7 @@ export default function MessagesPage() {
                   <div key={m.id} className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
                     {!isMine && (
                       <button
-                        className="w-[26px] h-[26px] rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[9px] font-semibold text-blue-700 dark:text-blue-300 shrink-0"
+                        className="w-[26px] h-[26px] rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[9px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0"
                         onClick={() => navigate('/profile/' + selectedFriend.username)}
                       >
                         {(m.sender as any)?.avatar_url
