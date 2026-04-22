@@ -81,6 +81,7 @@ export default function AppShell() {
   const [chatWithProfile, setChatWithProfile] = useState<Profile | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+  const [showFieldsMenu, setShowFieldsMenu] = useState(false)
 
   const path = location.pathname
 
@@ -193,13 +194,38 @@ export default function AppShell() {
             <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
             <span>Search creators or fields...</span>
           </button>
-          <button
-            onClick={() => navigate('/explore')}
-            className="flex items-center gap-2 bg-[#18181B] hover:bg-[#3F3F46] text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors shrink-0"
-          >
-            <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
-            Browse Fields
-          </button>
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowFieldsMenu(v => !v)}
+              className="flex items-center gap-2 bg-[#18181B] hover:bg-[#3F3F46] text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
+            >
+              <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
+              Browse Fields
+            </button>
+            {showFieldsMenu && (
+              <>
+                <div className="fixed inset-0 z-[48]" onClick={() => setShowFieldsMenu(false)} />
+                <div
+                  className="absolute right-0 top-full mt-2 z-[49] rounded-2xl py-2 w-[300px]"
+                  style={{ background: '#FFFFFF', border: '1px solid #E8E8E4', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-widest px-4 pt-1 pb-2 text-[#9CA3AF]">All Fields</p>
+                  <div className="grid grid-cols-2 gap-0.5 px-2 pb-2">
+                    {ALL_DISCIPLINES.map(d => (
+                      <button
+                        key={d.key}
+                        onClick={() => { navigate('/explore?discipline=' + d.key); setShowFieldsMenu(false) }}
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-colors text-[#111111] hover:bg-[#F3F3F0]"
+                      >
+                        <span className="flex w-[15px] h-[15px] shrink-0 text-[#6B7280]">{d.icon}</span>
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Right — mobile search only */}

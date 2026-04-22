@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, Post, Group, getProfMeta } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
@@ -30,12 +30,23 @@ const DISCIPLINES = [
 export default function ExplorePage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(null)
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(() => {
+    const d = searchParams.get('discipline')
+    return d && DISCIPLINES.find(disc => disc.key === d) ? d : null
+  })
   const [selectedSubgroup, setSelectedSubgroup]     = useState<Group | null>(null)
   const [subgroups, setSubgroups]                   = useState<Group[]>([])
   const [posts, setPosts]                           = useState<Post[]>([])
   const [loading, setLoading]                       = useState(false)
+
+  // ── Sync discipline from URL param ─────────────────────────────────────
+  const disciplineParam = searchParams.get('discipline')
+  useEffect(() => {
+    const d = disciplineParam
+    setSelectedDiscipline(d && DISCIPLINES.find(disc => disc.key === d) ? d : null)
+  }, [disciplineParam])
 
   // ── Load subgroups when discipline filter changes ───────────────────────
   useEffect(() => {
