@@ -152,6 +152,7 @@ export default function AppShell() {
     { path: '/notifications', icon: <Icon.Bell />,          label: 'Notifications', badge: unreadNotifCount },
     { path: '/messages',      icon: <Icon.MessageCircle />, label: 'Messages',      badge: unreadMsgCount },
     { path: '/bookmarks',     icon: <Icon.Bookmark />,      label: 'Saved',         badge: 0 },
+    { path: '/profile',       icon: <Icon.Profile />,       label: 'Profile',       badge: 0 },
   ]
 
   const myPersonaDisciplineKeys = new Set(myPersonas.map(p => p.discipline))
@@ -160,7 +161,10 @@ export default function AppShell() {
     .filter(Boolean) as typeof ALL_DISCIPLINES[number][]
 
   function isNavActive(itemPath: string) {
-    return itemPath === '/' ? path === '/' : path.startsWith(itemPath)
+    if (itemPath === '/') return path === '/'
+    // /profile should only highlight for own profile, not /profile/:username
+    if (itemPath === '/profile') return path === '/profile'
+    return path.startsWith(itemPath)
   }
 
   return (
