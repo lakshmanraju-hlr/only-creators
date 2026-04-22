@@ -105,6 +105,41 @@ export default function NotificationsPage() {
     }
   }
 
+  async function handleAcceptFeature(n: Notification) {
+    if (acting[n.id]) return
+    setActing(a => ({ ...a, [n.id]: true }))
+    try {
+      await supabase.from('post_features')
+        .update({ status: 'accepted' })
+        .eq('post_id', n.post_id!)
+        .eq('featured_user_id', profile!.id)
+      setNotifications(prev =>
+        prev.map(x => x.id === n.id ? { ...x, is_read: true } : x)
+      )
+      toast.success('Feature tag accepted — it will appear in your Featured In tab')
+    } catch {
+      toast.error('Failed to accept feature tag')
+    } finally {
+      setActing(a => ({ ...a, [n.id]: false }))
+    }
+  }
+
+  async function handleDeclineFeature(n: Notification) {
+    if (acting[n.id]) return
+    setActing(a => ({ ...a, [n.id]: true }))
+    try {
+      await supabase.from('post_features')
+        .update({ status: 'declined' })
+        .eq('post_id', n.post_id!)
+        .eq('featured_user_id', profile!.id)
+      setNotifications(prev => prev.filter(x => x.id !== n.id))
+    } catch {
+      toast.error('Failed to decline feature tag')
+    } finally {
+      setActing(a => ({ ...a, [n.id]: false }))
+    }
+  }
+
   type NotifMeta = {
     text: string
     icon: React.ReactNode
@@ -114,6 +149,7 @@ export default function NotificationsPage() {
     isProVote?: boolean
     isFriendRequest?: boolean
     isFriendAccepted?: boolean
+    isFeatureTag?: boolean
   }
 
   function getNotifMeta(n: Notification): NotifMeta {
@@ -146,6 +182,8 @@ export default function NotificationsPage() {
         return { text: `${name} verified you as a peer in your field`, icon: <Icon.Award />, iconColor: '#F59E0B', iconBg: '#FEF3C7', action: goToActor, isProVote: true }
       case 'message':
         return { text: `${name} sent you a message`, icon: <Icon.MessageCircle />, iconColor: '#2563EB', iconBg: '#EFF6FF', action: () => navigate('/messages?with=' + actor?.id) }
+      case 'feature_tag':
+        return { text: `${name} featured you in a post`, icon: <Icon.Star filled />, iconColor: '#6366F1', iconBg: '#EEF2FF', isFeatureTag: true }
       default:
         return { text: 'New activity', icon: <Icon.Bell />, iconColor: '#6B7280', iconBg: '#F8F8F6' }
     }
@@ -268,6 +306,39 @@ export default function NotificationsPage() {
                         <span className="flex w-3.5 h-3.5"><Icon.X /></span>
                         Decline
                       </button>
+                    </div>
+                  )}
+
+                  {/* Feature tag inline actions */}
+                  {meta.isFeatureTag && (
+                    <div className="flex gap-2 mt-2" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleAcceptFeature(n)}
+                        disabled={acting[n.id]}
+                        className="flex items-center gap-1.5 h-8 px-4 rounded-[8px] text-[13px] font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
+                        style={{ background: '#6366F1' }}
+                      >
+                        {acting[n.id]
+                          ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          : <><span className="flex w-3.5 h-3.5"><Icon.Check /></span> Accept</>
+                        }
+                      </button>
+                      <button
+                        onClick={() => handleDeclineFeature(n)}
+                        disabled={acting[n.id]}
+                        className="flex items-center gap-1.5 h-8 px-4 rounded-[8px] text-[13px] font-semibold text-[#1A1A1A] border border-[#E5E7EB] transition-all disabled:opacity-50 hover:bg-[#F8F8F6] active:scale-95"
+                      >
+                        <span className="flex w-3.5 h-3.5"><Icon.X /></span>
+                        Decline
+                      </button>
+                      {n.post_id && (
+                        <button
+                          onClick={() => { const post = (n as any).post; if (post?.profiles?.username) navigate('/profile/' + post.profiles.username + '#post-' + n.post_id) }}
+                          className="text-[12px] text-[#6B7280] hover:text-[#111111] underline transition-colors self-center"
+                        >
+                          View post
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

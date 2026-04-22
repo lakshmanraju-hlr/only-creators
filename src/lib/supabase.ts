@@ -139,14 +139,27 @@ export interface Group {
   member_count: number
   post_count: number
   follower_count: number
+  parent_group_id: string | null
+  is_user_created: boolean
+  needs_review: boolean
   created_at: string
+}
+
+export interface PostFeature {
+  post_id: string
+  featured_user_id: string
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+  post?: Post
+  featured_user?: Profile
+  actor?: Profile  // the post author
 }
 
 export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted' | 'peer_verify' | 'message'
+  type: 'like' | 'pro_upvote' | 'comment' | 'follow' | 'share' | 'friend_request' | 'friend_accepted' | 'peer_verify' | 'message' | 'feature_tag'
   post_id: string | null
   is_read: boolean
   created_at: string

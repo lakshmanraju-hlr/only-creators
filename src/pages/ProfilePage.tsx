@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { uploadPhoto } from '@/utils/uploadPhoto'
 import { useLazyLoad } from '@/hooks/useLazyLoad'
 import {
-  supabase, Profile, Post, getProfMeta, DisciplinePersona, TRUST_WEIGHTS, FriendStatus,
+  supabase, Profile, Post, PostFeature, getProfMeta, DisciplinePersona, TRUST_WEIGHTS, FriendStatus,
 } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import PostCard from '@/components/PostCard'
@@ -68,7 +68,8 @@ export default function ProfilePage() {
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
 
   // UI state
-  const [activeTab, setActiveTab] = useState<'posts' | 'portfolio'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'portfolio' | 'featured'>('posts')
+  const [featuredIn, setFeaturedIn] = useState<PostFeature[]>([])
   const [gridView, setGridView] = useState(true)
   const [bioExpanded, setBioExpanded] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -201,6 +202,23 @@ export default function ProfilePage() {
       const pins = (pinData || []) as { post_id: string; pin_order: number }[]
       setPinnedPins(pins)
       setPinnedPostIds(new Set(pins.map(r => r.post_id)))
+
+      // Featured In: posts where this profile is tagged as a featured creator (accepted)
+      const { data: featuredData } = await supabase
+        .from('post_features')
+        .select(`
+          post_id, featured_user_id, status, created_at,
+          post:post_id(
+            id, user_id, content_type, caption, poem_text, media_url, thumb_url, display_url,
+            tags, like_count, comment_count, share_count, pro_upvote_count, is_pro_post, is_pro,
+            post_type, persona_discipline, visibility, group_id, created_at,
+            profiles!user_id(id, username, full_name, avatar_url, role_title, is_pro, verification_count)
+          )
+        `)
+        .eq('featured_user_id', profileData.id)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: false })
+      setFeaturedIn((featuredData || []) as unknown as PostFeature[])
 
       // Endorsement counts per discipline
       const { data: endorseData } = await supabase
@@ -986,14 +1004,14 @@ export default function ProfilePage() {
       {/* ── TABS ── */}
       <div className="sticky top-[56px] md:top-0 border-b frosted-bar z-10">
         <div className="flex px-4 md:px-8">
-          {(['posts', 'portfolio'] as const).map(t => (
+          {(['posts', 'portfolio', 'featured'] as const).map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
               className="flex-1 py-3 text-[14px] font-bold transition-colors relative capitalize"
               style={{ color: activeTab === t ? '#111111' : '#9CA3AF' }}
             >
-              {t}
+              {t === 'featured' ? 'Featured In' : t}
               {activeTab === t && (
                 <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
               )}
@@ -1193,6 +1211,51 @@ export default function ProfilePage() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  )
+                })}
+              </motion.div>
+            )}
+          </>
+        )}
+
+        {/* ── FEATURED IN TAB ── */}
+        {!isPrivate && activeTab === 'featured' && (
+          <>
+            {featuredIn.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Star /></span>
+                <p className="font-semibold text-gray-600 dark:text-gray-400">No feature credits yet</p>
+                <p className="text-[13px] text-gray-400 mt-1">
+                  When another creator features {isOwnProfile ? 'you' : profile?.full_name} in their post, it'll appear here.
+                </p>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-0 max-w-[700px] mx-auto"
+              >
+                {featuredIn.map(feat => {
+                  const post = feat.post as unknown as Post | undefined
+                  if (!post) return null
+                  const actorProfile = post.profiles
+                  return (
+                    <div key={`${feat.post_id}`} className="relative">
+                      {/* By @username credit */}
+                      {actorProfile && (
+                        <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
+                          <span className="text-[11.5px] text-gray-400">Featured in a post by</span>
+                          <button
+                            onClick={() => navigate('/profile/' + actorProfile.username)}
+                            className="text-[11.5px] text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                          >
+                            @{actorProfile.username}
+                          </button>
+                        </div>
+                      )}
+                      <PostCard post={post} onUpdated={() => {}} />
                     </div>
                   )
                 })}

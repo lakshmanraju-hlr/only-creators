@@ -7,6 +7,8 @@ import { suggestGroup } from '@/lib/groupCategorization'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
+const MAX_TAGS = 10
+
 interface Props {
   onClose: () => void
   defaultGroup?: Group
@@ -64,6 +66,20 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
   const [communityOpen, setCommunityOpen]     = useState(false)
   const [communitySearch, setCommunitySearch] = useState('')
 
+  // ── Tag chip state ────────────────────────────────────────────────────────
+  const [tagList, setTagList]             = useState<string[]>([])
+  const [tagInput, setTagInput]           = useState('')
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([])
+
+  // ── Featured creator state ────────────────────────────────────────────────
+  const [featuredUsers, setFeaturedUsers]   = useState<Profile[]>([])
+  const [featuredSearch, setFeaturedSearch] = useState('')
+  const [featuredResults, setFeaturedResults] = useState<Profile[]>([])
+  const [featuredOpen, setFeaturedOpen]     = useState(false)
+
+  // ── Community creation state ──────────────────────────────────────────────
+  const [creatingCommunity, setCreatingCommunity] = useState(false)
+
   // ── Mention autocomplete ──────────────────────────────────────────────────
   const [mentionQuery, setMentionQuery]   = useState('')
   const [mentionResults, setMentionResults] = useState<Profile[]>([])
@@ -73,6 +89,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
   const fileRef        = useRef<HTMLInputElement>(null)
   const captionRef     = useRef<HTMLTextAreaElement>(null)
   const fieldSearchRef = useRef<HTMLInputElement>(null)
+  const tagInputRef    = useRef<HTMLInputElement>(null)
 
   // Auto-focus caption on open
   useEffect(() => { captionRef.current?.focus() }, [])
@@ -157,6 +174,45 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     if (suggestion && !selectedGroup) setSelectedGroup(suggestion)
   }, [caption, tags, availableGroups, selectedDiscipline])
 
+  // ── Tag suggestions from community ───────────────────────────────────────
+  useEffect(() => {
+    if (!selectedGroup) { setTagSuggestions([]); return }
+    const t = setTimeout(async () => {
+      // Fetch most common tags used in this community's posts
+      const { data } = await supabase
+        .from('post_tags')
+        .select('tag')
+        .in('post_id',
+          supabase.from('post_subgroups').select('post_id').eq('subgroup_id', selectedGroup.id) as any
+        )
+        .limit(20)
+      if (data && data.length > 0) {
+        const counts: Record<string, number> = {}
+        for (const row of data as { tag: string }[]) counts[row.tag] = (counts[row.tag] ?? 0) + 1
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t]) => t)
+        setTagSuggestions(sorted.slice(0, 8))
+      } else {
+        setTagSuggestions([])
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [selectedGroup?.id])
+
+  // ── Featured creator search ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!featuredSearch.trim()) { setFeaturedResults([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles').select('id,username,full_name,avatar_url')
+        .or(`username.ilike.${featuredSearch}%,full_name.ilike.${featuredSearch}%`)
+        .neq('id', profile?.id ?? '')
+        .limit(5)
+      const results = (data || []) as Profile[]
+      setFeaturedResults(results.filter(r => !featuredUsers.some(f => f.id === r.id)))
+    }, 200)
+    return () => clearTimeout(t)
+  }, [featuredSearch, profile?.id, featuredUsers])
+
   // ── Mention autocomplete ──────────────────────────────────────────────────
   useEffect(() => {
     if (!mentionQuery || mentionStart === -1) { setMentionResults([]); return }
@@ -223,6 +279,65 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     }
   }
 
+  // ── Tag chip helpers ──────────────────────────────────────────────────────
+  function normaliseTag(raw: string): string {
+    const stripped = raw.replace(/^#+/, '').trim().toLowerCase().replace(/\s+/g, '_')
+    return stripped ? '#' + stripped : ''
+  }
+
+  function addTag(raw: string) {
+    const tag = normaliseTag(raw)
+    if (!tag) return
+    if (tagList.length >= MAX_TAGS) { toast.error(`Max ${MAX_TAGS} tags`); return }
+    if (tagList.includes(tag)) return
+    setTagList(prev => [...prev, tag])
+  }
+
+  function handleTagInputKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (['Enter', ',', ' '].includes(e.key)) {
+      e.preventDefault()
+      addTag(tagInput)
+      setTagInput('')
+    } else if (e.key === 'Backspace' && !tagInput) {
+      setTagList(prev => prev.slice(0, -1))
+    }
+  }
+
+  // ── Featured creator helpers ──────────────────────────────────────────────
+  function pickFeatured(user: Profile) {
+    setFeaturedUsers(prev => [...prev, user])
+    setFeaturedSearch('')
+    setFeaturedResults([])
+  }
+
+  function removeFeatured(id: string) {
+    setFeaturedUsers(prev => prev.filter(u => u.id !== id))
+  }
+
+  // ── Community creation ────────────────────────────────────────────────────
+  async function handleCreateCommunity() {
+    if (!selectedDiscipline || !communitySearch.trim()) return
+    setCreatingCommunity(true)
+    const name = communitySearch.trim()
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const { data, error } = await supabase.from('groups').insert({
+      discipline: selectedDiscipline,
+      name,
+      slug: `${slug}-${Date.now().toString(36)}`,
+      description: '',
+      is_seeded: false,
+      is_user_created: true,
+      created_by: profile?.id ?? null,
+    }).select('*').single()
+    setCreatingCommunity(false)
+    if (error) { toast.error('Could not create community'); return }
+    const newGroup = data as Group
+    setAvailableGroups(prev => [newGroup, ...prev])
+    setSelectedGroup(newGroup)
+    setCommunitySearch('')
+    toast.success(`Community "${name}" created`)
+  }
+
   // ── Share eligibility ─────────────────────────────────────────────────────
   // General: always shareable (no field required)
   // Pro: requires a field + original work checkbox
@@ -271,7 +386,7 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
       )
     }
 
-    const tagArray  = tags.split(/[\s,]+/).filter(t => t.startsWith('#')).map(t => t.toLowerCase())
+    const tagArray  = tagList
     const expiresAt = postType === 'general'
       ? new Date(Date.now() + TWENTY_FOUR_HOURS).toISOString()
       : null
@@ -300,10 +415,12 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
     if (error) {
       toast.error('Failed to post: ' + error.message)
     } else {
+      const postId = postData?.id
+
       // Tag the post to the community in post_subgroups
-      if (postData?.id && selectedGroup?.id) {
+      if (postId && selectedGroup?.id) {
         await supabase.from('post_subgroups').insert({
-          post_id: postData.id,
+          post_id: postId,
           subgroup_id: selectedGroup.id,
         })
         // Save last used community per discipline
@@ -311,6 +428,30 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
           localStorage.setItem(`oc:last_community_${selectedDiscipline}`, selectedGroup.slug)
         }
       }
+
+      // Save structured tags to post_tags table
+      if (postId && tagList.length > 0) {
+        await supabase.from('post_tags').insert(
+          tagList.map(tag => ({ post_id: postId, tag }))
+        )
+      }
+
+      // Insert post_features and notify each featured creator
+      if (postId && featuredUsers.length > 0) {
+        await supabase.from('post_features').insert(
+          featuredUsers.map(u => ({ post_id: postId, featured_user_id: u.id, status: 'pending' }))
+        )
+        // Send feature_tag notifications
+        await supabase.from('notifications').insert(
+          featuredUsers.map(u => ({
+            user_id:  u.id,
+            actor_id: profile.id,
+            type:     'feature_tag',
+            post_id:  postId,
+          }))
+        )
+      }
+
       if (postType === 'pro' && selectedDiscipline) {
         const fieldLabel = getProfMeta(selectedDiscipline)?.label ?? selectedDiscipline
         toast.success(`Pro Post published to your ${fieldLabel} portfolio`)
@@ -613,34 +754,49 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
                     />
                   </div>
                   {/* Community list */}
-                  <div className="max-h-36 overflow-y-auto flex flex-col gap-1">
-                    {availableGroups
-                      .filter(g => !communitySearch || g.name.toLowerCase().includes(communitySearch.toLowerCase()))
-                      .map(g => {
-                        const isSelected = selectedGroup?.id === g.id
-                        const isSuggested = groupSuggestion?.id === g.id
-                        return (
+                  {(() => {
+                    const filtered = availableGroups.filter(g =>
+                      !communitySearch || g.name.toLowerCase().includes(communitySearch.toLowerCase())
+                    )
+                    const showCreate = communitySearch.trim().length >= 2 && filtered.length === 0
+                    return (
+                      <div className="max-h-36 overflow-y-auto flex flex-col gap-1">
+                        {filtered.map(g => {
+                          const isSelected = selectedGroup?.id === g.id
+                          const isSuggested = groupSuggestion?.id === g.id
+                          return (
+                            <button
+                              key={g.id}
+                              onClick={() => setSelectedGroup(isSelected ? null : g)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-left text-[13px] transition-colors ${
+                                isSelected
+                                  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
+                                  : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200'
+                              }`}
+                            >
+                              <span className="flex-1 font-medium truncate">{g.name}</span>
+                              {isSuggested && !isSelected && (
+                                <span className="text-[10px] text-brand-500 dark:text-brand-400 shrink-0">suggested</span>
+                              )}
+                              {isSelected && (
+                                <span className="flex w-3.5 h-3.5 text-amber-600 shrink-0"><Icon.CheckCircle /></span>
+                              )}
+                            </button>
+                          )
+                        })}
+                        {showCreate && (
                           <button
-                            key={g.id}
-                            onClick={() => setSelectedGroup(isSelected ? null : g)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-left text-[13px] transition-colors ${
-                              isSelected
-                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
-                                : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200'
-                            }`}
+                            onClick={handleCreateCommunity}
+                            disabled={creatingCommunity}
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-[13px] text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors font-medium disabled:opacity-50"
                           >
-                            <span className="flex-1 font-medium truncate">{g.name}</span>
-                            {isSuggested && !isSelected && (
-                              <span className="text-[10px] text-brand-500 dark:text-brand-400 shrink-0">suggested</span>
-                            )}
-                            {isSelected && (
-                              <span className="flex w-3.5 h-3.5 text-amber-600 shrink-0"><Icon.CheckCircle /></span>
-                            )}
+                            <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Plus /></span>
+                            {creatingCommunity ? 'Creating…' : `Create "${communitySearch.trim()}" community`}
                           </button>
-                        )
-                      })
-                    }
-                  </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
 
@@ -661,13 +817,124 @@ export default function UploadModal({ onClose, defaultGroup, defaultDiscipline }
             </div>
           )}
 
-          {/* Tags */}
-          <input
-            className="w-full bg-transparent outline-none text-[12.5px] text-gray-500 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-600 border-t border-gray-100 dark:border-gray-800 pt-3"
-            placeholder="#tag1  #tag2  #tag3"
-            value={tags}
-            onChange={e => setTags(e.target.value)}
-          />
+          {/* ── Tag chip editor ── */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {tagList.map(tag => (
+                <span
+                  key={tag}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 text-[12px] font-medium border border-brand-100 dark:border-brand-800"
+                >
+                  {tag}
+                  <button
+                    onClick={() => setTagList(prev => prev.filter(t => t !== tag))}
+                    className="text-brand-400 hover:text-brand-700 dark:hover:text-brand-200 leading-none"
+                  >×</button>
+                </span>
+              ))}
+              {tagList.length < MAX_TAGS && (
+                <input
+                  ref={tagInputRef}
+                  className="flex-1 min-w-[140px] bg-transparent outline-none text-[12.5px] text-gray-500 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                  placeholder={tagList.length === 0 ? '#add tags… (max 10)' : '#add more…'}
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={handleTagInputKey}
+                  onBlur={() => { if (tagInput) { addTag(tagInput); setTagInput('') } }}
+                />
+              )}
+            </div>
+
+            {/* Community tag suggestions */}
+            {tagSuggestions.length > 0 && tagList.length < MAX_TAGS && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                <span className="text-[10.5px] text-gray-400 mr-0.5 self-center">suggested:</span>
+                {tagSuggestions
+                  .filter(s => !tagList.includes(s))
+                  .slice(0, 5)
+                  .map(s => (
+                    <button
+                      key={s}
+                      onClick={() => addTag(s)}
+                      className="px-2 py-0.5 rounded-full text-[11px] text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-brand-300 hover:text-brand-600 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Featured creator tagging ── */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+            {/* Selected featured users chips */}
+            {featuredUsers.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {featuredUsers.map(u => (
+                  <span
+                    key={u.id}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-[12px] font-medium text-gray-700 dark:text-gray-200"
+                  >
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" loading="lazy" decoding="async" />
+                      : <span className="w-4 h-4 rounded-full bg-brand-200 dark:bg-brand-800 flex items-center justify-center text-[8px] text-brand-700">{u.full_name.slice(0,1)}</span>
+                    }
+                    @{u.username}
+                    <button onClick={() => removeFeatured(u.id)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-100 leading-none">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Featured creator search toggle */}
+            <div className="relative">
+              <button
+                onClick={() => { setFeaturedOpen(v => !v); setFeaturedSearch('') }}
+                className="flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+              >
+                <span className="flex w-3 h-3"><Icon.Plus /></span>
+                {featuredUsers.length === 0 ? 'Tag a featured creator' : 'Tag another'}
+              </button>
+
+              {featuredOpen && (
+                <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                    <span className="flex w-3 h-3 text-gray-400 shrink-0"><Icon.Search /></span>
+                    <input
+                      autoFocus
+                      className="flex-1 text-[13px] bg-transparent outline-none placeholder:text-gray-400 text-gray-900 dark:text-white"
+                      placeholder="Search by username…"
+                      value={featuredSearch}
+                      onChange={e => setFeaturedSearch(e.target.value)}
+                    />
+                    <button onClick={() => setFeaturedOpen(false)} className="text-gray-400 text-[16px] leading-none">×</button>
+                  </div>
+                  {featuredResults.length > 0 ? (
+                    <div className="max-h-36 overflow-y-auto">
+                      {featuredResults.map(r => (
+                        <button
+                          key={r.id}
+                          onMouseDown={e => { e.preventDefault(); pickFeatured(r); setFeaturedOpen(false) }}
+                          className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900 shrink-0">
+                            {r.avatar_url
+                              ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                              : <span className="flex w-full h-full items-center justify-center text-[8px] font-semibold text-brand-700">{r.full_name.slice(0,2).toUpperCase()}</span>
+                            }
+                          </div>
+                          <span className="font-medium text-[13px] text-gray-900 dark:text-white">{r.full_name}</span>
+                          <span className="text-[12px] text-gray-400">@{r.username}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : featuredSearch.length >= 1 ? (
+                    <div className="px-4 py-3 text-[12.5px] text-gray-400">No users found</div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Upload progress */}
           {uploading && (
