@@ -245,6 +245,7 @@ export default function GroupPage() {
           onClose={() => { setShowUpload(false); setTimeout(() => reloadPosts(), 600) }}
           defaultGroup={group}
           defaultDiscipline={group.discipline ?? undefined}
+          proLocked
         />
       )}
     </div>

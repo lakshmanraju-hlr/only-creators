@@ -302,6 +302,7 @@ export default function CommunityPage() {
           onClose={() => setShowUpload(false)}
           defaultGroup={community}
           defaultDiscipline={community.discipline}
+          proLocked
         />
       )}
     </div>
