@@ -83,6 +83,7 @@ export interface Post {
   share_count: number
   pro_upvote_count: number
   is_pro_post: boolean
+  is_pro: boolean
   post_type: PostType
   persona_discipline: string | null
   visibility: 'public' | 'friends'
@@ -93,6 +94,19 @@ export interface Post {
   profiles?: Profile
   user_liked?: boolean
   user_pro_upvoted?: boolean
+}
+
+export interface PinnedPost {
+  user_id: string
+  post_id: string
+  pin_order: number
+  pinned_at: string
+}
+
+export interface SubgroupFollow {
+  user_id: string
+  subgroup_id: string
+  followed_at: string
 }
 
 export interface Comment {
@@ -124,6 +138,7 @@ export interface Group {
   created_by: string | null
   member_count: number
   post_count: number
+  follower_count: number
   created_at: string
 }
 

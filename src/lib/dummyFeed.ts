@@ -176,6 +176,7 @@ export const DUMMY_POSTS: Post[] = [
     expires_at: null,
     profiles: DUMMY_AUTHORS[0],
     user_liked: false,
+    is_pro: false,
     user_pro_upvoted: false,
   },
 
@@ -204,6 +205,7 @@ export const DUMMY_POSTS: Post[] = [
     expires_at: null,
     profiles: DUMMY_AUTHORS[1],
     user_liked: false,
+    is_pro: false,
     user_pro_upvoted: false,
   },
 
@@ -232,6 +234,7 @@ export const DUMMY_POSTS: Post[] = [
     expires_at: null,
     profiles: DUMMY_AUTHORS[2],
     user_liked: false,
+    is_pro: false,
     user_pro_upvoted: false,
   },
 
@@ -260,6 +263,7 @@ export const DUMMY_POSTS: Post[] = [
     expires_at: new Date(Date.now() + 19 * 60 * 60 * 1000).toISOString(),
     profiles: DUMMY_AUTHORS[4],
     user_liked: false,
+    is_pro: false,
     user_pro_upvoted: false,
   },
 
@@ -296,6 +300,7 @@ of someone who has already changed their address.`,
     expires_at: null,
     profiles: DUMMY_AUTHORS[3],
     user_liked: false,
+    is_pro: false,
     user_pro_upvoted: false,
   },
 
@@ -324,6 +329,7 @@ of someone who has already changed their address.`,
     expires_at: null,
     profiles: DUMMY_AUTHORS[5],
     user_liked: false,
+    is_pro: false,
     user_pro_upvoted: false,
   },
 ]

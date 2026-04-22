@@ -12,8 +12,6 @@ import { DUMMY_FEED_ITEMS } from '@/lib/dummyFeed'
 // Types
 // ─────────────────────────────────────────────────────────────
 
-type FeedTab = 'all' | 'following'
-
 interface RisingCreatorItem {
   type: 'rising_creator'
   creator: Profile
@@ -519,13 +517,12 @@ function FeedHeaderStrip({
 // Main FeedPage
 // ─────────────────────────────────────────────────────────────
 
-const POST_FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,thumb_url,display_url,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,post_type,persona_discipline,visibility,group_id,created_at,expires_at'
+const POST_FIELDS = 'id,user_id,content_type,caption,poem_text,media_url,media_path,thumb_url,display_url,tags,like_count,comment_count,share_count,pro_upvote_count,is_pro_post,is_pro,post_type,persona_discipline,visibility,group_id,created_at,expires_at'
 
 export default function FeedPage({ onPost }: Props) {
   const { profile } = useAuth()
   const navigate    = useNavigate()
 
-  const [tab,          setTab]          = useState<FeedTab>('all')
   const [feedItems,    setFeedItems]    = useState<FeedItem[]>([])
   const [loading,      setLoading]      = useState(true)
   const [followingIds, setFollowingIds] = useState<string[]>([])
@@ -581,40 +578,57 @@ export default function FeedPage({ onPost }: Props) {
     }
   }, [profile, localFollowingSet])
 
-  const fetchFollowingFeed = useCallback(async () => {
-    const allIds = [...new Set([...followingIds, ...friendIds])]
-    if (!allIds.length) { setFeedItems([]); setLoading(false); return }
+  // ── Home feed: followed users + pro posts from followed communities ────────
+  const fetchHomeFeed = useCallback(async () => {
+    if (!profile) return
+    setLoading(true)
 
-    const now = Date.now()
-    const friendSet    = new Set(friendIds)
-    const followingSet = new Set(followingIds)
+    // Get followed community IDs
+    const { data: sfData } = await supabase
+      .from('subgroup_follows').select('subgroup_id').eq('user_id', profile.id)
+    const followedSubgroupIds = (sfData || []).map((r: any) => r.subgroup_id as string)
 
-    const { data, error } = await supabase.from('posts').select(POST_FIELDS)
-      .in('user_id', allIds).order('created_at', { ascending: false }).limit(60)
+    const allUserIds = [...new Set([...followingIds, ...friendIds])]
 
-    if (error) { toast.error(error.message); setLoading(false); return }
+    // Fetch posts from followed users (all types)
+    const fromUsersPromise = allUserIds.length > 0
+      ? supabase.from('posts').select(POST_FIELDS)
+          .in('user_id', allUserIds)
+          .order('created_at', { ascending: false }).limit(40)
+      : Promise.resolve({ data: [] as any[], error: null })
 
-    let posts = await enrichPosts(data || [])
+    // Fetch pro posts from followed communities (if any)
+    const fromCommunitiesPromise = followedSubgroupIds.length > 0
+      ? supabase.from('post_subgroups').select(`post_id, posts!inner(${POST_FIELDS})`)
+          .in('subgroup_id', followedSubgroupIds)
+          .order('added_at', { ascending: false }).limit(20)
+      : Promise.resolve({ data: [] as any[], error: null })
+
+    const [usersRes, commRes] = await Promise.all([fromUsersPromise, fromCommunitiesPromise])
+
+    const userPosts: any[] = usersRes.data || []
+    const commPosts: any[] = (commRes.data || []).map((r: any) => r.posts).filter(Boolean)
+
+    // Merge + deduplicate by post id
+    const seenIds = new Set<string>()
+    const merged: any[] = []
+    for (const p of [...userPosts, ...commPosts]) {
+      if (!seenIds.has(p.id)) { seenIds.add(p.id); merged.push(p) }
+    }
+
+    // Sort by recency
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    const limited = merged.slice(0, 40)
+
+    let posts = await enrichPosts(limited)
     posts = await markInteractions(posts)
 
-    posts.sort((a, b) => {
-      const sa = a.post_type === 'pro' ? scoreProPost(a, now) : scoreGeneralPost(a, now, friendSet, followingSet)
-      const sb = b.post_type === 'pro' ? scoreProPost(b, now) : scoreGeneralPost(b, now, friendSet, followingSet)
-      return sb - sa
-    })
-
-    const filtered = posts.filter(p =>
-      p.post_type === 'pro' ||
-      (!p.expires_at && scoreGeneralPost(p, now, friendSet, followingSet) >= 0) ||
-      (p.expires_at && new Date(p.expires_at) > new Date())
-    )
-
-    setFeedItems(filtered.map(p => ({
+    setFeedItems(posts.map(p => ({
       type: p.post_type === 'pro' ? 'pro_post' : 'general_post',
       post: p,
     } as FeedItem)))
     setLoading(false)
-  }, [followingIds.join(','), friendIds.join(',')])
+  }, [profile?.id, followingIds.join(','), friendIds.join(',')])
 
   const fetchForYouFeed = useCallback(async () => {
     if (!profile) return
@@ -750,7 +764,7 @@ export default function FeedPage({ onPost }: Props) {
               content_type: 'text', poem_text: '', media_url: '', media_path: '',
               tags: [], like_count: 0, comment_count: 0, share_count: 0,
               pro_upvote_count: votedPost.pro_upvote_count ?? 0,
-              is_pro_post: true, visibility: 'public', created_at: vote.created_at,
+              is_pro_post: true, is_pro: true, visibility: 'public', created_at: vote.created_at,
             }
             proVoteActivities.push({ type: 'pro_vote_activity', voter, creator, post: postForCard, discipline: votedPost.persona_discipline, voterLevel })
           }
@@ -814,27 +828,21 @@ export default function FeedPage({ onPost }: Props) {
     }
   }, [profile?.id, followingIds.join(','), friendIds.join(','), [...myFieldSet].sort().join(',')])
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true)
-    if (tab === 'following') await fetchFollowingFeed()
-    else await fetchForYouFeed()
-  }, [tab, fetchFollowingFeed, fetchForYouFeed])
-
-  useEffect(() => { fetchPosts() }, [fetchPosts])
+  useEffect(() => { fetchHomeFeed() }, [fetchHomeFeed])
 
   useEffect(() => {
     const channel = supabase.channel('posts-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => fetchPosts())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => fetchHomeFeed())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fetchPosts])
+  }, [fetchHomeFeed])
 
   useEffect(() => {
     const handler = async () => {
-      if (!profile) { fetchPosts(); return }
+      if (!profile) { fetchHomeFeed(); return }
       const { data } = await supabase.from('posts').select(POST_FIELDS)
         .eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1)
-      if (!data?.length) { fetchPosts(); return }
+      if (!data?.length) { fetchHomeFeed(); return }
       const { data: pData } = await supabase.from('profiles')
         .select('id,username,full_name,avatar_url,profession,role_title,is_pro,verification_count')
         .eq('id', profile.id)
@@ -848,47 +856,21 @@ export default function FeedPage({ onPost }: Props) {
     }
     window.addEventListener('oc:post-created', handler)
     return () => window.removeEventListener('oc:post-created', handler)
-  }, [fetchPosts, profile?.id])
+  }, [fetchHomeFeed, profile?.id])
 
   const postCount = feedItems.filter(i => i.type === 'pro_post' || i.type === 'general_post').length
   const myFields  = [...myFieldSet]
-  const maturity  = getFeedMaturity(profile, myFields.length)
 
   function initials(name: string) {
     return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
   }
 
-  const tabs: { key: FeedTab; label: string }[] = [
-    { key: 'all',       label: 'For you' },
-    { key: 'following', label: 'Following' },
-  ]
-
   return (
     <div className="max-w-[614px] mx-auto md:py-4">
 
-      {/* ── Feed tabs + activity chips (sticky on mobile) ─── */}
-      <div className="sticky top-0 z-20 bg-background border-b border-border">
-        {/* Tab bar */}
-        <div className="flex">
-          {tabs.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="flex-1 py-3 text-[14px] font-bold transition-colors relative"
-              style={{ color: tab === t.key ? '#111111' : '#9CA3AF' }}
-            >
-              {t.label}
-              {tab === t.key && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Activity chips ── */}
-      {profile && tab === 'all' && (
-        <div className="pt-3 pb-1">
+      {/* ── Activity chips (sticky) ── */}
+      {profile && (
+        <div className="sticky top-0 z-20 bg-background border-b border-border pt-3 pb-1">
           <FeedHeaderStrip
             profileId={profile.id}
             myFields={myFields}
@@ -919,12 +901,12 @@ export default function FeedPage({ onPost }: Props) {
         </button>
       </div>
 
-      {/* ── Feed maturity nudge ──────────────────────────────── */}
-      {tab === 'all' && !loading && postCount > 0 && maturity === 'new' && (
+      {/* ── Nudge when feed is empty ─────────────────────────── */}
+      {!loading && postCount === 0 && (
         <div className="flex items-center gap-2 mx-4 my-3 px-3 py-2.5 rounded-[8px] bg-surface-elevated border border-border">
           <span className="flex w-3.5 h-3.5 shrink-0 text-text-secondary"><Icon.Info /></span>
           <p className="text-[12.5px] text-text-secondary flex-1">
-            Follow more fields and creators to personalise your feed.
+            Follow creators and communities to fill your home feed.
           </p>
           <button
             onClick={() => navigate('/explore')}
@@ -941,41 +923,27 @@ export default function FeedPage({ onPost }: Props) {
           <div className="w-7 h-7 border-2 border-border-strong border-t-transparent rounded-full animate-spin" />
         </div>
       ) : postCount === 0 ? (
-        tab === 'following' ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <span className="flex w-10 h-10 mb-3 text-border-strong"><Icon.Feed /></span>
-            <p className="font-bold text-text-primary text-[15px]">Follow some creators</p>
-            <p className="text-[13px] text-text-secondary mt-1 mb-5">Their posts will appear here.</p>
+        <>
+          <div className="flex items-center gap-2 mx-4 my-3 px-3 py-2.5 rounded-[8px] bg-surface-elevated border border-border">
+            <span className="flex w-3.5 h-3.5 shrink-0 text-text-secondary"><Icon.Info /></span>
+            <p className="text-[12.5px] text-text-secondary flex-1">
+              Showing sample posts — be the first to share your work!
+            </p>
             <button
-              onClick={() => navigate('/explore')}
-              className="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-[14px] font-bold rounded-badge transition-colors"
+              onClick={onPost}
+              className="text-[12px] font-bold text-text-primary hover:underline shrink-0"
             >
-              Explore creators
+              Post now →
             </button>
           </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 mx-4 my-3 px-3 py-2.5 rounded-[8px] bg-surface-elevated border border-border">
-              <span className="flex w-3.5 h-3.5 shrink-0 text-text-secondary"><Icon.Info /></span>
-              <p className="text-[12.5px] text-text-secondary flex-1">
-                Showing sample posts — be the first to share your work!
-              </p>
-              <button
-                onClick={onPost}
-                className="text-[12px] font-bold text-text-primary hover:underline shrink-0"
-              >
-                Post now →
-              </button>
-            </div>
-            {DUMMY_FEED_ITEMS.map(item => (
-              <PostCard key={item.post.id} post={item.post} onUpdated={() => {}} />
-            ))}
-          </>
-        )
+          {DUMMY_FEED_ITEMS.map(item => (
+            <PostCard key={item.post.id} post={item.post} onUpdated={() => {}} />
+          ))}
+        </>
       ) : (
         feedItems.map((item, idx) => {
           if (item.type === 'pro_post' || item.type === 'general_post')
-            return <PostCard key={item.post.id} post={item.post} onUpdated={fetchPosts} />
+            return <PostCard key={item.post.id} post={item.post} onUpdated={fetchHomeFeed} />
 
           if (item.type === 'rising_creator')
             return (

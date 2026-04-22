@@ -51,7 +51,7 @@ const TIER_DISPLAY: Record<TierKey, { label: string; className: string }> = {
   authority:   { label: 'Authority', className: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400' },
 }
 
-const MAX_PINS = 12
+const MAX_PINS = 3
 const BIO_LIMIT = 160
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ export default function ProfilePage() {
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
 
   // UI state
-  const [activeTab, setActiveTab] = useState<string>('personal')
+  const [activeTab, setActiveTab] = useState<'posts' | 'portfolio'>('posts')
   const [gridView, setGridView] = useState(true)
   const [bioExpanded, setBioExpanded] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -78,9 +78,10 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
-  // Pin state
+  // Pin state — stored as ordered list by pin_order
+  const [pinnedPins, setPinnedPins]   = useState<{ post_id: string; pin_order: number }[]>([])
   const [pinnedPostIds, setPinnedPostIds] = useState<Set<string>>(new Set())
-  const [pinning, setPinning] = useState<string | null>(null)
+  const [pinning, setPinning]         = useState<string | null>(null)
 
   // Social state (visitor only)
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('none')
@@ -117,32 +118,34 @@ export default function ProfilePage() {
 
   const isOwnProfile = !username || profile?.id === myProfile?.id
 
-  // ── Computed: field tabs (personas with Pro Posts, sorted by Trust Score desc) ──
-  const fieldTabs = useMemo(() => {
-    return personas
-      .filter(p => posts.some(post => post.persona_discipline === p.discipline && post.is_pro_post))
-      .sort((a, b) => (TRUST_WEIGHTS[b.level as TierKey] ?? 0) - (TRUST_WEIGHTS[a.level as TierKey] ?? 0))
-  }, [personas, posts])
-
-  // ── Computed: posts shown in active tab ──
+  // ── Computed: Posts tab — pinned first (by pin_order), then rest by recency ──
   const tabPosts = useMemo(() => {
-    if (activeTab === 'personal') {
-      return posts.filter(p => pinnedPostIds.has(p.id))
+    if (activeTab === 'posts') {
+      const pinnedSorted = [...pinnedPins].sort((a, b) => a.pin_order - b.pin_order)
+      const pinnedOrdered = pinnedSorted.map(pp => posts.find(p => p.id === pp.post_id)).filter(Boolean) as Post[]
+      const remaining = posts.filter(p => !pinnedPostIds.has(p.id))
+      return [...pinnedOrdered, ...remaining]
     }
-    return posts
-      .filter(p => p.persona_discipline === activeTab && p.is_pro_post)
-      .sort((a, b) => b.pro_upvote_count - a.pro_upvote_count)
-  }, [activeTab, posts, pinnedPostIds])
+    // Portfolio tab: pro posts only, sorted by recency
+    return posts.filter(p => p.is_pro_post || p.post_type === 'pro')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [activeTab, posts, pinnedPins, pinnedPostIds])
 
-  // ── Computed: my level in the currently viewed field ──
-  const myLevelInCurrentField = useMemo(() => {
-    if (activeTab === 'personal') return null
-    return (myPersonas.find(p => p.discipline === activeTab)?.level ?? null) as TierKey | null
-  }, [activeTab, myPersonas])
+  // ── Computed: pro posts grouped by discipline for Portfolio tab ──
+  const portfolioGroups = useMemo(() => {
+    const proPosts = posts.filter(p => p.is_pro_post || p.post_type === 'pro')
+    const groups: Record<string, Post[]> = {}
+    proPosts.forEach(p => {
+      const disc = p.persona_discipline ?? 'other'
+      if (!groups[disc]) groups[disc] = []
+      groups[disc].push(p)
+    })
+    // Sort each group by pro_upvote_count desc
+    Object.values(groups).forEach(arr => arr.sort((a, b) => b.pro_upvote_count - a.pro_upvote_count))
+    return groups
+  }, [posts])
 
-  const canEndorse = !isOwnProfile &&
-    activeTab !== 'personal' &&
-    (myLevelInCurrentField === 'expert' || myLevelInCurrentField === 'authority')
+  const canEndorse = false // endorsements remain available per-discipline via portfolio groups
 
   // ── Data loading ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -189,10 +192,15 @@ export default function ProfilePage() {
       }
       setPosts(enriched)
 
-      // Pinned posts
+      // Pinned posts (new pinned_posts table with pin_order)
       const { data: pinData } = await supabase
-        .from('post_pins').select('post_id').eq('user_id', profileData.id)
-      setPinnedPostIds(new Set((pinData || []).map((r: any) => r.post_id as string)))
+        .from('pinned_posts')
+        .select('post_id, pin_order')
+        .eq('user_id', profileData.id)
+        .order('pin_order', { ascending: true })
+      const pins = (pinData || []) as { post_id: string; pin_order: number }[]
+      setPinnedPins(pins)
+      setPinnedPostIds(new Set(pins.map(r => r.post_id)))
 
       // Endorsement counts per discipline
       const { data: endorseData } = await supabase
@@ -382,22 +390,29 @@ export default function ProfilePage() {
   async function handlePin(postId: string) {
     if (!myProfile) return
     if (pinnedPostIds.size >= MAX_PINS) {
-      toast.error("You've reached your pin limit. Remove a pin to add a new one.")
+      toast.error('Unpin an existing post first — you can only pin 3 posts.')
       return
     }
+    // Assign next pin_order (1, 2, or 3)
+    const usedOrders = new Set(pinnedPins.map(p => p.pin_order))
+    const nextOrder = ([1, 2, 3] as const).find(n => !usedOrders.has(n)) ?? 1
     setPinning(postId)
-    const { error } = await supabase.from('post_pins').insert({ user_id: myProfile.id, post_id: postId })
+    const { error } = await supabase.from('pinned_posts').insert({
+      user_id: myProfile.id, post_id: postId, pin_order: nextOrder,
+    })
     if (error) { toast.error('Could not pin post'); setPinning(null); return }
+    setPinnedPins(prev => [...prev, { post_id: postId, pin_order: nextOrder }])
     setPinnedPostIds(prev => new Set([...prev, postId]))
-    toast.success('Pinned to your personal tab')
+    toast.success('Pinned to your Posts tab')
     setPinning(null)
   }
 
   async function handleUnpin(postId: string) {
     if (!myProfile) return
     setPinning(postId)
-    const { error } = await supabase.from('post_pins').delete().match({ user_id: myProfile.id, post_id: postId })
+    const { error } = await supabase.from('pinned_posts').delete().match({ user_id: myProfile.id, post_id: postId })
     if (error) { toast.error('Could not unpin post'); setPinning(null); return }
+    setPinnedPins(prev => prev.filter(p => p.post_id !== postId))
     setPinnedPostIds(prev => { const s = new Set(prev); s.delete(postId); return s })
     toast('Unpinned')
     setPinning(null)
@@ -726,8 +741,8 @@ export default function ProfilePage() {
   const ctxBtn = getContextButton()
 
   // Current field stats (when on a field tab)
-  const currentFieldStats = activeTab !== 'personal' ? getFieldStats(activeTab) : null
-  const currentPersona = activeTab !== 'personal' ? personas.find(p => p.discipline === activeTab) : null
+  const currentFieldStats = null
+  const currentPersona = null
 
   return (
     <div className="min-h-full">
@@ -970,100 +985,30 @@ export default function ProfilePage() {
 
       {/* ── TABS ── */}
       <div className="sticky top-[56px] md:top-0 border-b frosted-bar z-10">
-        <div className="flex items-center gap-1.5 px-4 md:px-8 py-3 overflow-x-auto scrollbar-hide">
-
-          {/* Personal tab — always first */}
-          <button
-            onClick={() => setActiveTab('personal')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] whitespace-nowrap transition-all shrink-0 ${
-              activeTab === 'personal'
-                ? 'font-semibold text-gray-900 dark:text-white bg-black/[0.09] dark:bg-white/[0.13] border border-black/[0.07] dark:border-white/[0.10] shadow-sm'
-                : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
-            }`}
-          >
-            <span className="flex w-3.5 h-3.5"><Icon.Profile /></span>
-            Personal
-          </button>
-
-          {/* Field tabs — only for disciplines with Pro Posts, sorted by Trust Score */}
-          {fieldTabs.map(persona => {
-            const disc = DISCIPLINE_MAP[persona.discipline]
-            if (!disc) return null
-            const isActive = activeTab === persona.discipline
-            return (
-              <button
-                key={persona.discipline}
-                onClick={() => setActiveTab(persona.discipline)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13.5px] whitespace-nowrap transition-all shrink-0 ${
-                  isActive
-                    ? 'font-semibold text-gray-900 dark:text-white bg-black/[0.09] dark:bg-white/[0.13] border border-black/[0.07] dark:border-white/[0.10] shadow-sm'
-                    : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
-                }`}
-              >
-                <span className="flex w-3.5 h-3.5"><disc.IconComp /></span>
-                {disc.label}
-              </button>
-            )
-          })}
+        <div className="flex px-4 md:px-8">
+          {(['posts', 'portfolio'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className="flex-1 py-3 text-[14px] font-bold transition-colors relative capitalize"
+              style={{ color: activeTab === t ? '#111111' : '#9CA3AF' }}
+            >
+              {t}
+              {activeTab === t && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* ── CONTENT ── */}
       <div className="px-4 md:px-8 py-4 md:py-6">
 
-        {/* ── FIELD TAB: Stats bar + Endorse button ── */}
-        {activeTab !== 'personal' && currentFieldStats && (
-          <div className="mb-5 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-5 flex-wrap">
-              {/* Pro Votes */}
-              <div className="flex items-center gap-1.5">
-                <span className="flex w-4 h-4 text-amber-500"><Icon.Star /></span>
-                <span className="text-[13.5px] font-semibold text-gray-800 dark:text-gray-100">
-                  {currentFieldStats.totalProVotes.toLocaleString()}
-                </span>
-                <span className="text-[12px] text-gray-400 dark:text-gray-500">Pro Votes</span>
-              </div>
-              {/* Endorsements */}
-              <div className="flex items-center gap-1.5">
-                <span className="flex w-4 h-4 text-blue-500"><Icon.ThumbsUp /></span>
-                <span className="text-[13.5px] font-semibold text-gray-800 dark:text-gray-100">
-                  {currentFieldStats.totalEndorsements.toLocaleString()}
-                </span>
-                <span className="text-[12px] text-gray-400 dark:text-gray-500">Endorsements</span>
-              </div>
-              {/* Tier badge */}
-              <span className={`px-2.5 py-1 rounded-full text-[11.5px] font-bold ${currentFieldStats.tierInfo.className}`}>
-                {currentFieldStats.tierInfo.label}
-              </span>
-            </div>
-
-            {/* Endorse button — opens confirmation sheet */}
-            {canEndorse && (
-              <button
-                onClick={() => !endorsedFields.has(activeTab) && setEndorseConfirmField(activeTab)}
-                disabled={endorsedFields.has(activeTab)}
-                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-full border transition-colors"
-                style={endorsedFields.has(activeTab)
-                  ? { borderColor: '#10B981', color: '#10B981', background: '#ECFDF5', cursor: 'default' }
-                  : { borderColor: '#E5E7EB', color: '#1A1A1A', background: 'transparent' }
-                }
-              >
-                <span className="flex w-3.5 h-3.5"><Icon.Medal /></span>
-                {endorsedFields.has(activeTab) ? 'Endorsed ✓' : endorsing === activeTab ? 'Endorsing…' : `Endorse in ${DISCIPLINE_MAP[activeTab]?.label ?? activeTab}`}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Section header (view toggle + new post) */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white tracking-tight">
-            {activeTab === 'personal'
-              ? 'Personal'
-              : DISCIPLINE_MAP[activeTab]?.label ?? activeTab}
-          </h2>
+        {/* View toggle + action buttons */}
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            {isOwnProfile && activeTab !== 'personal' && (
+            {isOwnProfile && (
               <button
                 onClick={() => setShowUpload(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full text-[12.5px] font-medium transition-colors"
@@ -1072,6 +1017,8 @@ export default function ProfilePage() {
                 New post
               </button>
             )}
+          </div>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setGridView(true)}
               className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
@@ -1100,28 +1047,25 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── PERSONAL TAB: pinned posts ── */}
-        {!isPrivate && activeTab === 'personal' && (
+        {/* ── POSTS TAB: all posts, pinned first ── */}
+        {!isPrivate && activeTab === 'posts' && (
           <>
             {tabPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 rounded-2xl"
-                style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.06) 0%, rgba(245,158,11,0.04) 100%)' }}>
-                <span className="flex w-10 h-10 mb-3 text-amber-300 dark:text-amber-700"><Icon.Pin /></span>
-                <p className="font-semibold text-gray-600 dark:text-gray-400 text-center px-4">
-                  {isOwnProfile
-                    ? 'Pin your favourite moments to your personal tab'
-                    : 'No pinned posts yet'}
-                </p>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Camera /></span>
+                <p className="font-semibold text-gray-600 dark:text-gray-400">No posts yet</p>
                 {isOwnProfile && (
-                  <p className="text-sm mt-1.5 text-gray-400 text-center max-w-xs px-4">
-                    Tap the pin button on any General Post while it's live to save it here permanently.
-                  </p>
+                  <button
+                    onClick={() => setShowUpload(true)}
+                    className="mt-4 px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-full hover:bg-brand-700 transition-colors"
+                  >
+                    Create your first post
+                  </button>
                 )}
               </div>
             ) : gridView ? (
               <motion.div
                 className="grid grid-cols-3 gap-3"
-                style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.04) 0%, rgba(245,158,11,0.02) 100%)' }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
@@ -1130,9 +1074,11 @@ export default function ProfilePage() {
                   <GridCell
                     key={p.id}
                     post={p}
-                    isPinned={true}
+                    isPinned={pinnedPostIds.has(p.id)}
+                    canPin={isOwnProfile && !pinnedPostIds.has(p.id) && pinnedPostIds.size < MAX_PINS}
                     onDelete={() => {
                       setPosts(prev => prev.filter(x => x.id !== p.id))
+                      setPinnedPins(prev => prev.filter(x => x.post_id !== p.id))
                       setPinnedPostIds(prev => { const s = new Set(prev); s.delete(p.id); return s })
                     }}
                   />
@@ -1145,27 +1091,38 @@ export default function ProfilePage() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                {tabPosts.map(p => (
-                  <PostCard
-                    key={p.id}
-                    post={p}
-                    onUpdated={() => {
-                      setPosts(prev => prev.filter(x => x.id !== p.id))
-                      setPinnedPostIds(prev => { const s = new Set(prev); s.delete(p.id); return s })
-                    }}
-                  />
-                ))}
+                {tabPosts.map(p => {
+                  const isPinned = pinnedPostIds.has(p.id)
+                  return (
+                    <div key={p.id} className="relative">
+                      {isPinned && (
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 rounded-full text-[11px] font-semibold">
+                          <span>📌</span>
+                          <span>Pinned</span>
+                        </div>
+                      )}
+                      <PostCard
+                        post={p}
+                        onUpdated={() => {
+                          setPosts(prev => prev.filter(x => x.id !== p.id))
+                          setPinnedPins(prev => prev.filter(x => x.post_id !== p.id))
+                          setPinnedPostIds(prev => { const s = new Set(prev); s.delete(p.id); return s })
+                        }}
+                      />
+                    </div>
+                  )
+                })}
               </motion.div>
             )}
           </>
         )}
 
-        {/* ── FIELD TABS: pro posts ── */}
-        {!isPrivate && activeTab !== 'personal' && (
+        {/* ── PORTFOLIO TAB: Pro posts grouped by discipline ── */}
+        {!isPrivate && activeTab === 'portfolio' && (
           <>
-            {tabPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Camera /></span>
+            {Object.keys(portfolioGroups).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Star /></span>
                 <p className="font-semibold text-gray-600 dark:text-gray-400">No Pro Posts yet</p>
                 {isOwnProfile && (
                   <button
@@ -1176,57 +1133,69 @@ export default function ProfilePage() {
                   </button>
                 )}
               </div>
-            ) : gridView ? (
-              <motion.div
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {tabPosts.map(p => {
-                  const persona = personas.find(per => per.discipline === activeTab)
-                  const tier = TIER_DISPLAY[(persona?.level as TierKey) ?? 'newcomer']
-                  return (
-                    <GridCell
-                      key={p.id}
-                      post={p}
-                      showProVotes
-                      tierLabel={tier.label}
-                      tierClassName={tier.className}
-                      canPin={isGeneralPostLive(p)}
-                      onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
-                    />
-                  )
-                })}
-              </motion.div>
             ) : (
               <motion.div
-                className="max-w-[700px] mx-auto"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
+                className="space-y-8"
               >
-                {selectedPost && (
-                  <div className="mb-3">
-                    <button
-                      className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800"
-                      onClick={() => setSelectedPost(null)}
-                    >
-                      <span className="flex w-3.5 h-3.5"><Icon.ArrowLeft /></span>
-                      All posts
-                    </button>
-                  </div>
-                )}
-                {(selectedPost ? [selectedPost] : tabPosts).map(p => (
-                  <PostCard
-                    key={p.id}
-                    post={p}
-                    onUpdated={() => {
-                      setPosts(prev => prev.filter(x => x.id !== p.id))
-                      if (selectedPost?.id === p.id) setSelectedPost(null)
-                    }}
-                  />
-                ))}
+                {Object.entries(portfolioGroups).map(([discipline, disciplinePosts]) => {
+                  const disc = DISCIPLINE_MAP[discipline]
+                  return (
+                    <div key={discipline}>
+                      {/* Discipline group header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        {disc && <span className="flex w-4 h-4 text-gray-500 dark:text-gray-400"><disc.IconComp /></span>}
+                        <h3 className="text-[15px] font-semibold text-gray-900 dark:text-white">
+                          {disc?.label ?? discipline}
+                        </h3>
+                        <span className="text-[12px] text-gray-400 ml-1">{disciplinePosts.length}</span>
+                      </div>
+
+                      {gridView ? (
+                        <div className="grid grid-cols-3 gap-3">
+                          {disciplinePosts.map(p => {
+                            const persona = personas.find(per => per.discipline === discipline)
+                            const tier = TIER_DISPLAY[(persona?.level as TierKey) ?? 'newcomer']
+                            return (
+                              <GridCell
+                                key={p.id}
+                                post={p}
+                                showProVotes
+                                tierLabel={tier.label}
+                                tierClassName={tier.className}
+                                onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
+                              />
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="max-w-[700px] mx-auto space-y-0">
+                          {disciplinePosts.map(p => (
+                            <div key={p.id} className="relative">
+                              {/* Subgroup label */}
+                              {p.group && (
+                                <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
+                                  <button
+                                    onClick={() => navigate(`/c/${(p.group as any).slug}`)}
+                                    className="text-[11.5px] text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                                  >
+                                    {(p.group as any).name}
+                                  </button>
+                                </div>
+                              )}
+                              <PostCard
+                                post={p}
+                                onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </motion.div>
             )}
           </>

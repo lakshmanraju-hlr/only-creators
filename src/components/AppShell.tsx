@@ -15,6 +15,7 @@ import FloatingChat from '@/components/FloatingChat'
 import UploadModal from '@/components/UploadModal'
 import SearchModal from '@/components/SearchModal'
 import GroupPage from '@/pages/GroupPage'
+import CommunityPage from '@/pages/CommunityPage'
 import OnboardingModal from '@/components/OnboardingModal'
 
 const ALL_DISCIPLINES = [
@@ -354,6 +355,7 @@ export default function AppShell() {
           <Route path="/profile"           element={<ProfilePage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/groups/:slug"      element={<GroupPage />} />
+          <Route path="/c/:slug"           element={<CommunityPage />} />
         </Routes>
       </main>
 
