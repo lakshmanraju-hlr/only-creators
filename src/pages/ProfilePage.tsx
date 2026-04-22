@@ -69,7 +69,7 @@ export default function ProfilePage() {
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
 
   // UI state
-  const [activeTab, setActiveTab] = useState<'posts' | 'portfolio' | 'featured'>('posts')
+  const [activeTab, setActiveTab] = useState<'all' | 'personal' | 'portfolio' | 'featured'>('all')
   const [featuredIn, setFeaturedIn] = useState<PostFeature[]>([])
   const [gridView, setGridView] = useState(true)
   const [bioExpanded, setBioExpanded] = useState(false)
@@ -128,27 +128,16 @@ export default function ProfilePage() {
   const [verifying, setVerifying] = useState(false)
 
   const isOwnProfile = !username || profile?.id === myProfile?.id
+  const isFriend = friendStatus === 'friends'
 
-  // ── Computed: Posts tab — pinned first (by pin_order), then rest by recency ──
-  // Visibility rules: personal posts only for mutual friends; pro posts for everyone
-  const tabPosts = useMemo(() => {
-    let visiblePosts = posts
-    if (!isOwnProfile) {
-      const isFriend = friendStatus === 'friends'
-      if (!isFriend) {
-        // Non-friends only see Pro posts
-        visiblePosts = posts.filter(p => p.is_pro_post || p.post_type === 'pro')
-      }
-    }
-    if (activeTab === 'posts') {
-      const pinnedSorted = [...pinnedPins].sort((a, b) => a.pin_order - b.pin_order)
-      const pinnedOrdered = pinnedSorted.map(pp => visiblePosts.find(p => p.id === pp.post_id)).filter(Boolean) as Post[]
-      const remaining = visiblePosts.filter(p => !pinnedPostIds.has(p.id))
-      return [...pinnedOrdered, ...remaining]
-    }
-    return visiblePosts.filter(p => p.is_pro_post || p.post_type === 'pro')
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [activeTab, posts, pinnedPins, pinnedPostIds, isOwnProfile, friendStatus])
+  // ── Computed: Personal tab — non-pro posts, pinned first ──
+  const personalPosts = useMemo(() => {
+    const nonPro = posts.filter(p => !p.is_pro_post && p.post_type !== 'pro')
+    const pinnedSorted = [...pinnedPins].sort((a, b) => a.pin_order - b.pin_order)
+    const pinnedOrdered = pinnedSorted.map(pp => nonPro.find(p => p.id === pp.post_id)).filter(Boolean) as Post[]
+    const remaining = nonPro.filter(p => !pinnedPostIds.has(p.id))
+    return [...pinnedOrdered, ...remaining]
+  }, [posts, pinnedPins, pinnedPostIds])
 
   // ── Computed: pro posts grouped by field (discipline) via post_subgroups ──
   // Each group: { posts, communityForPost: { postId → {name, slug} | null } }
@@ -194,6 +183,37 @@ export default function ProfilePage() {
   const portfolioFieldKeys = useMemo(() =>
     Object.keys(portfolioGroups).filter(k => k !== '__uncategorized__'),
   [portfolioGroups])
+
+  // ── Computed: All tab — curated mix of pinned + recent + top Pro posts + Featured In ──
+  const allTabContent = useMemo(() => {
+    const proPosts = posts.filter(p => p.is_pro_post || p.post_type === 'pro')
+
+    // 1. Pinned Pro posts (up to 3)
+    const pinnedSorted = [...pinnedPins].sort((a, b) => a.pin_order - b.pin_order)
+    const pinnedSection = pinnedSorted
+      .map(pp => proPosts.find(p => p.id === pp.post_id))
+      .filter(Boolean)
+      .slice(0, 3) as Post[]
+    const pinnedIds = new Set(pinnedSection.map(p => p.id))
+
+    // 2. Recent Pro posts (latest 6, excluding pinned)
+    const recentPro = proPosts
+      .filter(p => !pinnedIds.has(p.id))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 6)
+    const shownIds = new Set([...pinnedIds, ...recentPro.map(p => p.id)])
+
+    // 3. Top performing (up to 6, excluding already shown)
+    const topPro = proPosts
+      .filter(p => !shownIds.has(p.id))
+      .sort((a, b) => (b.like_count + b.comment_count * 2) - (a.like_count + a.comment_count * 2))
+      .slice(0, 6)
+
+    // 4. Featured In (up to 4)
+    const featuredSection = featuredIn.slice(0, 4)
+
+    return { pinnedSection, recentPro, topPro, featuredSection }
+  }, [posts, pinnedPins, featuredIn])
 
   const canEndorse = false // endorsements remain available per-discipline via portfolio groups
 
@@ -668,186 +688,113 @@ export default function ProfilePage() {
     return { totalProVotes, totalEndorsements, tierInfo, persona }
   }
 
-  // ── Grid Cell ─────────────────────────────────────────────────────────────
-  function GridCell({
+  // ── Post Tile (1:1 square gallery cell) ──────────────────────────────────
+  function PostTile({
     post,
-    showProVotes = false,
-    tierLabel,
-    tierClassName,
     isPinned = false,
-    canPin = false,
-    onDelete,
+    showProIndicator = false,
+    communityLabel,
+    onCommunityClick,
+    onTagCommunity,
   }: {
     post: Post
-    showProVotes?: boolean
-    tierLabel?: string
-    tierClassName?: string
     isPinned?: boolean
-    canPin?: boolean
-    onDelete?: () => void
+    showProIndicator?: boolean
+    communityLabel?: string
+    onCommunityClick?: () => void
+    onTagCommunity?: () => void
   }) {
     const [hovered, setHovered] = useState(false)
-    const [showMenu, setShowMenu] = useState(false)
-    const year = new Date(post.created_at).getFullYear()
-    const title = post.caption || (post.content_type === 'poem' ? 'Poem' : post.content_type === 'audio' ? 'Audio' : post.content_type === 'video' ? 'Video' : post.content_type === 'document' ? 'Document' : 'Post')
-    const { ref: cellRef, isVisible: cellVisible } = useLazyLoad<HTMLDivElement>()
-    const gridThumbSrc = useMemo(() => post.thumb_url || post.media_url || '', [post.thumb_url, post.media_url])
-
-    const isPinning = pinning === post.id
-    const showPinAction = isOwnProfile && isGeneralPostLive(post) && !isPinned && canPin
-    const showUnpinAction = isOwnProfile && isPinned
+    const { ref: tileRef, isVisible: tileVisible } = useLazyLoad<HTMLDivElement>()
+    const thumbSrc = useMemo(() => post.thumb_url || post.media_url || '', [post.thumb_url, post.media_url])
 
     return (
-      <motion.div
-        ref={cellRef}
-        className="apple-card overflow-hidden group"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => { setHovered(false); setShowMenu(false) }}
-        whileHover={{ y: -3, boxShadow: '0 12px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)' }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      >
-        {/* Media area */}
+      <div className="flex flex-col">
         <div
-          className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
+          ref={tileRef}
+          className="relative aspect-square overflow-hidden cursor-pointer"
+          style={{ background: '#F3F3F0' }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           onClick={() => setPostLightbox(post)}
         >
-          {post.content_type === 'photo' && post.media_url && cellVisible ? (
-            <img src={gridThumbSrc} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async" />
+          {/* Media */}
+          {post.content_type === 'photo' && post.media_url && tileVisible ? (
+            <img src={thumbSrc} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
           ) : post.content_type === 'video' && post.media_url ? (
             <>
               <video src={post.media_url} className="w-full h-full object-cover" muted />
               <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <div className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
-                  <span className="flex w-5 h-5 text-white"><Icon.Video /></span>
+                <div className="w-8 h-8 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
+                  <span className="flex w-4 h-4 text-white"><Icon.Video /></span>
                 </div>
               </div>
             </>
           ) : post.content_type === 'audio' ? (
             <div className="w-full h-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
-              <span className="flex w-10 h-10 text-white/80"><Icon.Music /></span>
+              <span className="flex w-8 h-8 text-white/80"><Icon.Music /></span>
             </div>
           ) : post.content_type === 'poem' ? (
-            <div className="w-full h-full bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/50 dark:to-orange-950/50 flex flex-col items-center justify-center p-5">
-              <span className="text-4xl text-amber-400/50 leading-none mb-2">"</span>
+            <div className="w-full h-full bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/50 dark:to-orange-950/50 flex flex-col items-center justify-center p-3">
+              <span className="text-3xl text-amber-400/50 leading-none mb-1">"</span>
               {post.poem_text && (
-                <p className="text-[11px] text-gray-500 text-center italic" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {post.poem_text}
-                </p>
+                <p className="text-[10px] text-gray-500 text-center italic line-clamp-3">{post.poem_text}</p>
               )}
             </div>
           ) : post.content_type === 'document' ? (
             <div className="w-full h-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-              <span className="flex w-10 h-10 text-gray-300 dark:text-gray-600"><Icon.FileText /></span>
+              <span className="flex w-8 h-8 text-gray-300 dark:text-gray-600"><Icon.FileText /></span>
             </div>
           ) : (
             <div className="w-full h-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-              <span className="flex w-8 h-8 text-gray-300 dark:text-gray-600"><Icon.MessageCircle /></span>
+              <span className="flex w-7 h-7 text-gray-300 dark:text-gray-600"><Icon.MessageCircle /></span>
             </div>
           )}
 
-          {/* Overlays: Pro vote count + tier badge (field tabs) */}
-          {showProVotes && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black/50 text-white backdrop-blur-sm">
-                <span className="flex w-3 h-3"><Icon.Star /></span>
-                {post.pro_upvote_count}
-              </span>
-              {tierLabel && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tierClassName}`}>
-                  {tierLabel}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Pin icon overlay (personal tab) */}
+          {/* Pin indicator — top-left */}
           {isPinned && (
-            <div className="absolute top-2 left-2">
-              <span className="flex w-4 h-4 text-white drop-shadow"><Icon.Pin /></span>
-            </div>
+            <div className="absolute top-1.5 left-1.5 text-[13px] drop-shadow-md select-none">📌</div>
           )}
 
-          {/* Pin button on hover (owner, general posts within 24h) */}
-          {showPinAction && (
-            <button
-              className={`absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm text-[11px] font-medium text-gray-700 dark:text-gray-200 shadow-sm transition-all duration-200 ${hovered ? 'opacity-100' : 'opacity-0'}`}
-              onClick={e => { e.stopPropagation(); handlePin(post.id) }}
-              disabled={isPinning}
-            >
-              <span className="flex w-3 h-3"><Icon.Pin /></span>
-              {isPinning ? '…' : 'Pin'}
-            </button>
+          {/* Pro indicator — top-right, owner only */}
+          {showProIndicator && (
+            <div className="absolute top-1.5 right-1.5 text-[13px] drop-shadow-md select-none">⚡</div>
           )}
 
-          {/* Heart button */}
-          <button
-            className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-110 active:scale-95 ${hovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}
-            onClick={e => e.stopPropagation()}
+          {/* Hover / tap overlay */}
+          <div
+            className={`absolute inset-0 flex items-center justify-center gap-4 transition-opacity duration-150 ${hovered ? 'opacity-100' : 'opacity-0'}`}
+            style={{ background: 'rgba(0,0,0,0.50)' }}
           >
-            <span className="flex w-3.5 h-3.5 text-gray-500 dark:text-gray-400"><Icon.Heart /></span>
+            <span className="flex items-center gap-1 text-white text-[13px] font-semibold">
+              <span>♡</span>
+              {post.like_count}
+            </span>
+            <span className="flex items-center gap-1 text-white text-[13px] font-semibold">
+              <span>💬</span>
+              {post.comment_count}
+            </span>
+          </div>
+        </div>
+
+        {/* Community label (portfolio tab only) */}
+        {communityLabel && onCommunityClick ? (
+          <button
+            onClick={onCommunityClick}
+            className="text-[11px] text-[#9CA3AF] hover:text-[#6B7280] text-center truncate transition-colors px-1 mt-0.5"
+          >
+            {communityLabel}
           </button>
-        </div>
-
-        {/* Card footer */}
-        <div className="px-4 py-3 flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setPostLightbox(post)}>
-            <p className="font-semibold text-[13.5px] text-gray-900 dark:text-white truncate leading-snug">{title}</p>
-            <p className="text-[10.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">{year}</p>
-          </div>
-
-          {/* ··· menu */}
-          <div className="relative shrink-0 mt-0.5">
-            <button
-              className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              onClick={e => { e.stopPropagation(); setShowMenu(v => !v) }}
-            >
-              <span className="flex w-4 h-4"><Icon.MoreHorizontal /></span>
-            </button>
-            <AnimatePresence>
-              {showMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.92, y: -4 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.92, y: -4 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg py-1 z-50 min-w-[140px]"
-                >
-                  <button
-                    className="w-full px-3.5 py-2 text-left text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2.5 transition-colors"
-                    onClick={e => { e.stopPropagation(); setPostLightbox(post); setShowMenu(false) }}
-                  >
-                    <span className="flex w-3.5 h-3.5 text-gray-400"><Icon.Eye /></span>
-                    View
-                  </button>
-                  {isOwnProfile && showUnpinAction && (
-                    <button
-                      className="w-full px-3.5 py-2 text-left text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2.5 transition-colors"
-                      onClick={async e => { e.stopPropagation(); setShowMenu(false); await handleUnpin(post.id) }}
-                    >
-                      <span className="flex w-3.5 h-3.5 text-gray-400"><Icon.Pin /></span>
-                      Unpin
-                    </button>
-                  )}
-                  {isOwnProfile && onDelete && (
-                    <button
-                      className="w-full px-3.5 py-2 text-left text-[13px] text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2.5 transition-colors"
-                      onClick={async e => {
-                        e.stopPropagation()
-                        setShowMenu(false)
-                        const { error } = await supabase.from('posts').delete().eq('id', post.id)
-                        if (!error) { if (post.media_path) await supabase.storage.from('posts').remove([post.media_path]); onDelete() }
-                      }}
-                    >
-                      <span className="flex w-3.5 h-3.5"><Icon.Trash /></span>
-                      Delete
-                    </button>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </motion.div>
+        ) : onTagCommunity ? (
+          <button
+            onClick={onTagCommunity}
+            className="text-[11px] text-[#9CA3AF] hover:text-brand-600 text-center transition-colors px-1 mt-0.5 flex items-center justify-center gap-1"
+          >
+            <span className="flex w-3 h-3"><Icon.Plus /></span>
+            Tag community
+          </button>
+        ) : null}
+      </div>
     )
   }
 
@@ -1148,29 +1095,35 @@ export default function ProfilePage() {
       {/* ── TABS ── */}
       <div className="sticky top-[56px] md:top-0 border-b frosted-bar z-10">
         <div className="flex px-4 md:px-8">
-          {(['posts', 'portfolio', 'featured'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              className="flex-1 py-3 text-[14px] font-bold transition-colors relative capitalize"
-              style={{ color: activeTab === t ? '#111111' : '#9CA3AF' }}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                {t === 'featured' ? 'Featured In' : t}
-                {t === 'featured' && isOwnProfile && pendingFeatures.length > 0 && (
-                  <span
-                    className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white"
-                    style={{ background: '#EF4444' }}
-                  >
-                    {pendingFeatures.length}
-                  </span>
+          {(isOwnProfile || isFriend
+            ? (['all', 'personal', 'portfolio', 'featured'] as const)
+            : (['all', 'portfolio', 'featured'] as const)
+          ).map(t => {
+            const label = t === 'featured' ? 'Featured In' : t.charAt(0).toUpperCase() + t.slice(1)
+            return (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                className="flex-1 py-3 text-[14px] font-bold transition-colors relative"
+                style={{ color: activeTab === t ? '#111111' : '#9CA3AF' }}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  {label}
+                  {t === 'featured' && isOwnProfile && pendingFeatures.length > 0 && (
+                    <span
+                      className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white"
+                      style={{ background: '#EF4444' }}
+                    >
+                      {pendingFeatures.length}
+                    </span>
+                  )}
+                </span>
+                {activeTab === t && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
                 )}
-              </span>
-              {activeTab === t && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
-              )}
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -1219,40 +1172,151 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── POSTS TAB: all posts, pinned first ── */}
-        {!isPrivate && activeTab === 'posts' && (
+        {/* ── ALL TAB: curated Pro posts + Featured In ── */}
+        {!isPrivate && activeTab === 'all' && (() => {
+          const { pinnedSection, recentPro, topPro, featuredSection } = allTabContent
+          const hasContent = pinnedSection.length + recentPro.length + topPro.length + featuredSection.length > 0
+          const GRID = 'grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1 lg:grid-cols-3'
+
+          if (!hasContent) return (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Camera /></span>
+              <p className="font-semibold text-gray-600 dark:text-gray-400">No posts yet</p>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setShowUpload(true)}
+                  className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
+                  style={{ background: '#18181B' }}
+                >
+                  Create your first post
+                </button>
+              )}
+            </div>
+          )
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              {/* Pinned Pro — top row */}
+              {pinnedSection.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[13px]">📌</span>
+                    <span className="text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider">Pinned</span>
+                  </div>
+                  <div className={GRID}>
+                    {pinnedSection.map(p => (
+                      <PostTile
+                        key={p.id}
+                        post={p}
+                        isPinned
+                        showProIndicator={isOwnProfile}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Pro */}
+              {recentPro.length > 0 && (
+                <div>
+                  <span className="block text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-2">Recent</span>
+                  <div className={GRID}>
+                    {recentPro.map(p => (
+                      <PostTile
+                        key={p.id}
+                        post={p}
+                        isPinned={pinnedPostIds.has(p.id)}
+                        showProIndicator={isOwnProfile}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top Performing */}
+              {topPro.length > 0 && (
+                <div>
+                  <span className="block text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-2">Top Performing</span>
+                  <div className={GRID}>
+                    {topPro.map(p => (
+                      <PostTile
+                        key={p.id}
+                        post={p}
+                        showProIndicator={isOwnProfile}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Featured In — up to 4 */}
+              {featuredSection.length > 0 && (
+                <div>
+                  <span className="block text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-3">Featured In</span>
+                  <div className="space-y-0 max-w-[700px] mx-auto">
+                    {featuredSection.map(feat => {
+                      const post = feat.post as unknown as Post | undefined
+                      if (!post) return null
+                      const poster = post.profiles as any
+                      return (
+                        <div key={feat.post_id} className="relative">
+                          <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
+                            <span className="text-[11.5px] text-[#9CA3AF]">by</span>
+                            <button
+                              onClick={() => navigate('/profile/' + poster?.username)}
+                              className="text-[11.5px] font-semibold text-[#111111] hover:underline"
+                            >
+                              @{poster?.username}
+                            </button>
+                          </div>
+                          <PostCard post={post} onUpdated={() => {}} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )
+        })()}
+
+        {/* ── PERSONAL TAB: non-pro posts, pinned first, friends + owner only ── */}
+        {!isPrivate && activeTab === 'personal' && (
           <>
-            {tabPosts.length === 0 ? (
+            {personalPosts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Camera /></span>
-                <p className="font-semibold text-gray-600 dark:text-gray-400">No posts yet</p>
+                <p className="font-semibold text-gray-600 dark:text-gray-400">
+                  {isOwnProfile ? 'Post something for your friends' : 'No personal posts yet'}
+                </p>
                 {isOwnProfile && (
                   <button
                     onClick={() => setShowUpload(true)}
-                    className="mt-4 px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-full hover:bg-brand-700 transition-colors"
+                    className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
+                    style={{ background: '#18181B' }}
                   >
-                    Create your first post
+                    New Post
                   </button>
                 )}
               </div>
             ) : gridView ? (
               <motion.div
-                className="grid grid-cols-3 gap-3"
+                className="grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1 lg:grid-cols-3"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                {tabPosts.map(p => (
-                  <GridCell
+                {personalPosts.map(p => (
+                  <PostTile
                     key={p.id}
                     post={p}
                     isPinned={pinnedPostIds.has(p.id)}
-                    canPin={isOwnProfile && !pinnedPostIds.has(p.id) && pinnedPostIds.size < MAX_PINS}
-                    onDelete={() => {
-                      setPosts(prev => prev.filter(x => x.id !== p.id))
-                      setPinnedPins(prev => prev.filter(x => x.post_id !== p.id))
-                      setPinnedPostIds(prev => { const s = new Set(prev); s.delete(p.id); return s })
-                    }}
+                    showProIndicator={isOwnProfile && (p.is_pro_post || p.post_type === 'pro')}
                   />
                 ))}
               </motion.div>
@@ -1263,7 +1327,7 @@ export default function ProfilePage() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                {tabPosts.map(p => {
+                {personalPosts.map(p => {
                   const isPinned = pinnedPostIds.has(p.id)
                   return (
                     <div key={p.id} className="relative">
@@ -1372,7 +1436,7 @@ export default function ProfilePage() {
                       {disc && <span className="flex w-4 h-4 text-[#6B7280]"><disc.IconComp /></span>}
                       {discipline !== '__uncategorized__' ? (
                         <button
-                          onClick={() => navigate('/explore?discipline=' + discipline)}
+                          onClick={() => navigate('/f/' + discipline)}
                           className="text-[15px] font-bold text-[#111111] hover:text-[#3F3F46] transition-colors flex items-center gap-1"
                         >
                           {fieldLabel}
@@ -1392,36 +1456,18 @@ export default function ProfilePage() {
                     </div>
 
                     {gridView ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1 lg:grid-cols-3">
                         {dPosts.map(p => {
                           const comm = communityForPost[p.id]
                           const isUncategorized = discipline === '__uncategorized__'
                           return (
-                            <div key={p.id} className="flex flex-col gap-1">
-                              <GridCell
-                                post={p}
-                                showProVotes
-                                tierLabel={tier.label}
-                                tierClassName={tier.className}
-                                onDelete={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
-                              />
-                              {comm ? (
-                                <button
-                                  onClick={() => navigate('/c/' + comm.slug)}
-                                  className="text-[11px] text-[#9CA3AF] hover:text-[#6B7280] text-center truncate transition-colors px-1"
-                                >
-                                  {comm.name}
-                                </button>
-                              ) : isUncategorized && isOwnProfile ? (
-                                <button
-                                  onClick={() => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null })}
-                                  className="text-[11px] text-[#9CA3AF] hover:text-brand-600 dark:hover:text-brand-400 text-center transition-colors px-1 flex items-center justify-center gap-1"
-                                >
-                                  <span className="flex w-3 h-3"><Icon.Plus /></span>
-                                  Tag community
-                                </button>
-                              ) : null}
-                            </div>
+                            <PostTile
+                              key={p.id}
+                              post={p}
+                              communityLabel={comm?.name}
+                              onCommunityClick={comm ? () => navigate('/c/' + comm.slug) : undefined}
+                              onTagCommunity={isUncategorized && isOwnProfile ? () => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null }) : undefined}
+                            />
                           )
                         })}
                       </div>
