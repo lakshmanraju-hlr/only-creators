@@ -508,7 +508,7 @@ export default function PostCard({ post, onUpdated }: Props) {
           <button
             onClick={toggleLike}
             className={`action-btn${liked ? ' liked' : ''}`}
-            style={{ color: liked ? '#EF4444' : undefined }}
+            style={{ color: liked ? 'var(--color-like, #EF4444)' : undefined }}
             title={liked ? 'Unlike' : 'Like'}
             aria-label={`${liked ? 'Unlike' : 'Like'} post, ${likeCount} likes`}
           >
@@ -744,15 +744,14 @@ export default function PostCard({ post, onUpdated }: Props) {
                         </button>
                         <div className="flex-1 min-w-0">
                           <span
-                            className={`text-[13px] font-bold cursor-pointer hover:underline ${
-                              isPro ? 'text-[#D97706]' : 'text-text-primary'
-                            }`}
+                            className={`text-[13px] font-bold cursor-pointer hover:underline`}
+                            style={isPro ? { color: 'var(--gold-dark, #D97706)' } : undefined}
                             onClick={() => c.profiles?.username && navigate('/profile/' + c.profiles.username)}
                           >
                             {c.profiles?.username}
                           </span>
                           {isPro && (
-                            <span className="ml-1.5 text-[10px] font-bold" style={{ color: '#F59E0B' }}>PRO</span>
+                            <span className="ml-1.5 text-[10px] font-bold" style={{ color: 'var(--gold)' }}>PRO</span>
                           )}
                           <span className="text-[13px] text-text-primary ml-1.5">
                             {c.body.split(' ').map((w: string, i: number) =>
@@ -812,7 +811,7 @@ export default function PostCard({ post, onUpdated }: Props) {
                   onClick={submitComment}
                   disabled={submitting || !commentText.trim()}
                   className="w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-40"
-                  style={{ background: commentText.trim() ? '#18181B' : '#D1D5DB' }}
+                  style={{ background: commentText.trim() ? 'var(--brand)' : 'var(--text-faint)' }}
                 >
                   {submitting
                     ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

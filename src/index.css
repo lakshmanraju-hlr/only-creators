@@ -9,172 +9,54 @@
 
 @layer components {
   .field-input-tw {
-    @apply w-full px-4 text-[15px] bg-surface border border-border rounded-input outline-none transition-colors;
+    @apply w-full px-4 text-[15px] rounded-input outline-none transition-colors;
     height: 48px;
-    color: var(--color-text-primary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
   }
-  .field-input-tw::placeholder { color: var(--color-text-hint); }
-  .field-input-tw:focus { border-color: var(--color-accent); }
+  .field-input-tw::placeholder { color: var(--text-faint); }
+  .field-input-tw:focus { border-color: var(--brand); }
   .field-input-tw:disabled {
-    background: var(--color-surface-elevated);
-    color: var(--color-text-disabled);
+    background: var(--surface-off);
+    color: var(--text-faint);
   }
 }
 
 /* ═══════════════════════════════════════════════
-   ONLY CREATORS — Design System v3
-   Chalk White & Indigo-Black · Gallery-editorial
+   ONLY CREATORS — App Shell & Base Styles
+   Design tokens from public/design_library.css
    ═══════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── Core surfaces ── */
-  --color-background:       #F9F9F7;
-  --color-surface:          #FFFFFF;
-  --color-surface-elevated: #F3F3F0;
+  /* ── Semantic aliases used by Tailwind components ── */
+  --color-like:    #EF4444;
+  --color-error:   #EF4444;
+  --color-success: #10B981;
 
-  /* ── Text ── */
-  --color-text-primary:   #111111;
-  --color-text-secondary: #6B7280;
-  --color-text-disabled:  #D1D5DB;
-  --color-text-inverse:   #FFFFFF;
-  --color-text-hint:      #9CA3AF;
-
-  /* Convenience aliases */
-  --color-bg:     var(--color-background);
-  --color-text:   var(--color-text-primary);
-  --color-text-2: var(--color-text-secondary);
-  --color-text-3: var(--color-text-hint);
-
-  /* ── Accent — all CTAs, active nav, buttons ── */
-  --color-accent:        #18181B;
-  --color-accent-hover:  #3F3F46;
-  --color-accent-subtle: #F4F4F5;
-
-  /* Legacy alias */
-  --color-primary:       var(--color-accent);
-  --color-primary-hover: var(--color-accent-hover);
-
-  /* ── Borders ── */
-  --color-border:        #E8E8E4;
-  --color-border-strong: #D1D1CB;
-
-  /* ── Pro Gold — recognition elements ONLY ── */
-  --color-pro-gradient:      linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #D97706 100%);
-  --color-pro-gradient-text: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-  --color-pro-glow:          0 0 12px rgba(245, 158, 11, 0.45);
-  --color-pro-subtle:        #FEF3C7;
-  --color-pro-border:        #F59E0B;
-  --pro-gold-start: #F59E0B;
-  --pro-gold-mid:   #FCD34D;
-  --pro-gold-end:   #D97706;
-
-  /* Legacy alias */
-  --color-pro:       #F59E0B;
-  --color-pro-light: #FEF3C7;
-
-  /* ── Semantic ── */
-  --color-success:        #10B981;
-  --color-success-subtle: #D1FAE5;
-  --color-error:          #EF4444;
-  --color-error-subtle:   #FEE2E2;
-  --color-warning:        #F59E0B;
-  --color-like:           #EF4444;
-
-  /* ── Overlay ── */
-  --color-overlay:       rgba(0, 0, 0, 0.4);
-  --color-overlay-light: rgba(0, 0, 0, 0.08);
-
-  /* ── Typography ── */
-  --font-sans:    'Manrope', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Manrope', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono:    ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
-
-  /* ── Radii ── */
-  --r-xs:   4px;
-  --r-sm:   8px;
-  --r-sm2:  6px;
-  --r-md:   12px;
-  --r-lg:   16px;
-  --r-full: 9999px;
-
-  /* ── Shadows ── */
-  --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  /* ── Tailwind shadow aliases ── */
+  --shadow-card:  var(--shadow-sm);
   --shadow-sheet: 0 -4px 24px rgba(0,0,0,0.08);
-  --shadow-modal: 0 20px 60px rgba(0,0,0,0.10);
-  --shadow-pro:   0 0 12px rgba(245, 158, 11, 0.45);
-
-  /* ── Transitions ── */
-  --ease:   cubic-bezier(0.16, 1, 0.3, 1);
-  --t-fast: 120ms;
-  --t-med:  200ms;
+  --shadow-modal: var(--shadow-lg);
 
   /* ── Layout ── */
   --sidebar-w: 240px;
   --topbar-h:  64px;
 }
 
-/* ── Design Library Token Bridges ───────────────────────────
- * Maps design_library.css short-name tokens (--bg, --surface,
- * --brand, etc.) to Design System v3 values so both systems
- * work side-by-side without conflict.
- * ─────────────────────────────────────────────────────────── */
-:root {
-  /* The design_library.css :root block defines these; here we
-     override them to align with v3 surface/text tokens. */
-  --bg:            var(--color-background);
-  --surface:       var(--color-surface);
-  --surface-off:   var(--color-surface-elevated);
-  --border:        var(--color-border);
-  --divider:       var(--color-border);
-  --text-primary:  var(--color-text-primary);
-  --text-muted:    var(--color-text-secondary);
-  --text-faint:    var(--color-text-hint);
-  /* Gold tokens align to pro-gold palette */
-  --gold:          var(--pro-gold-start);
-  --gold-mid:      var(--pro-gold-mid);
-  --gold-dark:     var(--pro-gold-end);
-  --gold-text:     #5c3c00;
-  --gold-gradient:      linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #D97706 100%);
-  --gold-text-gradient: linear-gradient(135deg, #c9972a 0%, #775A19 100%);
-  /* Radius aliases */
-  --radius-sm:     var(--r-sm2);
-  --radius-md:     var(--r-md);
-  --radius-lg:     var(--r-lg);
-  --radius-full:   var(--r-full);
-  /* Shadow aliases */
-  --shadow-sm:     var(--shadow-card);
-  --shadow-md:     0 4px 16px rgba(0,0,0,0.10);
-  --shadow-lg:     var(--shadow-modal);
-  /* Motion alias */
-  --transition:    var(--t-med) var(--ease);
-  /* Font alias — ensures design_library classes use Manrope */
-  --font:          'Manrope', 'Inter', ui-sans-serif, system-ui, sans-serif;
-}
-
-[data-theme="dark"] {
-  --bg:           #121212;
-  --surface:      #1c1c1e;
-  --surface-off:  #2c2c2e;
-  --border:       rgba(255,255,255,0.08);
-  --divider:      #3a3a3c;
-  --text-primary: #f5f5f5;
-  --text-muted:   #a1a1aa;
-  --text-faint:   #71717a;
-}
-
 /* ── BASE ── */
 html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
-body { font-family: var(--font-sans); background: var(--color-background); color: var(--color-text-primary); line-height: 1.6; overflow-x: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 input, textarea, select { font-family: inherit; }
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: var(--r-full); }
-::selection { background: var(--color-accent-subtle); }
+::-webkit-scrollbar-thumb { background: var(--divider); border-radius: var(--radius-full); }
+::selection { background: var(--surface-off); }
 
 /* ── APP SHELL ── */
 .app-shell {
@@ -216,29 +98,29 @@ img { display: block; max-width: 100%; }
 
 /* ── APPLE CARD ── */
 .apple-card {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 24px;
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s ease;
 }
-.apple-card:hover { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04); }
+.apple-card:hover { box-shadow: var(--shadow-md); }
 [data-theme="dark"] .apple-card {
-  background: #2c2c2e;
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  background: var(--surface-off);
+  border-color: var(--border);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── FROSTED BAR ── */
 .frosted-bar {
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
-  background: rgba(249, 249, 247, 0.88);
-  border-color: var(--color-border);
+  background: rgba(249, 249, 249, 0.88);
+  border-color: var(--border);
 }
 [data-theme="dark"] .frosted-bar {
-  background: rgba(17, 17, 17, 0.88);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(18, 16, 16, 0.88);
+  border-color: var(--border);
 }
 
 /* ── ANIMATIONS ── */
@@ -248,8 +130,8 @@ img { display: block; max-width: 100%; }
 
 .spinner {
   width: 18px; height: 18px;
-  border: 2px solid var(--color-border-strong);
-  border-top-color: var(--color-accent);
+  border: 2px solid var(--divider);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.65s linear infinite;
 }

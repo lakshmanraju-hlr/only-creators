@@ -901,22 +901,6 @@ export default function FeedPage({ onPost }: Props) {
         </button>
       </div>
 
-      {/* ── Nudge when feed is empty ─────────────────────────── */}
-      {!loading && postCount === 0 && (
-        <div className="flex items-center gap-2 mx-4 my-3 px-3 py-2.5 rounded-[8px] bg-surface-elevated border border-border">
-          <span className="flex w-3.5 h-3.5 shrink-0 text-text-secondary"><Icon.Info /></span>
-          <p className="text-[12.5px] text-text-secondary flex-1">
-            Follow creators and communities to fill your home feed.
-          </p>
-          <button
-            onClick={() => navigate('/explore')}
-            className="text-[12px] font-bold text-text-primary hover:underline shrink-0"
-          >
-            Explore →
-          </button>
-        </div>
-      )}
-
       {/* ── Feed items ──────────────────────────────────────── */}
       {loading ? (
         <div className="flex justify-center py-16">
@@ -924,18 +908,6 @@ export default function FeedPage({ onPost }: Props) {
         </div>
       ) : postCount === 0 ? (
         <>
-          <div className="flex items-center gap-2 mx-4 my-3 px-3 py-2.5 rounded-[8px] bg-surface-elevated border border-border">
-            <span className="flex w-3.5 h-3.5 shrink-0 text-text-secondary"><Icon.Info /></span>
-            <p className="text-[12.5px] text-text-secondary flex-1">
-              Showing sample posts — be the first to share your work!
-            </p>
-            <button
-              onClick={onPost}
-              className="text-[12px] font-bold text-text-primary hover:underline shrink-0"
-            >
-              Post now →
-            </button>
-          </div>
           {DUMMY_FEED_ITEMS.map(item => (
             <PostCard key={item.post.id} post={item.post} onUpdated={() => {}} />
           ))}
