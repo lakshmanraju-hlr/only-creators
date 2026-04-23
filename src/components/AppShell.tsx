@@ -171,75 +171,118 @@ export default function AppShell() {
     <div className="app-shell">
       {/* ── TOPBAR ── */}
       <header
-        className="col-span-full relative flex items-center h-[56px] md:h-[64px] px-4 md:px-6 sticky top-0 z-50"
+        className="col-span-full sticky top-0 z-50"
         style={{
           gridColumn: '1 / -1',
           background: 'rgba(249,249,247,0.95)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-          borderBottom: '1px solid #E8E8E4',
+          borderBottom: '1px solid var(--color-border)',
         }}
       >
-        {/* Logo */}
-        <span
-          className="font-display text-[18px] sm:text-[20px] font-bold tracking-tight select-none cursor-pointer shrink-0"
-          style={{ color: '#1A1A1A' }}
-          onClick={() => navigate('/')}
-        >
-          Only Creators
-        </span>
-
-        {/* Center: Search + Browse Fields — absolutely centered, hidden on mobile */}
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 w-[400px]">
-          <button
-            onClick={() => setShowSearch(true)}
-            className="flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left bg-[#F3F3F0] border border-[#E8E8E4] text-[#9CA3AF] hover:bg-[#EBEBEA]"
+        {/* ── Row 1: Logo + actions ── */}
+        <div className="flex items-center justify-between px-4 md:px-6 relative" style={{ height: 56 }}>
+          {/* Logo */}
+          <span
+            className="font-display text-[17px] font-extrabold tracking-[0.15em] select-none cursor-pointer shrink-0 uppercase"
+            style={{ color: 'var(--brand)' }}
+            onClick={() => navigate('/')}
           >
-            <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-            <span>Search creators or fields...</span>
-          </button>
-          <div className="relative shrink-0">
+            Only Creators
+          </span>
+
+          {/* Desktop center: Search + Browse Fields */}
+          <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 w-[400px]">
             <button
-              onClick={() => setShowFieldsMenu(v => !v)}
-              className="flex items-center gap-2 bg-[#18181B] hover:bg-[#3F3F46] text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
+              onClick={() => setShowSearch(true)}
+              className="flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left"
+              style={{ background: 'var(--color-surface-elevated)', border: '1px solid var(--color-border)', color: 'var(--color-text-hint)' }}
             >
-              <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
-              Browse Fields
+              <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
+              <span>Search creators or fields…</span>
             </button>
-            {showFieldsMenu && (
-              <>
-                <div className="fixed inset-0 z-[48]" onClick={() => setShowFieldsMenu(false)} />
-                <div
-                  className="absolute right-0 top-full mt-2 z-[49] rounded-2xl py-2 w-[300px]"
-                  style={{ background: '#FFFFFF', border: '1px solid #E8E8E4', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-widest px-4 pt-1 pb-2 text-[#9CA3AF]">All Fields</p>
-                  <div className="grid grid-cols-2 gap-0.5 px-2 pb-2">
-                    {ALL_DISCIPLINES.map(d => (
-                      <button
-                        key={d.key}
-                        onClick={() => { navigate('/explore?discipline=' + d.key); setShowFieldsMenu(false) }}
-                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-colors text-[#111111] hover:bg-[#F3F3F0]"
-                      >
-                        <span className="flex w-[15px] h-[15px] shrink-0 text-[#6B7280]">{d.icon}</span>
-                        {d.label}
-                      </button>
-                    ))}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setShowFieldsMenu(v => !v)}
+                className="flex items-center gap-2 text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
+                style={{ background: 'var(--color-accent)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-hover)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)' }}
+              >
+                <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
+                Browse Fields
+              </button>
+              {showFieldsMenu && (
+                <>
+                  <div className="fixed inset-0 z-[48]" onClick={() => setShowFieldsMenu(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-2 z-[49] rounded-2xl py-2 w-[300px]"
+                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-widest px-4 pt-1 pb-2" style={{ color: 'var(--color-text-hint)' }}>All Fields</p>
+                    <div className="grid grid-cols-2 gap-0.5 px-2 pb-2">
+                      {ALL_DISCIPLINES.map(d => (
+                        <button
+                          key={d.key}
+                          onClick={() => { navigate('/explore?discipline=' + d.key); setShowFieldsMenu(false) }}
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-colors"
+                          style={{ color: 'var(--color-text-primary)' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-elevated)' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                        >
+                          <span className="flex w-[15px] h-[15px] shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{d.icon}</span>
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right — mobile: messages + search icons */}
+          <div className="flex items-center gap-0.5 ml-auto">
+            {/* Messages (mobile only) */}
+            <button
+              onClick={() => navigate('/messages')}
+              className="icon-btn md:hidden"
+              aria-label="Messages"
+              style={{ position: 'relative' }}
+            >
+              <span className="flex w-[20px] h-[20px]"><Icon.MessageCircle /></span>
+              {unreadMsgCount > 0 && (
+                <span className="notif-badge">{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>
+              )}
+            </button>
+            {/* Search (mobile only) */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="icon-btn md:hidden"
+              aria-label="Search"
+            >
+              <span className="flex w-[20px] h-[20px]"><Icon.Search /></span>
+            </button>
           </div>
         </div>
 
-        {/* Right — mobile search only */}
-        <div className="flex items-center justify-end gap-1 ml-auto">
-          <button
-            onClick={() => setShowSearch(true)}
-            className="md:hidden w-9 h-9 flex items-center justify-center rounded-full transition-colors text-[#6B7280] hover:text-[#111111] hover:bg-[#F0F0EE]"
-          >
-            <span className="flex w-[18px] h-[18px]"><Icon.Search /></span>
-          </button>
+        {/* ── Row 2: Search bar (mobile only) ── */}
+        <div className="px-4 pb-3 md:hidden">
+          <div className="search-wrap" onClick={() => setShowSearch(true)} style={{ cursor: 'text' }}>
+            <span className="material-symbols-outlined" style={{ pointerEvents: 'none' }}>search</span>
+            <div
+              className="search-input"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'text',
+                userSelect: 'none',
+                color: 'var(--text-faint)',
+              }}
+            >
+              Search creators, fields, communities…
+            </div>
+          </div>
         </div>
       </header>
 
@@ -441,16 +484,8 @@ export default function AppShell() {
         <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} onOpenChat={setChatWithProfile} />
       </div>
 
-      {/* ── BOTTOM NAV (mobile) — 5-tab spec ── */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 flex items-center justify-around z-50 md:hidden"
-        style={{
-          height: 64,
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          background: '#FFFFFF',
-          borderTop: '1px solid #E8E8E4',
-        }}
-      >
+      {/* ── BOTTOM NAV (mobile) ── */}
+      <nav className="bottom-nav md:hidden" role="navigation" aria-label="Main navigation">
         <MobileNavBtn
           icon={<Icon.Feed />}
           label="Home"
@@ -463,29 +498,25 @@ export default function AppShell() {
           active={path.startsWith('/explore')}
           onClick={() => navigate('/explore')}
         />
-        {/* Post — elevated circle */}
-        <button
-          onClick={() => setShowUpload(true)}
-          className="flex items-center justify-center rounded-full transition-all active:scale-95"
-          style={{ width: 52, height: 52, background: '#18181B', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-          aria-label="Create post"
-        >
-          <span className="flex w-6 h-6 text-white"><Icon.Plus /></span>
-        </button>
+        {/* Create — elevated circle */}
+        <div className="nav-create">
+          <button
+            className="create-btn"
+            onClick={() => setShowUpload(true)}
+            aria-label="Create post"
+          >
+            <span className="flex w-6 h-6 text-white"><Icon.Plus /></span>
+          </button>
+        </div>
         {/* Notifications with badge */}
-        <div className="relative">
+        <div style={{ flex: 1, position: 'relative' }}>
           <MobileNavBtn
             icon={<Icon.Bell />}
             label="Activity"
             active={path.startsWith('/notifications')}
             onClick={() => navigate('/notifications')}
+            badge={unreadNotifCount}
           />
-          {unreadNotifCount > 0 && (
-            <span
-              className="absolute top-1 right-2 w-2 h-2 rounded-full bg-[#EF4444]"
-              style={{ border: '2px solid white' }}
-            />
-          )}
         </div>
         <MobileNavBtn
           icon={<Icon.Profile />}
@@ -511,20 +542,31 @@ function MobileNavBtn({
   label,
   active,
   onClick,
+  badge = 0,
 }: {
   icon: React.ReactNode
   label: string
   active: boolean
   onClick: () => void
+  badge?: number
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-0.5 px-3 py-1.5 transition-colors"
-      style={{ color: active ? '#111111' : '#9CA3AF' }}
+      className={`nav-item${active ? ' active' : ''}`}
+      aria-current={active ? 'page' : undefined}
     >
       <span className="flex w-[22px] h-[22px]">{icon}</span>
-      <span className={`text-[11px] ${active ? 'font-bold' : 'font-normal'}`}>{label}</span>
+      <span className="nav-label">{label}</span>
+      {badge > 0 && (
+        <span
+          className="notif-badge"
+          style={{ top: 6, right: 'calc(50% - 18px)' }}
+          aria-label={`${badge} unread`}
+        >
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
     </button>
   )
 }

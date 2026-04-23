@@ -354,11 +354,13 @@ export default function PostCard({ post, onUpdated }: Props) {
         </div>
 
         {/* ··· more */}
-        <div ref={menuRef} className="relative shrink-0">
+        <div ref={menuRef} className="more-wrap shrink-0">
           <button
             onClick={() => setShowMenuSheet(v => !v)}
-            className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors rounded-full"
+            className="icon-btn"
+            style={{ width: 36, height: 36 }}
             title="More options"
+            aria-label="More options"
           >
             <span className="flex w-[18px] h-[18px]"><Icon.MoreHorizontal /></span>
           </button>
@@ -369,65 +371,59 @@ export default function PostCard({ post, onUpdated }: Props) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.92, y: -4 }}
                 transition={{ duration: 0.12 }}
-                className="absolute right-0 top-full mt-1.5 bg-surface border border-border rounded-xl shadow-modal py-1 z-50 min-w-[168px]"
+                className="options-dropdown open"
               >
                 {isOwnPost ? (
                   <>
                     <button
-                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                      className="opt-item"
                       onClick={handlePinPost}
                       disabled={pinning}
                     >
-                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.Pin /></span>
+                      <span className="flex w-[18px] h-[18px] shrink-0 text-text-secondary"><Icon.Pin /></span>
                       {pinning ? '…' : isPinned ? 'Unpin from profile' : 'Pin to profile'}
                     </button>
                     {post.post_type === 'pro' && (
                       <button
-                        className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                        className="opt-item"
                         onClick={() => { setShowMenuSheet(false); setShowCommunityEditor(true) }}
                       >
-                        <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.MapPin /></span>
+                        <span className="flex w-[18px] h-[18px] shrink-0 text-text-secondary"><Icon.MapPin /></span>
                         Edit community
                       </button>
                     )}
-                    <button
-                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
-                      onClick={copyPostLink}
-                    >
-                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.CopyLink /></span>
+                    <button className="opt-item" onClick={copyPostLink}>
+                      <span className="flex w-[18px] h-[18px] shrink-0 text-text-secondary"><Icon.CopyLink /></span>
                       Copy link
                     </button>
-                    <div className="my-1 border-t border-border" />
+                    <div className="opt-divider" />
                     <button
-                      className="w-full px-4 py-2.5 text-left text-[13px] text-error hover:bg-error-subtle flex items-center gap-3 transition-colors"
+                      className="opt-item destructive"
                       onClick={() => { setShowMenuSheet(false); setShowConfirmDelete(true) }}
                     >
-                      <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Trash /></span>
+                      <span className="flex w-[18px] h-[18px] shrink-0"><Icon.Trash /></span>
                       Delete post
                     </button>
                   </>
                 ) : (
                   <>
                     <button
-                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
+                      className="opt-item"
                       onClick={() => { toast.success("Got it. We'll show fewer posts like this."); setShowMenuSheet(false) }}
                     >
-                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.EyeSlash /></span>
+                      <span className="flex w-[18px] h-[18px] shrink-0 text-text-secondary"><Icon.EyeSlash /></span>
                       Not interested
                     </button>
-                    <button
-                      className="w-full px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-surface-elevated flex items-center gap-3 transition-colors"
-                      onClick={copyPostLink}
-                    >
-                      <span className="flex w-3.5 h-3.5 text-text-secondary shrink-0"><Icon.CopyLink /></span>
+                    <button className="opt-item" onClick={copyPostLink}>
+                      <span className="flex w-[18px] h-[18px] shrink-0 text-text-secondary"><Icon.CopyLink /></span>
                       Copy link
                     </button>
-                    <div className="my-1 border-t border-border" />
+                    <div className="opt-divider" />
                     <button
-                      className="w-full px-4 py-2.5 text-left text-[13px] text-error hover:bg-error-subtle flex items-center gap-3 transition-colors"
+                      className="opt-item destructive"
                       onClick={() => { setShowMenuSheet(false); setShowReport(true) }}
                     >
-                      <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Flag /></span>
+                      <span className="flex w-[18px] h-[18px] shrink-0"><Icon.Flag /></span>
                       Report post
                     </button>
                   </>
@@ -506,152 +502,148 @@ export default function PostCard({ post, onUpdated }: Props) {
       )}
 
       {/* ── Action bar ──────────────────────────────────────── */}
-      <div className="flex items-center px-3 pt-2 pb-1 gap-0.5">
-        {/* Like */}
-        <button
-          onClick={toggleLike}
-          className="p-1.5 transition-colors rounded-full hover:bg-surface-elevated"
-          style={{ color: liked ? '#EF4444' : '#6B7280' }}
-          title={liked ? 'Unlike' : 'Like'}
-        >
-          <span className="flex w-[22px] h-[22px]"><Icon.Heart filled={liked} /></span>
-        </button>
-
-        {/* Comment */}
-        <button
-          onClick={loadComments}
-          className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors rounded-full"
-          title="Comment"
-        >
-          <span className="flex w-[22px] h-[22px]"><Icon.MessageCircle /></span>
-        </button>
-
-        {/* Share */}
-        <button
-          onClick={openShare}
-          className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors rounded-full"
-          title="Share"
-        >
-          <span className="flex w-[22px] h-[22px]"><Icon.Share /></span>
-        </button>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Pro Vote — only on pro posts */}
-        {post.post_type === 'pro' && (
-          <div
-            className="relative"
-            onMouseEnter={() => {
-              if (proCount === 0) return
-              upvoterTimerRef.current = setTimeout(async () => {
-                setUpvoterLoading(true); setShowUpvoterTooltip(true)
-                const { data } = await supabase.from('pro_upvotes')
-                  .select('profiles:user_id(id,username,full_name,avatar_url)')
-                  .eq('post_id', post.id).limit(5)
-                setUpvoterPreview((data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[])
-                setUpvoterTotal(proCount); setUpvoterLoading(false)
-              }, 300)
-            }}
-            onMouseLeave={() => {
-              if (upvoterTimerRef.current) clearTimeout(upvoterTimerRef.current)
-              setShowUpvoterTooltip(false)
-            }}
+      <div className="post-actions px-1">
+        {/* Left: Like · Comment · Share */}
+        <div className="actions-left">
+          <button
+            onClick={toggleLike}
+            className={`action-btn${liked ? ' liked' : ''}`}
+            style={{ color: liked ? '#EF4444' : undefined }}
+            title={liked ? 'Unlike' : 'Like'}
+            aria-label={`${liked ? 'Unlike' : 'Like'} post, ${likeCount} likes`}
           >
-            <button
-              onClick={canProUpvote
-                ? toggleProUpvote
-                : () => toast('Only verified creators in the same field can give Pro Votes')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[12px] font-semibold border transition-all ${
-                proUpvoted
-                  ? 'border-transparent text-white'
-                  : canProUpvote
-                  ? 'bg-transparent border-border text-text-secondary hover:border-[#F59E0B] hover:text-[#D97706]'
-                  : 'bg-transparent border-border text-text-disabled cursor-not-allowed'
-              }`}
-              style={proUpvoted ? {
-                background: 'linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #D97706 100%)',
-                filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.35))',
-              } : undefined}
-              title="Pro Vote"
-            >
-              <span className="flex w-3.5 h-3.5"><Icon.Star /></span>
-              <span>{proCount > 0 ? proCount : 'Pro'}</span>
-            </button>
+            <span className="flex w-[20px] h-[20px]"><Icon.Heart filled={liked} /></span>
+            {likeCount > 0 && (
+              <span>{likeCount >= 1000 ? (likeCount / 1000).toFixed(1) + 'k' : likeCount}</span>
+            )}
+          </button>
 
-            {/* Upvoter tooltip */}
-            <AnimatePresence>
-              {showUpvoterTooltip && proCount > 0 && (
-                <motion.div
-                  className="absolute bottom-full right-0 mb-2 w-52 bg-surface rounded-[8px] border border-border shadow-modal py-1.5 z-30"
-                  initial={{ opacity: 0, y: 4, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.97 }}
-                  transition={{ duration: 0.1 }}
-                >
-                  {upvoterLoading ? (
-                    <div className="flex justify-center py-3">
-                      <div className="w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : (
-                    <>
-                      {upvoterPreview.map(u => (
-                        <div key={u.id} className="flex items-center gap-2 px-3 py-1.5">
-                          <div className="w-6 h-6 rounded-full overflow-hidden bg-surface-elevated flex items-center justify-center text-[9px] font-semibold text-text-secondary shrink-0">
-                            {u.avatar_url
-                              ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                              : initials(u.full_name)}
-                          </div>
-                          <span className="text-[12.5px] font-medium text-text-primary truncate">{u.full_name}</span>
-                        </div>
-                      ))}
-                      {proCount > 5 && (
-                        <button
-                          onMouseDown={async e => {
-                            e.preventDefault(); setShowUpvoterTooltip(false); setShowUpvoterDialog(true)
-                            const { data } = await supabase.from('pro_upvotes')
-                              .select('profiles:user_id(id,username,full_name,avatar_url,profession)')
-                              .eq('post_id', post.id)
-                            setAllUpvoters((data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[])
-                          }}
-                          className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary font-medium hover:bg-surface-elevated transition-colors border-t border-border mt-1"
-                        >
-                          View all {proCount} Pro Voters →
-                        </button>
-                      )}
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+          <button
+            onClick={loadComments}
+            className="action-btn"
+            title="Comment"
+            aria-label={`${post.comment_count} comments`}
+          >
+            <span className="flex w-[20px] h-[20px]"><Icon.MessageCircle /></span>
+            {post.comment_count > 0 && <span>{post.comment_count}</span>}
+          </button>
 
-        {/* Bookmark */}
-        <button
-          onClick={toggleBookmark}
-          className="p-1.5 transition-colors rounded-full hover:bg-surface-elevated"
-          style={{ color: bookmarked ? '#18181B' : '#6B7280' }}
-          title={bookmarked ? 'Remove bookmark' : 'Bookmark'}
-        >
-          <span className="flex w-[22px] h-[22px]">{bookmarked ? <Icon.BookmarkFill /> : <Icon.Bookmark />}</span>
-        </button>
-      </div>
-
-      {/* ── Creator metrics ─────────────────────────────────── */}
-      {(proCount > 0 || likeCount > 0) && (
-        <div className="px-4 pt-0.5 pb-1">
-          {post.post_type === 'pro' && proCount > 0 ? (
-            <p className="text-[13px] font-bold text-text-primary">
-              {proCount.toLocaleString()} Pro Vote{proCount !== 1 ? 's' : ''}
-            </p>
-          ) : likeCount > 0 ? (
-            <p className="text-[13px] font-bold text-text-primary">
-              {likeCount.toLocaleString()} like{likeCount !== 1 ? 's' : ''}
-            </p>
-          ) : null}
+          <button
+            onClick={openShare}
+            className="action-btn"
+            title="Share"
+            aria-label="Share post"
+          >
+            <span className="flex w-[20px] h-[20px]"><Icon.Share /></span>
+          </button>
         </div>
-      )}
+
+        {/* Right: Pro Vote + Bookmark */}
+        <div className="flex items-center gap-1">
+          {/* Pro Vote — only on pro posts */}
+          {post.post_type === 'pro' && (
+            <div
+              className="pro-action-wrap"
+              style={{ position: 'relative' }}
+              onMouseEnter={() => {
+                if (proCount === 0) return
+                upvoterTimerRef.current = setTimeout(async () => {
+                  setUpvoterLoading(true); setShowUpvoterTooltip(true)
+                  const { data } = await supabase.from('pro_upvotes')
+                    .select('profiles:user_id(id,username,full_name,avatar_url)')
+                    .eq('post_id', post.id).limit(5)
+                  setUpvoterPreview((data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[])
+                  setUpvoterTotal(proCount); setUpvoterLoading(false)
+                }, 300)
+              }}
+              onMouseLeave={() => {
+                if (upvoterTimerRef.current) clearTimeout(upvoterTimerRef.current)
+                setShowUpvoterTooltip(false)
+              }}
+            >
+              <button
+                onClick={canProUpvote
+                  ? toggleProUpvote
+                  : () => toast('Only verified creators in the same field can give Pro Votes')}
+                className="pro-action-btn"
+                style={proUpvoted ? {
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #D97706 100%)',
+                  borderColor: 'transparent',
+                  filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.35))',
+                } : !canProUpvote ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                title="Pro Vote"
+                aria-label="Pro Vote"
+              >
+                <span className="pro-count" style={proUpvoted ? { background: 'none', WebkitTextFillColor: '#fff', color: '#fff' } : undefined}>
+                  Pro
+                </span>
+                <span className="flex w-3 h-3"><Icon.Star /></span>
+              </button>
+              {proCount > 0 && (
+                <span className="pro-external-count">
+                  {proCount >= 1000 ? (proCount / 1000).toFixed(1) + 'k' : proCount}
+                </span>
+              )}
+
+              {/* Upvoter tooltip */}
+              <AnimatePresence>
+                {showUpvoterTooltip && proCount > 0 && (
+                  <motion.div
+                    className="absolute bottom-full right-0 mb-2 w-52 bg-surface rounded-[8px] border border-border shadow-modal py-1.5 z-30"
+                    initial={{ opacity: 0, y: 4, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                    transition={{ duration: 0.1 }}
+                  >
+                    {upvoterLoading ? (
+                      <div className="flex justify-center py-3">
+                        <div className="w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : (
+                      <>
+                        {upvoterPreview.map(u => (
+                          <div key={u.id} className="flex items-center gap-2 px-3 py-1.5">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-surface-elevated flex items-center justify-center text-[9px] font-semibold text-text-secondary shrink-0">
+                              {u.avatar_url
+                                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                                : initials(u.full_name)}
+                            </div>
+                            <span className="text-[12.5px] font-medium text-text-primary truncate">{u.full_name}</span>
+                          </div>
+                        ))}
+                        {proCount > 5 && (
+                          <button
+                            onMouseDown={async e => {
+                              e.preventDefault(); setShowUpvoterTooltip(false); setShowUpvoterDialog(true)
+                              const { data } = await supabase.from('pro_upvotes')
+                                .select('profiles:user_id(id,username,full_name,avatar_url,profession)')
+                                .eq('post_id', post.id)
+                              setAllUpvoters((data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[])
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary font-medium hover:bg-surface-elevated transition-colors border-t border-border mt-1"
+                          >
+                            View all {proCount} Pro Voters →
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Bookmark */}
+          <button
+            onClick={toggleBookmark}
+            className={`save-btn${bookmarked ? ' saved' : ''}`}
+            title={bookmarked ? 'Remove bookmark' : 'Bookmark'}
+            aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark post'}
+          >
+            <span className="flex w-[20px] h-[20px]">{bookmarked ? <Icon.BookmarkFill /> : <Icon.Bookmark />}</span>
+          </button>
+        </div>
+      </div>
 
       {/* ── Caption (Instagram-style: bold username inline) ─── */}
       {post.caption && post.content_type !== 'audio' && post.content_type !== 'poem' && (
