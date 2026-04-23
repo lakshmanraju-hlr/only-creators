@@ -718,7 +718,7 @@ export default function ProfilePage() {
         <div
           ref={tileRef}
           className="relative aspect-square overflow-hidden cursor-pointer"
-          style={{ background: '#F3F3F0' }}
+          style={{ background: 'var(--surface-off)' }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           onClick={() => setPostLightbox(post)}
@@ -786,14 +786,20 @@ export default function ProfilePage() {
         {communityLabel && onCommunityClick ? (
           <button
             onClick={onCommunityClick}
-            className="text-[11px] text-[#9CA3AF] hover:text-[#6B7280] text-center truncate transition-colors px-1 mt-0.5"
+            className="text-[11px] text-center truncate px-1 mt-0.5"
+            style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
           >
             {communityLabel}
           </button>
         ) : onTagCommunity ? (
           <button
             onClick={onTagCommunity}
-            className="text-[11px] text-[#9CA3AF] hover:text-brand-600 text-center transition-colors px-1 mt-0.5 flex items-center justify-center gap-1"
+            className="text-[11px] text-center px-1 mt-0.5 flex items-center justify-center gap-1"
+              style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
           >
             <span className="flex w-3 h-3"><Icon.Plus /></span>
             Tag community
@@ -806,14 +812,14 @@ export default function ProfilePage() {
   // ── Loading / not found ───────────────────────────────────────────────────
   if (loading) return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
     </div>
   )
 
   if (!profile) return (
-    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-      <span className="flex w-12 h-12 mb-3 text-gray-300"><Icon.Profile /></span>
-      <p className="font-semibold text-gray-500">Creator not found</p>
+    <div className="flex flex-col items-center justify-center py-20" style={{ color: 'var(--text-faint)' }}>
+      <span className="flex w-12 h-12 mb-3"><Icon.Profile /></span>
+      <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>Creator not found</p>
     </div>
   )
 
@@ -832,28 +838,25 @@ export default function ProfilePage() {
   return (
     <div className="min-h-full">
 
-      {/* ── PROFILE HEADER ── */}
-      <div className="px-4 md:px-8 pt-5 md:pt-8 pb-4 md:pb-6">
-        <div className="apple-card p-4 md:p-6 flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
+      {/* ── PROFILE HERO ── */}
+      <section style={{ background: 'var(--surface)', padding: 'var(--space-6) var(--space-5) var(--space-4)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
 
-          {/* Avatar */}
-          <div className="relative shrink-0">
+        {/* Avatar */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+          <div style={{ position: 'relative', width: 96, height: 96 }}>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             <button
-              onClick={() => {
-                if (isOwnProfile && !profile.avatar_url) avatarInputRef.current?.click()
-                else if (profile.avatar_url) setAvatarLightbox(true)
-              }}
-              className="w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 ring-4 ring-white dark:ring-gray-950 shadow-md block"
+              onClick={() => { if (isOwnProfile) avatarInputRef.current?.click(); else if (profile.avatar_url) setAvatarLightbox(true) }}
+              style={{ width: 96, height: 96, borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '3px solid var(--surface)', boxShadow: 'var(--shadow-md)', background: 'var(--surface-off)', display: 'block' }}
             >
               {uploadingAvatar ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="spinner" />
                 </div>
               ) : profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" decoding="async" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-bold text-burgundy-700 dark:text-burgundy-300">
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 700, color: 'var(--brand)' }}>
                   {initials(profile.full_name)}
                 </div>
               )}
@@ -861,321 +864,261 @@ export default function ProfilePage() {
             {isOwnProfile && (
               <button
                 onClick={() => avatarInputRef.current?.click()}
-                title={profile.avatar_url ? 'Change photo' : 'Add photo'}
-                className="absolute bottom-0.5 right-0.5 w-7 h-7 bg-brand-600 rounded-full flex items-center justify-center shadow-md hover:bg-brand-700 transition-colors"
+                style={{ position: 'absolute', bottom: 3, right: 3, width: 28, height: 28, background: 'var(--brand)', color: '#fff', borderRadius: 'var(--radius-full)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(78,11,22,0.35)', border: '2px solid var(--surface)' }}
+                aria-label="Change profile photo"
               >
-                <span className="flex w-3.5 h-3.5 text-white"><Icon.Camera /></span>
+                <span className="flex w-3.5 h-3.5"><Icon.Camera /></span>
               </button>
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0 w-full md:w-auto text-center md:text-left">
-
-            {/* Name + role + actions row */}
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-[20px] md:text-[22px] font-bold text-gray-900 dark:text-white leading-tight">
-                  {profile.full_name}
-                </h1>
-                {(profile.role_title || (profile as any).workplace) && (
-                  <p className="text-gray-500 dark:text-gray-400 text-[13.5px] mt-0.5 font-medium">
-                    {profile.role_title}
-                    {profile.role_title && (profile as any).workplace && ' at '}
-                    {(profile as any).workplace}
-                  </p>
-                )}
-              </div>
-
-              {/* Edit / context-aware action */}
-              <div className="shrink-0 flex items-center gap-2 mx-auto md:mx-0">
-                {isOwnProfile ? (
-                  <button
-                    onClick={() => setShowEditModal(true)}
-                    className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-colors"
-                  >
-                    Edit Profile
-                  </button>
-                ) : socialLoading ? (
-                  <div className="w-32 h-9 rounded-[8px] bg-[#F0F0EE] animate-pulse" />
-                ) : (
-                  <>
-                    {/* State 2: no connection */}
-                    {friendStatus === 'none' && !isFollowing && (
-                      <>
-                        <button
-                          onClick={handleSendFriendRequest}
-                          disabled={socialActing}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95 disabled:opacity-50"
-                          style={{ background: '#1A1A1A' }}
-                        >
-                          Add Friend
-                        </button>
-                        <button
-                          onClick={handleToggleFollow}
-                          disabled={socialActing}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all disabled:opacity-50"
-                        >
-                          Follow
-                        </button>
-                      </>
-                    )}
-                    {/* State 3: pending sent */}
-                    {friendStatus === 'pending_sent' && (
-                      <button
-                        onClick={handleCancelFriendRequest}
-                        disabled={socialActing}
-                        className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F8F8F6] transition-all disabled:opacity-50"
-                      >
-                        Request Sent
-                      </button>
-                    )}
-                    {/* State 4: pending received */}
-                    {friendStatus === 'pending_received' && (
-                      <>
-                        <button
-                          onClick={handleAcceptFriend}
-                          disabled={socialActing}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
-                          style={{ background: '#10B981' }}
-                        >
-                          <span className="flex w-4 h-4"><Icon.Check /></span>
-                          Accept
-                        </button>
-                        <button
-                          onClick={handleDeclineFriendHeader}
-                          disabled={socialActing}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all disabled:opacity-50 flex items-center gap-1.5"
-                        >
-                          <span className="flex w-4 h-4"><Icon.X /></span>
-                          Decline
-                        </button>
-                      </>
-                    )}
-                    {/* State 5: friends */}
-                    {friendStatus === 'friends' && (
-                      <>
-                        <button
-                          onClick={() => navigate('/messages?with=' + profile!.id)}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95"
-                          style={{ background: '#1A1A1A' }}
-                        >
-                          Message
-                        </button>
-                        <button
-                          onClick={() => setShowFriendSheet(true)}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all"
-                        >
-                          Friends ✓
-                        </button>
-                      </>
-                    )}
-                    {/* State 6: following only */}
-                    {friendStatus === 'none' && isFollowing && (
-                      <>
-                        <button
-                          onClick={handleSendFriendRequest}
-                          disabled={socialActing}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] text-white transition-all active:scale-95 disabled:opacity-50"
-                          style={{ background: '#1A1A1A' }}
-                        >
-                          Add Friend
-                        </button>
-                        <button
-                          onClick={() => setShowUnfollowConfirm(true)}
-                          className="h-9 px-5 text-[15px] font-semibold rounded-[8px] border border-[#E5E7EB] text-[#1A1A1A] hover:bg-[#F8F8F6] transition-all"
-                        >
-                          Following ✓
-                        </button>
-                      </>
-                    )}
-
-                    {/* 3-dot menu button */}
-                    <button
-                      onClick={() => setShowProfile3Dot(true)}
-                      className="h-9 w-9 flex items-center justify-center rounded-[8px] border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F8F8F6] transition-colors"
-                    >
-                      <span className="flex w-5 h-5"><Icon.MoreHorizontal /></span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Bio */}
-            {profile.bio && (
-              <div className="mt-2.5">
-                <p className="text-gray-600 dark:text-gray-300 text-[13.5px] leading-relaxed max-w-sm mx-auto md:mx-0">
-                  {bioTruncated}
-                  {profile.bio.length > BIO_LIMIT && !bioExpanded && (
-                    <>
-                      {'… '}
-                      <button
-                        onClick={() => setBioExpanded(true)}
-                        className="text-brand-600 dark:text-brand-400 font-medium hover:underline text-[13px]"
-                      >
-                        more
-                      </button>
-                    </>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* Location + website */}
-            <div className="flex items-center gap-4 mt-2 flex-wrap justify-center md:justify-start">
-              {profileLocation && (
-                <span className="flex items-center gap-1.5 text-[12.5px] text-gray-400 dark:text-gray-500">
-                  <span className="flex w-3.5 h-3.5"><Icon.MapPin /></span>
-                  {profileLocation}
-                </span>
-              )}
-              {profile.website && (
-                <a
-                  href={profile.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 text-[12.5px] text-brand-600 dark:text-brand-400 hover:underline"
-                >
-                  <span className="flex w-3.5 h-3.5"><Icon.Globe /></span>
-                  {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                </a>
-              )}
-            </div>
-
-            {/* Stats: friends + followers */}
-            <div className="flex items-center gap-8 mt-4 justify-center md:justify-start">
-              <button
-                onClick={() => openListModal('friends')}
-                className="text-left group"
-              >
-                <div className="text-[20px] font-bold text-gray-900 dark:text-white leading-tight group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                  {Number(profile.friend_count ?? 0).toLocaleString()}
-                </div>
-                <div className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-0.5">Friends</div>
-              </button>
-              <button
-                onClick={() => openListModal('followers')}
-                className="text-left group"
-              >
-                <div className="text-[20px] font-bold text-gray-900 dark:text-white leading-tight group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                  {Number(profile.follower_count ?? 0).toLocaleString()}
-                </div>
-                <div className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-0.5">Followers</div>
-              </button>
-            </div>
-
-            {/* Auto-derived field summary — tappable pills that jump to Portfolio tab filtered to that field */}
-            {portfolioFieldKeys.length > 0 && (
-              <div className="flex items-center gap-1.5 mt-3 flex-wrap justify-center md:justify-start">
-                {portfolioFieldKeys.map(disc => {
-                  const meta = DISCIPLINE_MAP[disc]
-                  const isActive = portfolioFieldFilter === disc && activeTab === 'portfolio'
-                  return (
-                    <button
-                      key={disc}
-                      onClick={() => {
-                        setActiveTab('portfolio')
-                        setPortfolioFieldFilter(prev => (prev === disc && activeTab === 'portfolio') ? null : disc)
-                      }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium transition-colors"
-                      style={{
-                        background: isActive ? '#18181B' : '#F3F3F0',
-                        color: isActive ? '#FFFFFF' : '#6B7280',
-                        border: '1px solid',
-                        borderColor: isActive ? '#18181B' : '#E8E8E4',
-                      }}
-                    >
-                      {meta && <span className="flex w-3 h-3 shrink-0"><meta.IconComp /></span>}
-                      {meta?.label ?? disc}
-                    </button>
-                  )
-                })}
-              </div>
             )}
           </div>
         </div>
-      </div>
+
+        {/* Name */}
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em', marginBottom: 2, color: 'var(--text-primary)' }}>
+          {profile.full_name}
+        </div>
+
+        {/* Title / Workplace */}
+        {(profile.role_title || (profile as any).workplace) && (
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 'var(--space-2)' }}>
+            {profile.role_title}{profile.role_title && (profile as any).workplace && ' at '}{(profile as any).workplace}
+          </div>
+        )}
+
+        {/* Bio */}
+        {profile.bio && (
+          <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 'var(--space-2)', maxWidth: 280 }}>
+            {bioTruncated}
+            {profile.bio.length > BIO_LIMIT && !bioExpanded && (
+              <>{' '}<button onClick={() => setBioExpanded(true)} style={{ color: 'var(--brand)', fontWeight: 600 }}>more</button></>
+            )}
+          </div>
+        )}
+
+        {/* Location */}
+        {profileLocation && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-faint)', marginBottom: 'var(--space-4)' }}>
+            <span className="flex w-3.5 h-3.5 shrink-0"><Icon.MapPin /></span>
+            {profileLocation}
+          </div>
+        )}
+
+        {/* Stats */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', marginBottom: 'var(--space-4)' }}>
+          <button onClick={() => openListModal('friends')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{Number(profile.friend_count ?? 0).toLocaleString()}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Friends</span>
+          </button>
+          <button onClick={() => openListModal('followers')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{Number(profile.follower_count ?? 0).toLocaleString()}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Followers</span>
+          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{posts.length}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Posts</span>
+          </div>
+        </div>
+
+        {/* Edit / social action buttons */}
+        {isOwnProfile ? (
+          <button
+            onClick={() => setShowEditModal(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(78,11,22,0.25)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          >
+            Edit Profile
+          </button>
+        ) : socialLoading ? (
+          <div style={{ width: 120, height: 36, borderRadius: 'var(--radius-full)', background: 'var(--surface-off)' }} className="animate-pulse" />
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {friendStatus === 'none' && !isFollowing && (
+              <>
+                <button onClick={handleSendFriendRequest} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
+                  Add Friend
+                </button>
+                <button onClick={handleToggleFollow} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', opacity: socialActing ? 0.5 : 1 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                >
+                  Follow
+                </button>
+              </>
+            )}
+            {friendStatus === 'pending_sent' && (
+              <button onClick={handleCancelFriendRequest} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', opacity: socialActing ? 0.5 : 1 }}>
+                Request Sent
+              </button>
+            )}
+            {friendStatus === 'pending_received' && (
+              <>
+                <button onClick={handleAcceptFriend} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: socialActing ? 0.5 : 1 }}>
+                  <span className="flex w-4 h-4"><Icon.Check /></span> Accept
+                </button>
+                <button onClick={handleDeclineFriendHeader} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: socialActing ? 0.5 : 1 }}>
+                  <span className="flex w-4 h-4"><Icon.X /></span> Decline
+                </button>
+              </>
+            )}
+            {friendStatus === 'friends' && (
+              <>
+                <button onClick={() => navigate('/messages?with=' + profile!.id)} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff' }}>
+                  Message
+                </button>
+                <button onClick={() => setShowFriendSheet(true)} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                >
+                  Friends ✓
+                </button>
+              </>
+            )}
+            {friendStatus === 'none' && isFollowing && (
+              <>
+                <button onClick={handleSendFriendRequest} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
+                  Add Friend
+                </button>
+                <button onClick={() => setShowUnfollowConfirm(true)} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                >
+                  Following ✓
+                </button>
+              </>
+            )}
+            <button onClick={() => setShowProfile3Dot(true)} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            >
+              <span className="flex w-5 h-5"><Icon.MoreHorizontal /></span>
+            </button>
+          </div>
+        )}
+
+        {/* Field pills */}
+        {portfolioFieldKeys.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', justifyContent: 'center', marginTop: 'var(--space-4)' }}>
+            {portfolioFieldKeys.map(disc => {
+              const meta = DISCIPLINE_MAP[disc]
+              const isActive = portfolioFieldFilter === disc && activeTab === 'portfolio'
+              return (
+                <button
+                  key={disc}
+                  onClick={() => { setActiveTab('portfolio'); setPortfolioFieldFilter(prev => prev === disc && activeTab === 'portfolio' ? null : disc) }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: isActive ? 'var(--brand)' : 'var(--surface-off)', border: `1px solid ${isActive ? 'var(--brand)' : 'var(--border)'}`, borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, color: isActive ? '#fff' : 'var(--text-muted)' }}
+                >
+                  {meta && <span className="flex w-3.5 h-3.5 shrink-0"><meta.IconComp /></span>}
+                  {meta?.label ?? disc}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
       {/* ── TABS ── */}
-      <div className="sticky top-[56px] md:top-0 border-b frosted-bar z-10">
-        <div className="flex px-4 md:px-8">
-          {(isOwnProfile
-            ? (['personal', 'portfolio', 'featured'] as const)
-            : isFriend
-              ? (['all', 'personal', 'portfolio', 'featured'] as const)
-              : (['all', 'portfolio', 'featured'] as const)
-          ).map(t => {
-            const label = t === 'featured' ? 'Featured In' : t.charAt(0).toUpperCase() + t.slice(1)
-            return (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t)}
-                className="flex-1 py-3 text-[14px] font-bold transition-colors relative"
-                style={{ color: activeTab === t ? '#111111' : '#9CA3AF' }}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  {label}
-                  {t === 'featured' && isOwnProfile && pendingFeatures.length > 0 && (
-                    <span
-                      className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white"
-                      style={{ background: '#EF4444' }}
-                    >
-                      {pendingFeatures.length}
-                    </span>
-                  )}
-                </span>
-                {activeTab === t && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
+      <div
+        role="tablist"
+        style={{ display: 'flex', background: 'var(--surface)', borderBottom: '1px solid var(--divider)', position: 'sticky', top: 56, zIndex: 50 }}
+      >
+        {(isOwnProfile
+          ? (['personal', 'portfolio', 'featured'] as const)
+          : isFriend
+            ? (['all', 'personal', 'portfolio', 'featured'] as const)
+            : (['all', 'portfolio', 'featured'] as const)
+        ).map(t => {
+          const label = t === 'featured' ? 'Featured In' : t.charAt(0).toUpperCase() + t.slice(1)
+          const active = activeTab === t
+          return (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(t)}
+              style={{ flex: 1, padding: '13px var(--space-2)', fontSize: 12, fontWeight: 600, color: active ? 'var(--brand)' : 'var(--text-faint)', borderBottom: `2px solid ${active ? 'var(--brand)' : 'transparent'}`, transition: 'color var(--transition), border-color var(--transition)', background: 'none' }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {label}
+                {t === 'featured' && isOwnProfile && pendingFeatures.length > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 16, height: 16, padding: '0 3px', borderRadius: 'var(--radius-full)', fontSize: 9, fontWeight: 800, color: '#fff', background: 'var(--color-error)' }}>
+                    {pendingFeatures.length}
+                  </span>
                 )}
-              </button>
-            )
-          })}
-        </div>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* ── CONTENT ── */}
-      <div className="px-4 md:px-8 py-4 md:py-6">
-
-        {/* View toggle + action buttons */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+      {/* ── PILL SLIDER (portfolio tab only) ── */}
+      {activeTab === 'portfolio' && portfolioFieldKeys.length > 0 && (
+        <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--divider)', padding: 'var(--space-2) 0' }}>
+          <div className="scrollbar-hide" style={{ display: 'flex', gap: 'var(--space-2)', overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '2px var(--space-4) 4px' }}>
+            <button
+              onClick={() => setPortfolioFieldFilter(null)}
+              style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', background: !portfolioFieldFilter ? 'var(--brand)' : 'var(--surface-off)', color: !portfolioFieldFilter ? '#fff' : 'var(--text-muted)', border: `1px solid ${!portfolioFieldFilter ? 'var(--brand)' : 'var(--border)'}` }}
+            >All</button>
+            {portfolioFieldKeys.map(disc => {
+              const meta = DISCIPLINE_MAP[disc]
+              const active = portfolioFieldFilter === disc
+              return (
+                <button key={disc} onClick={() => setPortfolioFieldFilter(active ? null : disc)}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', background: active ? 'var(--brand)' : 'var(--surface-off)', color: active ? '#fff' : 'var(--text-muted)', border: `1px solid ${active ? 'var(--brand)' : 'var(--border)'}` }}
+                >
+                  {meta && <span className="flex w-3.5 h-3.5 shrink-0"><meta.IconComp /></span>}
+                  {meta?.label ?? disc}
+                </button>
+              )
+            })}
             {isOwnProfile && (
-              <button
-                onClick={() => setShowUpload(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-full text-[12.5px] font-medium transition-colors"
+              <button onClick={() => setShowUpload(true)}
+                style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', background: 'transparent', color: 'var(--text-faint)', border: '1px dashed var(--border)' }}
               >
-                <span className="flex w-3 h-3"><Icon.Plus /></span>
-                New post
+                <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Plus /></span>
+                Add field
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1">
+        </div>
+      )}
+
+      {/* ── CONTENT ── */}
+      <div>
+
+        {/* Content toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-3) var(--space-4)', background: 'var(--bg)', borderBottom: '1px solid var(--divider)' }}>
+          {isOwnProfile ? (
             <button
-              onClick={() => setGridView(true)}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                gridView ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
-              }`}
+              onClick={() => setShowUpload(true)}
+              style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--brand)', color: '#fff', borderRadius: 'var(--radius-full)', boxShadow: '0 2px 8px rgba(78,11,22,0.25)' }}
+              aria-label="Create new post"
             >
-              <span className="flex w-4 h-4"><Icon.GridView /></span>
+              <span className="flex w-[22px] h-[22px]"><Icon.Plus /></span>
             </button>
-            <button
-              onClick={() => setGridView(false)}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                !gridView ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
-              }`}
+          ) : <div />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => setGridView(true)}
+              style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', background: gridView ? 'var(--surface-off)' : 'transparent', color: gridView ? 'var(--brand)' : 'var(--text-faint)' }}
+              aria-label="Grid view"
             >
-              <span className="flex w-4 h-4"><Icon.ListView /></span>
+              <span className="flex w-5 h-5"><Icon.GridView /></span>
+            </button>
+            <button onClick={() => setGridView(false)}
+              style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', background: !gridView ? 'var(--surface-off)' : 'transparent', color: !gridView ? 'var(--brand)' : 'var(--text-faint)' }}
+              aria-label="List view"
+            >
+              <span className="flex w-5 h-5"><Icon.ListView /></span>
             </button>
           </div>
         </div>
 
         {/* Private profile */}
         {isPrivate && (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-            <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Lock /></span>
-            <p className="font-semibold text-gray-600 dark:text-gray-400">This profile is private</p>
-            <p className="text-sm mt-1 text-gray-400">Only friends can see this creator's posts.</p>
+          <div className="flex flex-col items-center justify-center py-16">
+            <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Lock /></span>
+            <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>This profile is private</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-faint)' }}>Only friends can see this creator's posts.</p>
           </div>
         )}
 
@@ -1183,17 +1126,17 @@ export default function ProfilePage() {
         {!isPrivate && activeTab === 'all' && (() => {
           const { pinnedSection, recentPro, topPro, featuredSection } = allTabContent
           const hasContent = pinnedSection.length + recentPro.length + topPro.length + featuredSection.length > 0
-          const GRID = 'grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1 lg:grid-cols-3'
+          const GRID = 'grid grid-cols-2 gap-[2px]'
 
           if (!hasContent) return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Camera /></span>
-              <p className="font-semibold text-gray-600 dark:text-gray-400">No posts yet</p>
+              <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Camera /></span>
+              <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>No posts yet</p>
               {isOwnProfile && (
                 <button
                   onClick={() => setShowUpload(true)}
                   className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
-                  style={{ background: '#18181B' }}
+                  style={{ background: 'var(--brand)' }}
                 >
                   Create your first post
                 </button>
@@ -1213,7 +1156,7 @@ export default function ProfilePage() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="text-[13px]">📌</span>
-                    <span className="text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider">Pinned</span>
+                    <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Pinned</span>
                   </div>
                   <div className={GRID}>
                     {pinnedSection.map(p => (
@@ -1231,7 +1174,7 @@ export default function ProfilePage() {
               {/* Recent Pro */}
               {recentPro.length > 0 && (
                 <div>
-                  <span className="block text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-2">Recent</span>
+                  <span className="block text-[12px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>Recent</span>
                   <div className={GRID}>
                     {recentPro.map(p => (
                       <PostTile
@@ -1248,7 +1191,7 @@ export default function ProfilePage() {
               {/* Top Performing */}
               {topPro.length > 0 && (
                 <div>
-                  <span className="block text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-2">Top Performing</span>
+                  <span className="block text-[12px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>Top Performing</span>
                   <div className={GRID}>
                     {topPro.map(p => (
                       <PostTile
@@ -1264,7 +1207,7 @@ export default function ProfilePage() {
               {/* Featured In — up to 4 */}
               {featuredSection.length > 0 && (
                 <div>
-                  <span className="block text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-3">Featured In</span>
+                  <span className="block text-[12px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-faint)' }}>Featured In</span>
                   <div className="space-y-0 max-w-[700px] mx-auto">
                     {featuredSection.map(feat => {
                       const post = feat.post as unknown as Post | undefined
@@ -1273,10 +1216,11 @@ export default function ProfilePage() {
                       return (
                         <div key={feat.post_id} className="relative">
                           <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
-                            <span className="text-[11.5px] text-[#9CA3AF]">by</span>
+                            <span className="text-[11.5px]" style={{ color: 'var(--text-faint)' }}>by</span>
                             <button
                               onClick={() => navigate('/profile/' + poster?.username)}
-                              className="text-[11.5px] font-semibold text-[#111111] hover:underline"
+                              className="text-[11.5px] font-semibold hover:underline"
+                              style={{ color: 'var(--text-primary)' }}
                             >
                               @{poster?.username}
                             </button>
@@ -1297,15 +1241,15 @@ export default function ProfilePage() {
           <>
             {personalPosts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.Camera /></span>
-                <p className="font-semibold text-gray-600 dark:text-gray-400">
+                <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Camera /></span>
+                <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>
                   {isOwnProfile ? 'Post something for your friends' : 'No personal posts yet'}
                 </p>
                 {isOwnProfile && (
                   <button
                     onClick={() => setShowUpload(true)}
                     className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
-                    style={{ background: '#18181B' }}
+                    style={{ background: 'var(--brand)' }}
                   >
                     New Post
                   </button>
@@ -1313,7 +1257,7 @@ export default function ProfilePage() {
               </div>
             ) : gridView ? (
               <motion.div
-                className="grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1 lg:grid-cols-3"
+                className="grid grid-cols-2 gap-[2px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
@@ -1339,7 +1283,7 @@ export default function ProfilePage() {
                   return (
                     <div key={p.id} className="relative">
                       {isPinned && (
-                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 rounded-full text-[11px] font-semibold">
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: 'var(--surface-off)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                           <span>📌</span>
                           <span>Pinned</span>
                         </div>
@@ -1371,13 +1315,13 @@ export default function ProfilePage() {
 
           if (totalProPosts === 0) return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <span className="flex w-10 h-10 mb-3 text-[#D1D5DB]"><Icon.Star /></span>
-              <p className="font-semibold text-[#6B7280]">No Pro Posts yet</p>
+              <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Star /></span>
+              <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>No Pro Posts yet</p>
               {isOwnProfile && (
                 <button
                   onClick={() => setShowUpload(true)}
                   className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
-                  style={{ background: '#18181B' }}
+                  style={{ background: 'var(--brand)' }}
                 >
                   Create a Pro Post
                 </button>
@@ -1392,44 +1336,6 @@ export default function ProfilePage() {
               transition={{ duration: 0.2 }}
               className="space-y-8"
             >
-              {/* Field filter bar — shown when portfolio has >1 field */}
-              {portfolioFieldKeys.length > 1 && (
-                <div className="flex items-center gap-2 flex-wrap -mb-2">
-                  <button
-                    onClick={() => setPortfolioFieldFilter(null)}
-                    className="px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors"
-                    style={{
-                      background: !portfolioFieldFilter ? '#18181B' : '#F3F3F0',
-                      color: !portfolioFieldFilter ? '#FFFFFF' : '#6B7280',
-                      border: '1px solid',
-                      borderColor: !portfolioFieldFilter ? '#18181B' : '#E8E8E4',
-                    }}
-                  >
-                    All fields
-                  </button>
-                  {portfolioFieldKeys.map(disc => {
-                    const meta = DISCIPLINE_MAP[disc]
-                    const active = portfolioFieldFilter === disc
-                    return (
-                      <button
-                        key={disc}
-                        onClick={() => setPortfolioFieldFilter(active ? null : disc)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors"
-                        style={{
-                          background: active ? '#18181B' : '#F3F3F0',
-                          color: active ? '#FFFFFF' : '#6B7280',
-                          border: '1px solid',
-                          borderColor: active ? '#18181B' : '#E8E8E4',
-                        }}
-                      >
-                        {meta && <span className="flex w-3 h-3 shrink-0"><meta.IconComp /></span>}
-                        {meta?.label ?? disc}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
               {groupEntries.map(([discipline, { posts: dPosts, communityForPost }]) => {
                 const disc = discipline === '__uncategorized__' ? null : DISCIPLINE_MAP[discipline]
                 const fieldLabel = disc?.label ?? (discipline === '__uncategorized__' ? 'Uncategorized' : discipline)
@@ -1440,30 +1346,33 @@ export default function ProfilePage() {
                   <div key={discipline}>
                     {/* Field section header */}
                     <div className="flex items-center gap-2 mb-3">
-                      {disc && <span className="flex w-4 h-4 text-[#6B7280]"><disc.IconComp /></span>}
+                      {disc && <span className="flex w-4 h-4" style={{ color: 'var(--text-muted)' }}><disc.IconComp /></span>}
                       {discipline !== '__uncategorized__' ? (
                         <button
                           onClick={() => navigate('/f/' + discipline)}
-                          className="text-[15px] font-bold text-[#111111] hover:text-[#3F3F46] transition-colors flex items-center gap-1"
+                          className="text-[15px] font-bold flex items-center gap-1"
+                          style={{ color: 'var(--text-primary)', transition: 'color var(--transition)' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
                         >
                           {fieldLabel}
-                          <span className="flex w-3.5 h-3.5 text-[#9CA3AF]"><Icon.ChevronRight /></span>
+                          <span className="flex w-3.5 h-3.5" style={{ color: 'var(--text-faint)' }}><Icon.ChevronRight /></span>
                         </button>
                       ) : (
-                        <h3 className="text-[15px] font-bold text-[#9CA3AF]">{fieldLabel}</h3>
+                        <h3 className="text-[15px] font-bold" style={{ color: 'var(--text-faint)' }}>{fieldLabel}</h3>
                       )}
-                      <span className="text-[12px] text-[#9CA3AF] ml-0.5">{dPosts.length}</span>
+                      <span className="text-[12px] ml-0.5" style={{ color: 'var(--text-faint)' }}>{dPosts.length}</span>
 
                       {/* "Add to community" prompt for uncategorized (owner only) */}
                       {discipline === '__uncategorized__' && isOwnProfile && (
-                        <span className="ml-2 text-[11.5px] text-[#9CA3AF] italic">
+                        <span className="ml-2 text-[11.5px] italic" style={{ color: 'var(--text-faint)' }}>
                           Tap a post below to tag it
                         </span>
                       )}
                     </div>
 
                     {gridView ? (
-                      <div className="grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1 lg:grid-cols-3">
+                      <div className="grid grid-cols-2 gap-[2px]">
                         {dPosts.map(p => {
                           const comm = communityForPost[p.id]
                           const isUncategorized = discipline === '__uncategorized__'
@@ -1489,7 +1398,10 @@ export default function ProfilePage() {
                                 <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
                                   <button
                                     onClick={() => navigate('/c/' + comm.slug)}
-                                    className="text-[11.5px] font-medium text-[#18181B] hover:text-[#6B7280] transition-colors hover:underline"
+                                    className="text-[11.5px] font-medium hover:underline"
+                                    style={{ color: 'var(--text-primary)', transition: 'color var(--transition)' }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
                                   >
                                     {comm.name}
                                   </button>
@@ -1498,7 +1410,10 @@ export default function ProfilePage() {
                                 <div className="flex items-center gap-1 pt-2 pb-1 px-1">
                                   <button
                                     onClick={() => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null })}
-                                    className="text-[11.5px] text-[#9CA3AF] hover:text-brand-600 dark:hover:text-brand-400 transition-colors flex items-center gap-1"
+                                    className="text-[11.5px] flex items-center gap-1"
+                                      style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
+                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)' }}
+                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
                                   >
                                     <span className="flex w-3 h-3"><Icon.Plus /></span>
                                     Tag community
@@ -1542,7 +1457,7 @@ export default function ProfilePage() {
               {/* Pending feature requests — own profile only */}
               {isOwnProfile && pendingFeatures.length > 0 && (
                 <div>
-                  <h3 className="text-[13px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-3">
+                  <h3 className="text-[13px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-faint)' }}>
                     Pending Requests ({pendingFeatures.length})
                   </h3>
                   <div className="space-y-3">
@@ -1554,17 +1469,17 @@ export default function ProfilePage() {
                         <div
                           key={feat.post_id}
                           className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                          style={{ background: '#FFFBEB', border: '1px solid #FEF3C7' }}
+                          style={{ background: 'var(--surface-off)', border: '1px solid var(--border)' }}
                         >
                           {poster?.avatar_url ? (
                             <img src={poster.avatar_url} className="w-9 h-9 rounded-full object-cover shrink-0" loading="lazy" alt="" />
                           ) : (
-                            <div className="w-9 h-9 rounded-full bg-[#F3F3F0] flex items-center justify-center text-[12px] font-bold text-[#6B7280] shrink-0">
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0" style={{ background: 'var(--surface-off)', color: 'var(--text-muted)' }}>
                               {poster?.full_name?.[0]?.toUpperCase() ?? '?'}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13.5px] font-semibold text-[#111111] truncate">
+                            <p className="text-[13.5px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                               <button
                                 onClick={() => navigate('/profile/' + poster?.username)}
                                 className="hover:underline"
@@ -1574,21 +1489,23 @@ export default function ProfilePage() {
                               {' '}wants to feature you in a post
                             </p>
                             {post.caption && (
-                              <p className="text-[12px] text-[#6B7280] truncate mt-0.5">"{post.caption}"</p>
+                              <p className="text-[12px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>"{post.caption}"</p>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <button
                               onClick={() => handleAcceptFeature(feat.post_id)}
                               className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold text-white transition-colors"
-                              style={{ background: '#18181B' }}
+                              style={{ background: 'var(--brand)' }}
                             >
                               Accept
                             </button>
                             <button
                               onClick={() => handleDeclineFeature(feat.post_id)}
-                              className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold text-[#6B7280] transition-colors hover:bg-[#F3F3F0]"
-                              style={{ border: '1px solid #E8E8E4' }}
+                              className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold transition-colors"
+                              style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                             >
                               Decline
                             </button>
@@ -1603,9 +1520,9 @@ export default function ProfilePage() {
               {/* Empty state */}
               {featuredIn.length === 0 && pendingFeatures.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <span className="flex w-10 h-10 mb-3 text-[#D1D5DB]"><Icon.Star /></span>
-                  <p className="font-semibold text-[#6B7280]">Posts where you're featured will appear here</p>
-                  <p className="text-[13px] text-[#9CA3AF] mt-1">
+                  <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Star /></span>
+                  <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>Posts where you're featured will appear here</p>
+                  <p className="text-[13px] mt-1" style={{ color: 'var(--text-faint)' }}>
                     When another creator tags {isOwnProfile ? 'you' : profile?.full_name} as a featured creator and you accept, it'll show up here.
                   </p>
                 </div>
@@ -1620,9 +1537,9 @@ export default function ProfilePage() {
                   <div key={discipline}>
                     {/* Field section header */}
                     <div className="flex items-center gap-2 mb-3">
-                      {disc && <span className="flex w-4 h-4 text-[#6B7280]"><disc.IconComp /></span>}
-                      <h3 className="text-[15px] font-bold text-[#111111]">{fieldLabel}</h3>
-                      <span className="text-[12px] text-[#9CA3AF] ml-0.5">{feats.length}</span>
+                      {disc && <span className="flex w-4 h-4" style={{ color: 'var(--text-muted)' }}><disc.IconComp /></span>}
+                      <h3 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>{fieldLabel}</h3>
+                      <span className="text-[12px] ml-0.5" style={{ color: 'var(--text-faint)' }}>{feats.length}</span>
                     </div>
 
                     <div className="space-y-0">
@@ -1635,10 +1552,13 @@ export default function ProfilePage() {
                             {/* By @username credit + remove button for owner */}
                             <div className="flex items-center justify-between pt-2 pb-1 px-1">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11.5px] text-[#9CA3AF]">by</span>
+                                <span className="text-[11.5px]" style={{ color: 'var(--text-faint)' }}>by</span>
                                 <button
                                   onClick={() => navigate('/profile/' + poster?.username)}
-                                  className="text-[11.5px] font-semibold text-[#111111] hover:text-[#6B7280] transition-colors hover:underline"
+                                  className="text-[11.5px] font-semibold hover:underline"
+                                  style={{ color: 'var(--text-primary)', transition: 'color var(--transition)' }}
+                                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+                                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
                                 >
                                   @{poster?.username}
                                 </button>
@@ -1646,7 +1566,10 @@ export default function ProfilePage() {
                               {isOwnProfile && (
                                 <button
                                   onClick={() => handleRemoveFeature(feat.post_id)}
-                                  className="text-[11px] text-[#9CA3AF] hover:text-red-500 transition-colors font-medium"
+                                  className="text-[11px] font-medium"
+                                  style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
+                                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#EF4444' }}
+                                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
                                 >
                                   Remove
                                 </button>
@@ -1685,25 +1608,28 @@ export default function ProfilePage() {
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}
             >
-              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white capitalize">
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0" style={{ borderBottom: '1px solid var(--divider)' }}>
+                <h3 className="text-[16px] font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
                   {listModal === 'friends' ? 'Friends' : 'Followers'}
                 </h3>
                 <button
                   onClick={() => setListModal(null)}
-                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                 >
-                  <span className="flex w-4 h-4 text-gray-500"><Icon.X /></span>
+                  <span className="flex w-4 h-4"><Icon.X /></span>
                 </button>
               </div>
               <div className="overflow-y-auto flex-1 px-3 py-2">
                 {listLoading ? (
                   <div className="flex items-center justify-center py-10">
-                    <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
                   </div>
                 ) : listUsers.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                    <span className="flex w-8 h-8 mb-2 text-gray-300"><Icon.Users /></span>
+                  <div className="flex flex-col items-center justify-center py-10" style={{ color: 'var(--text-faint)' }}>
+                    <span className="flex w-8 h-8 mb-2"><Icon.Users /></span>
                     <p className="text-sm">No {listModal === 'friends' ? 'friends' : 'followers'} yet</p>
                   </div>
                 ) : (
@@ -1711,17 +1637,19 @@ export default function ProfilePage() {
                     <button
                       key={u.id}
                       onClick={() => { setListModal(null); navigate('/profile/' + u.username) }}
-                      className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors"
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                     >
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 shrink-0">
+                      <div className="w-10 h-10 rounded-full overflow-hidden shrink-0" style={{ background: 'var(--surface-off)' }}>
                         {u.avatar_url
                           ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                          : <div className="w-full h-full flex items-center justify-center text-sm font-bold text-burgundy-700 dark:text-burgundy-300">{initials(u.full_name)}</div>
+                          : <div className="w-full h-full flex items-center justify-center text-sm font-bold" style={{ color: 'var(--brand)' }}>{initials(u.full_name)}</div>
                         }
                       </div>
                       <div className="text-left min-w-0">
-                        <p className="text-[14px] font-semibold text-gray-900 dark:text-white truncate">{u.full_name}</p>
-                        <p className="text-[12px] text-gray-400 dark:text-gray-500 truncate">@{u.username}</p>
+                        <p className="text-[14px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{u.full_name}</p>
+                        <p className="text-[12px] truncate" style={{ color: 'var(--text-faint)' }}>@{u.username}</p>
                       </div>
                     </button>
                   ))

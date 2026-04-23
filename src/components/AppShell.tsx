@@ -174,10 +174,10 @@ export default function AppShell() {
         className="col-span-full sticky top-0 z-50"
         style={{
           gridColumn: '1 / -1',
-          background: 'rgba(249,249,247,0.95)',
+          background: 'rgba(249,249,249,0.92)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-          borderBottom: '1px solid var(--color-border)',
+          borderBottom: '1px solid var(--border)',
         }}
       >
         {/* ── Row 1: Logo + actions ── */}
@@ -196,7 +196,7 @@ export default function AppShell() {
             <button
               onClick={() => setShowSearch(true)}
               className="flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left"
-              style={{ background: 'var(--color-surface-elevated)', border: '1px solid var(--color-border)', color: 'var(--color-text-hint)' }}
+              style={{ background: 'var(--surface-off)', border: '1px solid var(--border)', color: 'var(--text-faint)' }}
             >
               <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
               <span>Search creators or fields…</span>
@@ -205,9 +205,9 @@ export default function AppShell() {
               <button
                 onClick={() => setShowFieldsMenu(v => !v)}
                 className="flex items-center gap-2 text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
-                style={{ background: 'var(--color-accent)' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-hover)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)' }}
+                style={{ background: 'var(--brand)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand-muted)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand)' }}
               >
                 <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
                 Browse Fields
@@ -217,20 +217,20 @@ export default function AppShell() {
                   <div className="fixed inset-0 z-[48]" onClick={() => setShowFieldsMenu(false)} />
                   <div
                     className="absolute right-0 top-full mt-2 z-[49] rounded-2xl py-2 w-[300px]"
-                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-widest px-4 pt-1 pb-2" style={{ color: 'var(--color-text-hint)' }}>All Fields</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest px-4 pt-1 pb-2" style={{ color: 'var(--text-faint)' }}>All Fields</p>
                     <div className="grid grid-cols-2 gap-0.5 px-2 pb-2">
                       {ALL_DISCIPLINES.map(d => (
                         <button
                           key={d.key}
                           onClick={() => { navigate('/explore?discipline=' + d.key); setShowFieldsMenu(false) }}
                           className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-colors"
-                          style={{ color: 'var(--color-text-primary)' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-elevated)' }}
+                          style={{ color: 'var(--text-primary)' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
                           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                         >
-                          <span className="flex w-[15px] h-[15px] shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{d.icon}</span>
+                          <span className="flex w-[15px] h-[15px] shrink-0" style={{ color: 'var(--text-muted)' }}>{d.icon}</span>
                           {d.label}
                         </button>
                       ))}
@@ -289,7 +289,7 @@ export default function AppShell() {
       {/* ── LEFT SIDEBAR ── */}
       <aside
         className="app-sidebar flex flex-col overflow-hidden"
-        style={{ gridColumn: '1', gridRow: '2', background: '#FFFFFF', borderRight: '1px solid #E8E8E4' }}
+        style={{ gridColumn: '1', gridRow: '2', background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
       >
         {/* Main nav */}
         <div className="px-3 pt-3 pb-1">
@@ -302,8 +302,8 @@ export default function AppShell() {
                   <button
                     onClick={() => setShowSearch(true)}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[15px] mb-0.5 transition-all text-left"
-                    style={{ color: '#6B7280', fontWeight: 500 }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
+                    style={{ color: 'var(--text-muted)', fontWeight: 500 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                   >
                     <span className="flex w-[19px] h-[19px] shrink-0"><Icon.Search /></span>
@@ -314,11 +314,11 @@ export default function AppShell() {
                   onClick={() => navigate(item.path)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[15px] mb-0.5 transition-all text-left"
                   style={{
-                    background: active ? '#F4F4F5' : 'transparent',
-                    color: active ? '#18181B' : '#6B7280',
+                    background: active ? 'var(--surface-off)' : 'transparent',
+                    color: active ? 'var(--brand)' : 'var(--text-muted)',
                     fontWeight: active ? 600 : 500,
                   }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
                   onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                 >
                   <span className="flex w-[19px] h-[19px] shrink-0">{item.icon}</span>
@@ -326,7 +326,7 @@ export default function AppShell() {
                   {item.badge > 0 && (
                     <span
                       className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center text-white"
-                      style={{ background: '#18181B' }}
+                      style={{ background: 'var(--brand)' }}
                     >
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
@@ -342,22 +342,22 @@ export default function AppShell() {
           <button
             onClick={() => setShowUpload(true)}
             className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-[8px] text-[15px] font-semibold transition-all"
-            style={{ background: '#18181B', color: '#FFFFFF' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#3F3F46' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#18181B' }}
+            style={{ background: 'var(--brand)', color: '#FFFFFF' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand-muted)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand)' }}
           >
             <span className="flex w-[18px] h-[18px] shrink-0"><Icon.Plus /></span>
             Create
           </button>
         </div>
 
-        <div className="h-px mx-3 bg-[#E8E8E4]" />
+        <div className="h-px mx-3" style={{ background: 'var(--border)' }} />
 
         {/* Your Communities */}
         <div className="flex-1 overflow-y-auto px-3 min-h-0 py-2">
           {proDiscs.length > 0 && (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-widest px-3 pt-1 pb-2 text-[#9CA3AF]">Your Communities</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest px-3 pt-1 pb-2" style={{ color: 'var(--text-faint)' }}>Your Communities</p>
               {proDiscs.map(d => {
                 const active = path.includes('discipline=' + d.key)
                 const dotColor = DISC_COLORS[d.key] ?? '#9CA3AF'
@@ -367,11 +367,11 @@ export default function AppShell() {
                     onClick={() => navigate('/explore?discipline=' + d.key + '&view=posts')}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[14.5px] mb-0.5 transition-all text-left"
                     style={{
-                      background: active ? '#F4F4F5' : 'transparent',
-                      color: active ? '#18181B' : '#6B7280',
+                      background: active ? 'var(--surface-off)' : 'transparent',
+                      color: active ? 'var(--brand)' : 'var(--text-muted)',
                       fontWeight: active ? 600 : 500,
                     }}
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F3F3F0' }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
                     onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                   >
                     <span
@@ -386,7 +386,7 @@ export default function AppShell() {
           )}
         </div>
 
-        <div className="h-px mx-3 bg-[#E8E8E4]" />
+        <div className="h-px mx-3" style={{ background: 'var(--border)' }} />
 
         {/* Profile card at bottom */}
         <div className="relative px-3 py-3">
@@ -396,20 +396,22 @@ export default function AppShell() {
               <div className="fixed inset-0 z-[48]" onClick={() => setShowProfileMenu(false)} />
               <div
                 className="absolute left-3 right-3 bottom-full mb-2 z-[49] rounded-[12px] overflow-hidden py-1.5"
-                style={{ background: '#FFFFFF', border: '1px solid #E8E8E4', boxShadow: '0 -8px 32px rgba(0,0,0,0.10)' }}
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 -8px 32px rgba(0,0,0,0.10)' }}
               >
                 <button
                   onClick={() => { navigate('/profile'); setShowProfileMenu(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-[#111111] hover:bg-[#F8F8F6]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left hover:bg-surface-elevated"
+                  style={{ color: 'var(--text-primary)' }}
                 >
-                  <span className="flex w-4 h-4 shrink-0 text-[#6B7280]"><Icon.Profile /></span>
+                  <span className="flex w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }}><Icon.Profile /></span>
                   Edit profile
                 </button>
                 <button
                   onClick={() => setDarkMode(d => !d)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left text-[#111111] hover:bg-[#F8F8F6]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-medium transition-colors text-left hover:bg-surface-elevated"
+                  style={{ color: 'var(--text-primary)' }}
                 >
-                  <span className="flex w-4 h-4 shrink-0 text-[#6B7280]">{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
+                  <span className="flex w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }}>{darkMode ? <Icon.Sun /> : <Icon.Moon />}</span>
                   {darkMode ? 'Light mode' : 'Dark mode'}
                 </button>
                 <div className="h-px mx-3 my-1" style={{ background: 'rgba(0,0,0,0.06)' }} />
@@ -429,7 +431,7 @@ export default function AppShell() {
             <button
               onClick={() => navigate('/profile')}
               className="w-9 h-9 rounded-full overflow-hidden bg-burgundy-100 flex items-center justify-center text-[12px] font-bold text-burgundy-700 shrink-0 transition-opacity hover:opacity-80"
-              style={{ border: '1px solid #E5E7EB' }}
+              style={{ border: '1px solid var(--border)' }}
             >
               {profile?.avatar_url
                 ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
@@ -438,12 +440,14 @@ export default function AppShell() {
 
             {/* Name + label */}
             <div className="flex-1 min-w-0">
-              <p className="text-[13.5px] font-semibold text-[#111111] truncate leading-snug">
+              <p className="text-[13.5px] font-semibold truncate leading-snug" style={{ color: 'var(--text-primary)' }}>
                 {profile?.full_name}
               </p>
               <button
                 onClick={() => navigate('/profile')}
-                className="text-[11.5px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors leading-snug font-mono"
+                className="text-[11.5px] transition-colors leading-snug font-mono" style={{ color: 'var(--text-faint)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
               >
                 @{profile?.username}
               </button>
@@ -452,7 +456,10 @@ export default function AppShell() {
             {/* 3-dot */}
             <button
               onClick={() => setShowProfileMenu(v => !v)}
-              className="w-7 h-7 flex items-center justify-center rounded-full text-[#9CA3AF] hover:text-[#111111] hover:bg-[#F3F3F0] transition-colors shrink-0"
+              className="w-7 h-7 flex items-center justify-center rounded-full transition-colors shrink-0"
+              style={{ color: 'var(--text-faint)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
             >
               <span className="flex w-4 h-4"><Icon.MoreHorizontal /></span>
             </button>
@@ -461,14 +468,14 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="app-main" style={{ background: '#F9F9F7' }}>
+      <main className="app-main" style={{ background: 'var(--bg)' }}>
         <Routes>
           <Route path="/"                  element={<FeedPage onPost={() => setShowUpload(true)} />} />
           <Route path="/explore"           element={<ExplorePage />} />
           <Route path="/messages"          element={<MessagesPage />} />
           <Route path="/friends"           element={<FriendsPage />} />
           <Route path="/notifications"     element={<NotificationsPage />} />
-          <Route path="/bookmarks"         element={<div className="max-w-[700px] mx-auto px-8 py-6"><h1 className="text-[22px] font-semibold text-[#111111] tracking-tight mb-1">Bookmarks</h1><p className="text-[13px] text-[#6B7280]">Coming soon</p></div>} />
+          <Route path="/bookmarks"         element={<div className="max-w-[700px] mx-auto px-8 py-6"><h1 className="text-[22px] font-semibold tracking-tight mb-1" style={{ color: 'var(--text-primary)' }}>Bookmarks</h1><p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>Coming soon</p></div>} />
           <Route path="/profile"           element={<ProfilePage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/groups/:slug"      element={<GroupPage />} />
@@ -479,7 +486,7 @@ export default function AppShell() {
       {/* ── RIGHT PANEL ── */}
       <div
         className="app-right-panel overflow-y-auto"
-        style={{ gridColumn: '3', gridRow: '2', background: '#F9F9F7', borderLeft: '1px solid #E8E8E4' }}
+        style={{ gridColumn: '3', gridRow: '2', background: 'var(--bg)', borderLeft: '1px solid var(--border)' }}
       >
         <RightPanel onlineFriends={onlineFriends} setOnlineFriends={setOnlineFriends} onOpenChat={setChatWithProfile} />
       </div>
