@@ -81,8 +81,6 @@ export default function AppShell() {
   const [chatWithProfile, setChatWithProfile] = useState<Profile | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
-  const [showFieldsMenu, setShowFieldsMenu] = useState(false)
-
   const path = location.pathname
 
   useEffect(() => {
@@ -180,109 +178,33 @@ export default function AppShell() {
           borderBottom: '1px solid var(--border)',
         }}
       >
-        {/* ── Row 1: Logo + actions ── */}
-        <div className="flex items-center justify-between px-4 md:px-6 relative" style={{ height: 56 }}>
+        <div className="flex items-center justify-between px-4 md:px-6" style={{ height: 56 }}>
           {/* Logo */}
-          <span
-            className="font-display text-[17px] font-extrabold tracking-[0.15em] select-none cursor-pointer shrink-0 uppercase"
-            style={{ color: 'var(--brand)' }}
+          <button
             onClick={() => navigate('/')}
+            className="flex items-center gap-2.5 select-none shrink-0"
           >
-            Only Creators
-          </span>
+            <span className="flex w-[22px] h-[22px]" style={{ color: 'var(--brand)' }}><Icon.OC /></span>
+            <span
+              className="font-display text-[15px] font-extrabold tracking-[0.14em] uppercase"
+              style={{ color: 'var(--brand)' }}
+            >
+              Only Creators
+            </span>
+          </button>
 
-          {/* Desktop center: Search + Browse Fields */}
-          <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2.5 w-[400px]">
-            <button
-              onClick={() => setShowSearch(true)}
-              className="flex-1 flex items-center gap-3 rounded-full px-4 py-2 text-[13.5px] transition-colors cursor-text text-left"
-              style={{ background: 'var(--surface-off)', border: '1px solid var(--border)', color: 'var(--text-faint)' }}
-            >
-              <span className="flex w-4 h-4 shrink-0"><Icon.Search /></span>
-              <span>Search creators or fields…</span>
-            </button>
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setShowFieldsMenu(v => !v)}
-                className="flex items-center gap-2 text-white rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
-                style={{ background: 'var(--brand)' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand-muted)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand)' }}
-              >
-                <span className="flex w-[14px] h-[14px]"><Icon.Layers /></span>
-                Browse Fields
-              </button>
-              {showFieldsMenu && (
-                <>
-                  <div className="fixed inset-0 z-[48]" onClick={() => setShowFieldsMenu(false)} />
-                  <div
-                    className="absolute right-0 top-full mt-2 z-[49] rounded-2xl py-2 w-[300px]"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-widest px-4 pt-1 pb-2" style={{ color: 'var(--text-faint)' }}>All Fields</p>
-                    <div className="grid grid-cols-2 gap-0.5 px-2 pb-2">
-                      {ALL_DISCIPLINES.map(d => (
-                        <button
-                          key={d.key}
-                          onClick={() => { navigate('/explore?discipline=' + d.key); setShowFieldsMenu(false) }}
-                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-colors"
-                          style={{ color: 'var(--text-primary)' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-                        >
-                          <span className="flex w-[15px] h-[15px] shrink-0" style={{ color: 'var(--text-muted)' }}>{d.icon}</span>
-                          {d.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Right — mobile: messages + search icons */}
-          <div className="flex items-center gap-0.5 ml-auto">
-            {/* Messages (mobile only) */}
-            <button
-              onClick={() => navigate('/messages')}
-              className="icon-btn md:hidden"
-              aria-label="Messages"
-              style={{ position: 'relative' }}
-            >
-              <span className="flex w-[20px] h-[20px]"><Icon.MessageCircle /></span>
-              {unreadMsgCount > 0 && (
-                <span className="notif-badge">{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>
-              )}
-            </button>
-            {/* Search (mobile only) */}
-            <button
-              onClick={() => setShowSearch(true)}
-              className="icon-btn md:hidden"
-              aria-label="Search"
-            >
-              <span className="flex w-[20px] h-[20px]"><Icon.Search /></span>
-            </button>
-          </div>
-        </div>
-
-        {/* ── Row 2: Search bar (mobile only) ── */}
-        <div className="px-4 pb-3 md:hidden">
-          <div className="search-wrap" onClick={() => setShowSearch(true)} style={{ cursor: 'text' }}>
-            <span className="material-symbols-outlined" style={{ pointerEvents: 'none' }}>search</span>
-            <div
-              className="search-input"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'text',
-                userSelect: 'none',
-                color: 'var(--text-faint)',
-              }}
-            >
-              Search creators, fields, communities…
-            </div>
-          </div>
+          {/* Messages icon */}
+          <button
+            onClick={() => navigate('/messages')}
+            className="icon-btn"
+            aria-label="Messages"
+            style={{ position: 'relative' }}
+          >
+            <span className="flex w-[22px] h-[22px]"><Icon.MessageCircle /></span>
+            {unreadMsgCount > 0 && (
+              <span className="notif-badge">{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>
+            )}
+          </button>
         </div>
       </header>
 

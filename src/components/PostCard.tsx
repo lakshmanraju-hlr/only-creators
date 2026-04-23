@@ -303,15 +303,8 @@ export default function PostCard({ post, onUpdated }: Props) {
   return (
     <article
       id={'post-' + post.id}
-      className="relative bg-surface overflow-hidden border-b border-border md:border md:rounded-card md:shadow-card md:mb-6"
+      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--divider)' }}
     >
-      {/* Pro Post gold left-border indicator */}
-      {post.post_type === 'pro' && (
-        <div
-          className="absolute left-0 top-0 bottom-0 w-[3px] z-10"
-          style={{ background: 'linear-gradient(180deg, #F59E0B 0%, #D97706 100%)' }}
-        />
-      )}
 
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 pt-3 pb-2.5">
@@ -438,7 +431,7 @@ export default function PostCard({ post, onUpdated }: Props) {
       {post.content_type === 'photo' && post.media_url && (
         <div
           ref={mediaRef}
-          className="aspect-[4/5] bg-surface-elevated cursor-zoom-in overflow-hidden"
+          className="relative aspect-[4/5] bg-surface-elevated cursor-zoom-in overflow-hidden"
           onClick={() => setMediaLightbox({ url: displaySrc, type: 'photo' })}
         >
           {mediaVisible && (
@@ -451,6 +444,26 @@ export default function PostCard({ post, onUpdated }: Props) {
               style={{ opacity: 0, transition: 'opacity 0.2s ease' }}
               onLoad={e => { (e.currentTarget as HTMLImageElement).style.opacity = '1' }}
             />
+          )}
+          {/* Community / field pill overlay — top-left */}
+          {fieldMeta && (
+            <div className="absolute top-3 left-3 z-10 pointer-events-none">
+              <span style={{
+                display: 'inline-block',
+                background: 'rgba(0,0,0,0.52)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                color: '#fff',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.07em',
+                textTransform: 'uppercase',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-full)',
+              }}>
+                {fieldMeta.label}
+              </span>
+            </div>
           )}
         </div>
       )}
@@ -502,7 +515,7 @@ export default function PostCard({ post, onUpdated }: Props) {
       )}
 
       {/* ── Action bar ──────────────────────────────────────── */}
-      <div className="post-actions px-1">
+      <div className="post-actions px-3">
         {/* Left: Like · Comment · Share */}
         <div className="actions-left">
           <button
@@ -542,9 +555,7 @@ export default function PostCard({ post, onUpdated }: Props) {
         <div className="flex items-center gap-1">
           {/* Pro Vote — only on pro posts */}
           {post.post_type === 'pro' && (
-            <div
-              className="pro-action-wrap"
-              style={{ position: 'relative' }}
+            <div style={{ position: 'relative' }}
               onMouseEnter={() => {
                 if (proCount === 0) return
                 upvoterTimerRef.current = setTimeout(async () => {
@@ -565,31 +576,42 @@ export default function PostCard({ post, onUpdated }: Props) {
                 onClick={canProUpvote
                   ? toggleProUpvote
                   : () => toast('Only verified creators in the same field can give Pro Votes')}
-                className="pro-action-btn"
-                style={proUpvoted ? {
-                  background: 'linear-gradient(135deg, #F59E0B 0%, #FCD34D 50%, #D97706 100%)',
-                  borderColor: 'transparent',
-                  filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.35))',
-                } : !canProUpvote ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  height: 28,
+                  padding: '0 10px',
+                  borderRadius: 'var(--radius-full)',
+                  border: `1.5px solid ${proUpvoted ? 'var(--brand)' : 'var(--border)'}`,
+                  background: proUpvoted ? 'var(--brand)' : 'transparent',
+                  color: proUpvoted ? '#fff' : 'var(--text-muted)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.02em',
+                  cursor: canProUpvote ? 'pointer' : 'default',
+                  opacity: !canProUpvote && !proUpvoted ? 0.5 : 1,
+                  transition: 'background var(--transition), border-color var(--transition), color var(--transition)',
+                  fontFamily: 'var(--font)',
+                }}
                 title="Pro Vote"
                 aria-label="Pro Vote"
               >
-                <span className="pro-count" style={proUpvoted ? { background: 'none', WebkitTextFillColor: '#fff', color: '#fff' } : undefined}>
-                  Pro
-                </span>
+                Pro
                 <span className="flex w-3 h-3"><Icon.Star /></span>
+                {proCount > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>
+                    {proCount >= 1000 ? (proCount / 1000).toFixed(1) + 'k' : proCount}
+                  </span>
+                )}
               </button>
-              {proCount > 0 && (
-                <span className="pro-external-count">
-                  {proCount >= 1000 ? (proCount / 1000).toFixed(1) + 'k' : proCount}
-                </span>
-              )}
 
               {/* Upvoter tooltip */}
               <AnimatePresence>
                 {showUpvoterTooltip && proCount > 0 && (
                   <motion.div
-                    className="absolute bottom-full right-0 mb-2 w-52 bg-surface rounded-[8px] border border-border shadow-modal py-1.5 z-30"
+                    className="absolute bottom-full right-0 mb-2 w-52 rounded-[8px] py-1.5 z-30"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
                     initial={{ opacity: 0, y: 4, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.97 }}
@@ -597,18 +619,18 @@ export default function PostCard({ post, onUpdated }: Props) {
                   >
                     {upvoterLoading ? (
                       <div className="flex justify-center py-3">
-                        <div className="w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full animate-spin" />
+                        <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
                       </div>
                     ) : (
                       <>
                         {upvoterPreview.map(u => (
                           <div key={u.id} className="flex items-center gap-2 px-3 py-1.5">
-                            <div className="w-6 h-6 rounded-full overflow-hidden bg-surface-elevated flex items-center justify-center text-[9px] font-semibold text-text-secondary shrink-0">
+                            <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[9px] font-semibold shrink-0" style={{ background: 'var(--surface-off)', color: 'var(--text-muted)' }}>
                               {u.avatar_url
                                 ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                 : initials(u.full_name)}
                             </div>
-                            <span className="text-[12.5px] font-medium text-text-primary truncate">{u.full_name}</span>
+                            <span className="text-[12.5px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{u.full_name}</span>
                           </div>
                         ))}
                         {proCount > 5 && (
@@ -620,7 +642,10 @@ export default function PostCard({ post, onUpdated }: Props) {
                                 .eq('post_id', post.id)
                               setAllUpvoters((data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[])
                             }}
-                            className="w-full text-left px-3 py-1.5 text-[12px] text-text-secondary font-medium hover:bg-surface-elevated transition-colors border-t border-border mt-1"
+                            className="w-full text-left px-3 py-1.5 text-[12px] font-medium transition-colors border-t mt-1"
+                            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
                           >
                             View all {proCount} Pro Voters →
                           </button>

@@ -430,25 +430,9 @@ function FeedHeaderStrip({
   const fetchChips = useCallback(async () => {
     const newChips: HeaderChip[] = []
     const now = new Date()
-    const since24h = new Date(now.getTime() - 86_400_000).toISOString()
     const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
     await Promise.all([
-      myFields.length > 0
-        ? supabase.from('posts').select('id', { count: 'exact', head: true })
-            .eq('post_type', 'pro').in('persona_discipline', myFields).gte('created_at', since24h)
-            .then(({ count }) => {
-              if (count && count > 0) {
-                const meta = getProfMeta(myFields[0])
-                newChips.push({
-                  id: 'new-pro-posts',
-                  label: `${count} new Pro Post${count > 1 ? 's' : ''} in ${meta?.label ?? myFields[0]}`,
-                  route: '/explore',
-                })
-              }
-            })
-        : Promise.resolve(),
-
       friendIds.length > 0
         ? supabase.from('posts').select('user_id', { count: 'exact', head: false })
             .in('user_id', friendIds.slice(0, 50)).gte('created_at', todayMidnight)
