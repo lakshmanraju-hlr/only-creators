@@ -298,6 +298,43 @@ export default function PostCard({ post, onUpdated }: Props) {
     setShowShare(false)
   }
 
+  // ─── First comment preview (lazy-loaded on mount) ─────────────────────────
+  function FirstCommentPreview() {
+    const [firstComment, setFirstComment] = useState<Comment | null>(null)
+    useEffect(() => {
+      if (post.comment_count === 0) return
+      supabase.from('comments')
+        .select('*, profiles(id,username,full_name,avatar_url)')
+        .eq('post_id', post.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single()
+        .then(({ data }) => { if (data) setFirstComment(data as Comment) })
+    }, [])
+
+    return (
+      <div className="px-4 pb-2">
+        {firstComment && (
+          <div className="text-[13.5px] leading-snug text-text-primary mb-1">
+            <button
+              onClick={() => firstComment.profiles?.username && navigate('/profile/' + firstComment.profiles.username)}
+              className="font-bold mr-1 hover:underline shrink-0"
+            >
+              {firstComment.profiles?.username}
+            </button>
+            <span>{firstComment.body}</span>
+          </div>
+        )}
+        <button
+          onClick={loadComments}
+          className="text-[13px] text-text-secondary hover:text-text-primary transition-colors text-left"
+        >
+          View all {post.comment_count} comment{post.comment_count !== 1 ? 's' : ''}
+        </button>
+      </div>
+    )
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -319,32 +356,31 @@ export default function PostCard({ post, onUpdated }: Props) {
           }
         </button>
 
-        {/* Name + meta */}
+        {/* Name + location */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={goToAuthor}
-              className="text-[14px] font-bold text-text-primary leading-snug hover:underline"
-            >
-              {author?.full_name}
-            </button>
-            {/* Endorsement badge */}
-            {(author?.verification_count ?? 0) > 0 && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-badge bg-accent-subtle text-text-primary shrink-0">
-                ✓ {author!.verification_count}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1 mt-0.5 text-[12px] text-text-secondary leading-none flex-wrap">
-            <span>@{author?.username}</span>
-            {fieldMeta && (
-              <>
-                <span className="shrink-0">·</span>
-                <span className="shrink-0">{fieldMeta.icon} {fieldMeta.label}</span>
-              </>
-            )}
-          </div>
+          <button
+            onClick={goToAuthor}
+            className="text-[14px] font-bold text-text-primary leading-snug hover:underline block"
+          >
+            {author?.full_name}
+          </button>
+          {(author as any)?.location && (
+            <div className="flex items-center gap-0.5 mt-0.5 text-[12px] text-text-secondary leading-none">
+              <span className="flex w-3 h-3 shrink-0"><Icon.MapPin /></span>
+              <span className="truncate">{(author as any).location}</span>
+            </div>
+          )}
         </div>
+
+        {/* Bookmark — left of ··· */}
+        <button
+          onClick={toggleBookmark}
+          className={`save-btn shrink-0${bookmarked ? ' saved' : ''}`}
+          title={bookmarked ? 'Remove bookmark' : 'Bookmark'}
+          aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark post'}
+        >
+          <span className="flex w-[20px] h-[20px]">{bookmarked ? <Icon.BookmarkFill /> : <Icon.Bookmark />}</span>
+        </button>
 
         {/* ··· more */}
         <div ref={menuRef} className="more-wrap shrink-0">
@@ -551,9 +587,8 @@ export default function PostCard({ post, onUpdated }: Props) {
           </button>
         </div>
 
-        {/* Right: Pro Vote + Bookmark */}
-        <div className="flex items-center gap-1">
-          {/* Pro Vote — only on pro posts */}
+        {/* Right: Pro Vote only */}
+        <div className="flex items-center">
           {post.post_type === 'pro' && (
             <div style={{ position: 'relative' }}
               onMouseEnter={() => {
@@ -581,16 +616,16 @@ export default function PostCard({ post, onUpdated }: Props) {
                   alignItems: 'center',
                   gap: 5,
                   height: 28,
-                  padding: '0 10px',
+                  padding: '0 12px',
                   borderRadius: 'var(--radius-full)',
                   border: `1.5px solid ${proUpvoted ? 'var(--brand)' : 'var(--border)'}`,
                   background: proUpvoted ? 'var(--brand)' : 'transparent',
-                  color: proUpvoted ? '#fff' : 'var(--text-muted)',
+                  color: proUpvoted ? '#fff' : 'var(--text-primary)',
                   fontSize: 12,
                   fontWeight: 700,
-                  letterSpacing: '0.02em',
+                  letterSpacing: '0.01em',
                   cursor: canProUpvote ? 'pointer' : 'default',
-                  opacity: !canProUpvote && !proUpvoted ? 0.5 : 1,
+                  opacity: !canProUpvote && !proUpvoted ? 0.45 : 1,
                   transition: 'background var(--transition), border-color var(--transition), color var(--transition)',
                   fontFamily: 'var(--font)',
                 }}
@@ -598,9 +633,11 @@ export default function PostCard({ post, onUpdated }: Props) {
                 aria-label="Pro Vote"
               >
                 Pro
-                <span className="flex w-3 h-3"><Icon.Star /></span>
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+                  <path d="M6 1L10.5 9H1.5L6 1Z" fill="currentColor" />
+                </svg>
                 {proCount > 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>
                     {proCount >= 1000 ? (proCount / 1000).toFixed(1) + 'k' : proCount}
                   </span>
                 )}
@@ -657,55 +694,32 @@ export default function PostCard({ post, onUpdated }: Props) {
               </AnimatePresence>
             </div>
           )}
-
-          {/* Bookmark */}
-          <button
-            onClick={toggleBookmark}
-            className={`save-btn${bookmarked ? ' saved' : ''}`}
-            title={bookmarked ? 'Remove bookmark' : 'Bookmark'}
-            aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark post'}
-          >
-            <span className="flex w-[20px] h-[20px]">{bookmarked ? <Icon.BookmarkFill /> : <Icon.Bookmark />}</span>
-          </button>
         </div>
       </div>
 
-      {/* ── Caption (Instagram-style: bold username inline) ─── */}
+      {/* ── Caption ─────────────────────────────────────────── */}
       {post.caption && post.content_type !== 'audio' && post.content_type !== 'poem' && (
-        <div className="px-4 pb-1.5 text-[14px] leading-[1.5] text-text-primary">
-          <button
-            onClick={goToAuthor}
-            className="font-bold mr-1.5 hover:underline shrink-0"
-          >
+        <div className="px-4 pt-0.5 pb-1 text-[14px] leading-[1.5] text-text-primary">
+          <button onClick={goToAuthor} className="font-bold mr-1.5 hover:underline shrink-0">
             {author?.full_name}
           </button>
           {post.caption.split(' ').map((word, i) =>
             word.startsWith('#')
               ? <span key={i} className="font-medium cursor-pointer hover:underline text-text-primary">{word} </span>
               : word.startsWith('@')
-              ? <span
-                  key={i}
-                  className="font-semibold cursor-pointer hover:underline"
-                  onClick={() => navigate('/profile/' + word.slice(1))}
-                >{word} </span>
+              ? <span key={i} className="font-semibold cursor-pointer hover:underline" onClick={() => navigate('/profile/' + word.slice(1))}>{word} </span>
               : <span key={i}>{word} </span>
           )}
         </div>
       )}
 
-      {/* ── Skill / Field tags ──────────────────────────────── */}
-      {(post.tags?.length ?? 0) > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-          {post.tags.map((tag, i) => (
-            <span
-              key={i}
-              className="text-[11px] font-semibold px-2 py-0.5 rounded-badge bg-accent-subtle text-text-primary"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* ── Timestamp — directly below caption ──────────────── */}
+      <p className="px-4 pb-2 text-[11px] text-text-secondary uppercase tracking-wide">
+        {timeAgo}
+      </p>
+
+      {/* ── First comment preview + "View all" ──────────────── */}
+      {post.comment_count > 0 && !showComments && <FirstCommentPreview />}
 
       {/* ── Group chip ──────────────────────────────────────── */}
       {post.group && (
@@ -718,21 +732,6 @@ export default function PostCard({ post, onUpdated }: Props) {
           </Link>
         </div>
       )}
-
-      {/* ── Comments summary ────────────────────────────────── */}
-      {post.comment_count > 0 && !showComments && (
-        <button
-          onClick={loadComments}
-          className="block px-4 pb-1 text-[13px] text-text-secondary hover:text-text-primary transition-colors text-left w-full"
-        >
-          View all {post.comment_count} comment{post.comment_count !== 1 ? 's' : ''}
-        </button>
-      )}
-
-      {/* ── Timestamp ───────────────────────────────────────── */}
-      <p className="px-4 pb-3 text-[11px] text-text-secondary uppercase tracking-wide">
-        {timeAgo}
-      </p>
 
       {/* ── Expanded comments ───────────────────────────────── */}
       <AnimatePresence>

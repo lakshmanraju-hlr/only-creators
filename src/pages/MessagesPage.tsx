@@ -1,129 +1,291 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { formatDistanceToNow } from 'date-fns'
+import { format, isToday, isYesterday, isThisWeek } from 'date-fns'
 import { supabase, Profile, Message } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { Icon } from '@/lib/icons'
-import { getFriends } from '@/lib/friends'
 import toast from 'react-hot-toast'
+import { getProfMeta } from '@/lib/supabase'
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface ConvRow {
+  id: string
+  other: Profile
+  lastMsg: Message | null
+  unread: number
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
+
+function tsLabel(iso: string) {
+  const d = new Date(iso)
+  if (isToday(d))       return format(d, 'h:mm a')
+  if (isYesterday(d))   return 'Yesterday'
+  if (isThisWeek(d))    return format(d, 'EEE')
+  return format(d, 'MMM d')
+}
+
+function msgTimeLabel(iso: string) { return format(new Date(iso), 'h:mm a') }
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+function Avatar({ user, size = 44, online = false }: { user: Profile; size?: number; online?: boolean }) {
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <div style={{ width: size, height: size, borderRadius: 'var(--radius-full)', overflow: 'hidden', background: 'var(--surface-off)', border: '1.5px solid var(--border)', flexShrink: 0 }}>
+        {user.avatar_url
+          ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.3, fontWeight: 700, color: 'var(--brand)' }}>{initials(user.full_name)}</div>
+        }
+      </div>
+      {online && (
+        <div style={{ position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: 'var(--radius-full)', background: '#22C55E', border: '2px solid var(--surface)' }} />
+      )}
+    </div>
+  )
+}
+
+// ── Shared post card in chat ──────────────────────────────────────────────────
+function SharedPostCard({ post, onClick }: { post: any; onClick: () => void }) {
+  const fieldMeta = getProfMeta(post.persona_discipline)
+  const proCount = post.pro_upvote_count ?? 0
+
+  return (
+    <div
+      onClick={onClick}
+      style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)', maxWidth: 280, cursor: 'pointer' }}
+    >
+      {post.media_url && (
+        <div style={{ aspectRatio: '4/3', overflow: 'hidden', background: 'var(--surface-off)' }}>
+          <img src={post.thumb_url || post.media_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+        </div>
+      )}
+      <div style={{ padding: '10px 12px' }}>
+        {(fieldMeta || proCount > 0) && (
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: 4 }}>
+            {fieldMeta?.label}{fieldMeta && proCount > 0 ? ' · ' : ''}
+            {proCount > 0 ? `Pro-voted ${proCount >= 1000 ? (proCount / 1000).toFixed(1) + 'k' : proCount}` : ''}
+          </p>
+        )}
+        {post.caption && (
+          <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {post.caption}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function MessagesPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [friends, setFriends] = useState<Profile[]>([])
-  const [selectedFriend, setSelectedFriend] = useState<Profile | null>(null)
-  const [conversationId, setConversationId] = useState<string | null>(null)
+
+  const [convs, setConvs] = useState<ConvRow[]>([])
+  const [convsLoading, setConvsLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  const [activeFriend, setActiveFriend] = useState<Profile | null>(null)
+  const [convId, setConvId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [msgsLoading, setMsgsLoading] = useState(false)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [friendsLoading, setFriendsLoading] = useState(true)
+
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const convIdRef = useRef<string | null>(null)
 
-  // Load friends list
+  // ── Presence (online status) ────────────────────────────────────────────────
   useEffect(() => {
     if (!profile) return
-    async function load() {
-      setFriendsLoading(true)
-      const ids = await getFriends(profile!.id)
-      if (!ids.length) { setFriendsLoading(false); return }
-      const { data } = await supabase.from('profiles').select('*').in('id', ids)
-      const friendList = (data || []) as Profile[]
-      setFriends(friendList)
-      setFriendsLoading(false)
-
-      // If ?with= param, auto-open that conversation
-      const withUserId = searchParams.get('with')
-      if (withUserId) {
-        const target = friendList.find(f => f.id === withUserId)
-        if (target) openConversation(target)
-      }
-    }
-    load()
+    const ch = supabase.channel('presence-global', { config: { presence: { key: profile.id } } })
+      .on('presence', { event: 'sync' }, () => {
+        const state = ch.presenceState()
+        const ids = new Set(Object.keys(state))
+        setOnlineIds(ids)
+      })
+      .on('presence', { event: 'join' }, ({ key }) => {
+        setOnlineIds(s => new Set([...s, key]))
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        setOnlineIds(s => { const n = new Set(s); n.delete(key); return n })
+      })
+      .subscribe(async status => {
+        if (status === 'SUBSCRIBED') {
+          await ch.track({ user_id: profile.id, online_at: new Date().toISOString() })
+        }
+      })
+    return () => { supabase.removeChannel(ch) }
   }, [profile?.id])
 
+  // ── Load conversations ──────────────────────────────────────────────────────
+  const loadConvs = useCallback(async () => {
+    if (!profile) return
+    setConvsLoading(true)
+
+    // Get all conversation_ids for this user
+    const { data: parts } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id, last_read_at')
+      .eq('user_id', profile.id)
+
+    if (!parts?.length) { setConvsLoading(false); return }
+    const convIds = parts.map((p: any) => p.conversation_id as string)
+    const lastReadMap: Record<string, string> = {}
+    parts.forEach((p: any) => { lastReadMap[p.conversation_id] = p.last_read_at })
+
+    // Get the other participant for each conversation
+    const { data: otherParts } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id, user_id, profiles:user_id(id,username,full_name,avatar_url,role_title)')
+      .in('conversation_id', convIds)
+      .neq('user_id', profile.id)
+
+    // Get last message per conversation
+    const { data: lastMsgs } = await supabase
+      .from('messages')
+      .select('*, post:post_id(id,caption,content_type,media_url,thumb_url,persona_discipline,pro_upvote_count,profiles:user_id(username,full_name))')
+      .in('conversation_id', convIds)
+      .order('created_at', { ascending: false })
+
+    // Build last message map (first occurrence = latest)
+    const lastMsgMap: Record<string, Message> = {}
+    ;(lastMsgs || []).forEach((m: any) => {
+      if (!lastMsgMap[m.conversation_id]) lastMsgMap[m.conversation_id] = m as Message
+    })
+
+    // Count unreads per conv
+    const unreadMap: Record<string, number> = {}
+    ;(lastMsgs || []).forEach((m: any) => {
+      const lastRead = lastReadMap[m.conversation_id]
+      if (m.sender_id !== profile.id && (!lastRead || m.created_at > lastRead)) {
+        unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
+      }
+    })
+
+    const rows: ConvRow[] = (otherParts || [])
+      .map((p: any) => ({
+        id: p.conversation_id,
+        other: p.profiles as Profile,
+        lastMsg: lastMsgMap[p.conversation_id] ?? null,
+        unread: unreadMap[p.conversation_id] ?? 0,
+      }))
+      .filter(r => r.other)
+      .sort((a, b) => {
+        const at = a.lastMsg?.created_at ?? ''
+        const bt = b.lastMsg?.created_at ?? ''
+        return bt.localeCompare(at)
+      })
+
+    setConvs(rows)
+    setConvsLoading(false)
+  }, [profile?.id])
+
+  useEffect(() => { loadConvs() }, [loadConvs])
+
+  // Auto-open ?with= param
+  useEffect(() => {
+    const withId = searchParams.get('with')
+    if (!withId || !convs.length) return
+    const row = convs.find(c => c.other.id === withId)
+    if (row) openConversation(row.other)
+  }, [convs, searchParams])
+
+  // ── Open conversation ───────────────────────────────────────────────────────
   const openConversation = useCallback(async (friend: Profile) => {
-    setSelectedFriend(friend)
+    setActiveFriend(friend)
     setMessages([])
-    setLoading(true)
+    setMsgsLoading(true)
+    setText('')
 
     const { data, error } = await supabase.rpc('get_or_create_conversation', { other_user_id: friend.id })
-    if (error) { toast.error('Could not open conversation: ' + error.message); setLoading(false); return }
-    const convId = data as string
-    setConversationId(convId)
-    convIdRef.current = convId
+    if (error) { toast.error('Could not open conversation'); setMsgsLoading(false); return }
+    const cid = data as string
+    setConvId(cid)
+    convIdRef.current = cid
 
-    const { data: msgs, error: msgsError } = await supabase
+    const { data: msgs } = await supabase
       .from('messages')
-      .select('*, sender:sender_id(id, username, full_name, avatar_url), post:post_id(id, caption, content_type, media_url, profiles!user_id(username, full_name))')
-      .eq('conversation_id', convId)
+      .select(`
+        *,
+        sender:sender_id(id,username,full_name,avatar_url),
+        post:post_id(
+          id,user_id,caption,content_type,media_url,thumb_url,
+          persona_discipline,pro_upvote_count,
+          profiles:user_id(id,username,full_name)
+        )
+      `)
+      .eq('conversation_id', cid)
       .order('created_at', { ascending: true })
 
-    if (msgsError) toast.error('Failed to load messages: ' + msgsError.message)
     setMessages((msgs || []) as Message[])
-    setLoading(false)
+    setMsgsLoading(false)
 
     // Mark as read
     await supabase.from('conversation_participants')
       .update({ last_read_at: new Date().toISOString() })
-      .eq('conversation_id', convId)
-      .eq('user_id', profile!.id)
+      .eq('conversation_id', cid).eq('user_id', profile!.id)
 
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-    setTimeout(() => inputRef.current?.focus(), 150)
+    // Update unread count locally
+    setConvs(prev => prev.map(c => c.id === cid ? { ...c, unread: 0 } : c))
+
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 80)
+    setTimeout(() => inputRef.current?.focus(), 100)
   }, [profile?.id])
 
-  // Realtime subscription — attached once per conversation
+  // ── Realtime messages ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!conversationId || !profile) return
-
-    const channelName = 'msgs-' + conversationId
-    const ch = supabase.channel(channelName)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: 'conversation_id=eq.' + conversationId },
+    if (!convId || !profile) return
+    const ch = supabase.channel('chat-' + convId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'conversation_id=eq.' + convId },
         async (payload) => {
           const msg = payload.new as Message
-          // Don't double-add messages we sent ourselves (optimistic insert handles that)
-          setMessages(prev => {
-            if (prev.some(m => m.id === msg.id)) return prev
-            return [...prev, msg]
-          })
-          // Enrich with sender + post info
-          const { data: sender } = await supabase
-            .from('profiles').select('id,username,full_name,avatar_url').eq('id', msg.sender_id).single()
+          if (msg.sender_id === profile.id) return // already optimistically added
+          // Enrich
+          const { data: sender } = await supabase.from('profiles').select('id,username,full_name,avatar_url').eq('id', msg.sender_id).single()
           let post = null
           if (msg.post_id) {
-            const { data: p } = await supabase
-              .from('posts').select('id,caption,content_type,media_url,profiles(username,full_name)').eq('id', msg.post_id).single()
+            const { data: p } = await supabase.from('posts')
+              .select('id,user_id,caption,content_type,media_url,thumb_url,persona_discipline,pro_upvote_count,profiles:user_id(id,username,full_name)')
+              .eq('id', msg.post_id).single()
             post = p
           }
-          setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, sender: sender as Profile, post: post as any } : m))
+          setMessages(prev => [...prev, { ...msg, sender: sender as Profile, post: post as any }])
+          // Mark read immediately since chat is open
+          supabase.from('conversation_participants')
+            .update({ last_read_at: new Date().toISOString() })
+            .eq('conversation_id', convId).eq('user_id', profile.id)
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // subscription active
-        }
-      })
-
+        })
+      .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [conversationId])
+  }, [convId, profile?.id])
 
+  // Realtime conv list updates (new messages from others)
+  useEffect(() => {
+    if (!profile) return
+    const ch = supabase.channel('conv-list-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+        () => { loadConvs() })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [profile?.id, loadConvs])
+
+  // ── Send ────────────────────────────────────────────────────────────────────
   async function send() {
-    if (!profile || !conversationId || !text.trim()) return
+    if (!profile || !convId || !text.trim() || sending) return
     const body = text.trim()
     setText('')
     setSending(true)
 
-    // Optimistic insert
     const tempId = 'temp-' + Date.now()
     const optimistic: Message = {
-      id: tempId, conversation_id: conversationId,
+      id: tempId, conversation_id: convId,
       sender_id: profile.id, body, post_id: null,
       created_at: new Date().toISOString(),
       sender: profile,
@@ -132,153 +294,294 @@ export default function MessagesPage() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30)
 
     const { data, error } = await supabase.from('messages')
-      .insert({ conversation_id: conversationId, sender_id: profile.id, body })
-      .select('id')
-      .single()
+      .insert({ conversation_id: convId, sender_id: profile.id, body })
+      .select('id').single()
 
     if (error) {
-      toast.error('Failed to send: ' + error.message)
+      toast.error('Failed to send')
       setMessages(prev => prev.filter(m => m.id !== tempId))
       setText(body)
     } else if (data) {
-      // Replace optimistic with real id
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: data.id } : m))
-      // Notify the recipient
-      if (selectedFriend) {
-        await supabase.from('notifications').insert({
-          user_id: selectedFriend.id,
-          actor_id: profile.id,
-          type: 'message',
-          post_id: null,
-        })
+      if (activeFriend) {
+        await supabase.from('notifications').insert({ user_id: activeFriend.id, actor_id: profile.id, type: 'message', post_id: null })
       }
     }
     setSending(false)
   }
 
-  function initials(n: string) { return n?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
+  // ── Filter ──────────────────────────────────────────────────────────────────
+  const filteredConvs = search.trim()
+    ? convs.filter(c =>
+        c.other.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.other.username?.toLowerCase().includes(search.toLowerCase())
+      )
+    : convs
 
+  // ── Last message preview text ───────────────────────────────────────────────
+  function previewText(c: ConvRow): string {
+    const m = c.lastMsg
+    if (!m) return 'Start a conversation'
+    if (m.post_id) return 'Shared a post'
+    if (m.body) return (m.sender_id === profile?.id ? 'You: ' : '') + m.body
+    return ''
+  }
+
+  const activeIsOnline = activeFriend ? onlineIds.has(activeFriend.id) : false
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
-      {/* Friends sidebar */}
-      <div className="w-64 shrink-0 border-r border-gray-100 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-900 overflow-y-auto">
-        <div className="px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
-          <p className="font-semibold text-[15px] text-gray-900 dark:text-white">Messages</p>
-        </div>
-        {friendsLoading ? (
-          <div className="flex justify-center py-6"><div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
-        ) : friends.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[13px] text-gray-400">Add friends to start messaging</p>
-        ) : friends.map(f => (
+    <div style={{ display: 'flex', height: 'calc(100dvh - 56px)', overflow: 'hidden', background: 'var(--surface)' }}>
+
+      {/* ── LEFT: Conversation list ── */}
+      <div style={{ width: 320, flexShrink: 0, borderRight: '1px solid var(--divider)', display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
+
+        {/* List header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, borderBottom: '1px solid var(--divider)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ display: 'flex', width: 22, height: 22, color: 'var(--brand)' }}><Icon.OC /></span>
+            <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--brand)', letterSpacing: '-0.01em' }}>Messages</span>
+          </div>
           <button
-            key={f.id}
-            onClick={() => openConversation(f)}
-            className={`flex items-center gap-3 px-4 py-3 w-full text-left transition-colors ${
-              selectedFriend?.id === f.id
-                ? 'bg-brand-50 dark:bg-brand-600/10'
-                : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-            }`}
+            onClick={() => {/* TODO: new conversation */}}
+            style={{ display: 'flex', width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'transparent', transition: 'background var(--transition)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
-            <div className="w-[38px] h-[38px] rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[13px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0">
-              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(f.full_name)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-[13.5px] text-gray-900 dark:text-white truncate">{f.full_name}</p>
-              <p className="text-[11.5px] text-gray-400 dark:text-gray-500">@{f.username}</p>
-            </div>
+            <span style={{ display: 'flex', width: 20, height: 20 }}><Icon.PenLine /></span>
           </button>
-        ))}
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '10px 12px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--surface-off)', borderRadius: 'var(--radius-full)', border: '1px solid var(--border)' }}>
+            <span style={{ display: 'flex', width: 15, height: 15, color: 'var(--text-faint)', flexShrink: 0 }}><Icon.Search /></span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search messages..."
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13.5, color: 'var(--text-primary)', fontFamily: 'var(--font)' }}
+            />
+          </div>
+        </div>
+
+        {/* Conversation rows */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {convsLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+              <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
+            </div>
+          ) : filteredConvs.length === 0 ? (
+            <p style={{ textAlign: 'center', padding: '40px 16px', fontSize: 13, color: 'var(--text-faint)' }}>
+              {search ? 'No conversations found' : 'No conversations yet'}
+            </p>
+          ) : filteredConvs.map(c => {
+            const isActive = activeFriend?.id === c.other.id
+            const isOnline = onlineIds.has(c.other.id)
+            const preview = previewText(c)
+            const isSharedPost = c.lastMsg?.post_id != null && !c.lastMsg?.body
+
+            return (
+              <button
+                key={c.id}
+                onClick={() => openConversation(c.other)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--divider)',
+                  background: isActive ? 'rgba(78,11,22,0.04)' : 'transparent',
+                  textAlign: 'left',
+                  transition: 'background var(--transition)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              >
+                <Avatar user={c.other} size={46} online={isOnline} />
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.other.username}
+                    </span>
+                    {c.lastMsg && (
+                      <span style={{ fontSize: 11.5, color: 'var(--text-faint)', flexShrink: 0, marginLeft: 8 }}>
+                        {tsLabel(c.lastMsg.created_at)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Shared post thumbnail in preview */}
+                    {isSharedPost && (
+                      <div style={{ width: 20, height: 20, borderRadius: 4, overflow: 'hidden', background: 'var(--surface-off)', flexShrink: 0, border: '1px solid var(--border)' }}>
+                        {(c.lastMsg?.post as any)?.thumb_url && (
+                          <img src={(c.lastMsg?.post as any).thumb_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        )}
+                      </div>
+                    )}
+                    <span style={{ fontSize: 13, color: c.unread > 0 ? 'var(--text-primary)' : 'var(--text-faint)', fontWeight: c.unread > 0 ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {preview}
+                    </span>
+                    {c.unread > 0 && (
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, padding: '0 4px', borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                        {c.unread > 9 ? '9+' : c.unread}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-950">
-        {!selectedFriend ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <span className="flex w-10 h-10 mb-3 text-gray-300 dark:text-gray-600"><Icon.MessageCircle /></span>
-            <p className="font-semibold text-gray-600 dark:text-gray-400">Select a friend to message</p>
-            <p className="text-sm mt-1 text-gray-400">Your conversations with friends will appear here</p>
+      {/* ── RIGHT: Chat pane ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--surface)' }}>
+        {!activeFriend ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10 }}>
+            <span style={{ display: 'flex', width: 44, height: 44, color: 'var(--text-faint)' }}><Icon.MessageCircle /></span>
+            <p style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 15 }}>Your messages</p>
+            <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>Select a conversation to start chatting</p>
           </div>
         ) : (
           <>
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
-              <button
-                className="w-[34px] h-[34px] rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[12px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0"
-                onClick={() => navigate('/profile/' + selectedFriend.username)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 56, borderBottom: '1px solid var(--divider)', flexShrink: 0, background: 'var(--surface)' }}>
+              <button onClick={() => { setActiveFriend(null); setConvId(null) }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'transparent', transition: 'background var(--transition)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
               >
-                {selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" /> : initials(selectedFriend.full_name)}
+                <span style={{ display: 'flex', width: 18, height: 18 }}><Icon.ArrowLeft /></span>
               </button>
-              <button className="flex-1 text-left" onClick={() => navigate('/profile/' + selectedFriend.username)}>
-                <p className="font-semibold text-[14px] text-gray-900 dark:text-white">{selectedFriend.full_name}</p>
-                <p className="text-[11.5px] text-gray-400 dark:text-gray-500">@{selectedFriend.username}</p>
+
+              <button onClick={() => navigate('/profile/' + activeFriend.username)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'transparent' }}>
+                <Avatar user={activeFriend} size={36} online={activeIsOnline} />
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{activeFriend.username}</p>
+                  {activeIsOnline && (
+                    <p style={{ fontSize: 11.5, color: '#22C55E', fontWeight: 500 }}>Online</p>
+                  )}
+                </div>
               </button>
             </div>
 
             {/* Messages body */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-              {loading ? (
-                <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }} className="scrollbar-hide">
+              {msgsLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+                  <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
+                </div>
               ) : messages.length === 0 ? (
-                <p className="text-center text-[13px] text-gray-400 py-6">Send your first message to {selectedFriend.full_name}</p>
-              ) : messages.map(m => {
-                const isMine = m.sender_id === profile?.id
-                return (
-                  <div key={m.id} className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
-                    {!isMine && (
-                      <button
-                        className="w-[26px] h-[26px] rounded-full overflow-hidden bg-burgundy-100 dark:bg-burgundy-900 flex items-center justify-center text-[9px] font-semibold text-burgundy-700 dark:text-burgundy-300 shrink-0"
-                        onClick={() => navigate('/profile/' + selectedFriend.username)}
-                      >
-                        {(m.sender as any)?.avatar_url
-                          ? <img src={(m.sender as any).avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                          : initials((m.sender as any)?.full_name || '?')}
-                      </button>
-                    )}
-                    <div className={`flex flex-col gap-1 max-w-[70%] ${isMine ? 'items-end' : 'items-start'}`}>
-                      {m.post_id && (m.post as any) && (
-                        <div className="px-3 py-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-left">
-                          <p className="text-[10px] text-gray-400 mb-1">Shared post</p>
-                          <p className="text-[13px] font-medium text-gray-900 dark:text-white truncate">{(m.post as any)?.caption || (m.post as any)?.content_type}</p>
-                          <p className="text-[11px] text-gray-400">by @{(m.post as any)?.profiles?.username}</p>
+                <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-faint)', paddingTop: 40 }}>
+                  Send your first message to {activeFriend.username}
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {messages.map((m, i) => {
+                    const isMine = m.sender_id === profile?.id
+                    const post = m.post as any
+                    const prevMsg = messages[i - 1]
+                    const showTime = !prevMsg || new Date(m.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000
+
+                    return (
+                      <div key={m.id}>
+                        {/* Time divider */}
+                        {showTime && (
+                          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-faint)', margin: '12px 0 6px', fontWeight: 500 }}>
+                            {msgTimeLabel(m.created_at)}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: isMine ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginBottom: 2 }}>
+                          {/* Avatar for other */}
+                          {!isMine && (
+                            <button onClick={() => navigate('/profile/' + activeFriend.username)} style={{ flexShrink: 0, marginBottom: 2 }}>
+                              <Avatar user={activeFriend} size={28} online={false} />
+                            </button>
+                          )}
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '68%', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                            {/* Shared post card */}
+                            {m.post_id && post && (
+                              <SharedPostCard
+                                post={post}
+                                onClick={() => {
+                                  const posterUsername = post.profiles?.username
+                                  if (posterUsername) navigate('/profile/' + posterUsername + '#post-' + post.id)
+                                }}
+                              />
+                            )}
+
+                            {/* Text bubble */}
+                            {m.body && (
+                              <div style={{
+                                padding: '10px 14px',
+                                borderRadius: 18,
+                                borderBottomRightRadius: isMine ? 4 : 18,
+                                borderBottomLeftRadius: isMine ? 18 : 4,
+                                background: isMine ? 'var(--brand)' : 'var(--surface-off)',
+                                color: isMine ? '#fff' : 'var(--text-primary)',
+                                fontSize: 14,
+                                lineHeight: 1.45,
+                                wordBreak: 'break-word',
+                              }}>
+                                {m.body}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {m.body && (
-                        <div className={`px-3.5 py-2.5 rounded-2xl text-[13.5px] leading-snug ${
-                          isMine
-                            ? 'bg-brand-600 text-white rounded-br-sm'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm'
-                        }`}>
-                          {m.body}
-                        </div>
-                      )}
-                      <p className={`text-[10.5px] text-gray-400 px-1`}>
-                        {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-              <div ref={bottomRef} />
+                      </div>
+                    )
+                  })}
+                  <div ref={bottomRef} />
+                </div>
+              )}
             </div>
 
-            {/* Input row */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
+            {/* Input bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 14px', borderTop: '1px solid var(--divider)', background: 'var(--surface)', flexShrink: 0 }}>
               <input
                 ref={inputRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2.5 text-[13.5px] text-gray-900 dark:text-white placeholder:text-gray-400 outline-none focus:border-brand-600 dark:focus:border-brand-400 transition-colors"
-                placeholder={'Message ' + selectedFriend.full_name + '…'}
                 value={text}
                 onChange={e => setText(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                placeholder="Message..."
+                style={{
+                  flex: 1,
+                  height: 42,
+                  padding: '0 18px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--surface-off)',
+                  border: '1px solid var(--border)',
+                  fontSize: 14,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font)',
+                  outline: 'none',
+                  transition: 'border-color var(--transition)',
+                }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'rgba(78,11,22,0.25)' }}
+                onBlur={e => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)' }}
               />
               <button
                 onClick={send}
                 disabled={sending || !text.trim()}
-                className="w-9 h-9 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-40 flex items-center justify-center text-white transition-colors shrink-0"
+                style={{
+                  width: 42, height: 42, borderRadius: 'var(--radius-full)',
+                  background: text.trim() ? 'var(--brand)' : 'var(--surface-off)',
+                  color: text.trim() ? '#fff' : 'var(--text-faint)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'background var(--transition), color var(--transition)',
+                  opacity: sending ? 0.6 : 1,
+                }}
               >
                 {sending
-                  ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                  : <span className="flex w-3.5 h-3.5"><Icon.Send /></span>}
+                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  : <span style={{ display: 'flex', width: 17, height: 17 }}><Icon.Send /></span>
+                }
               </button>
             </div>
           </>

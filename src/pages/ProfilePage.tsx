@@ -69,7 +69,7 @@ export default function ProfilePage() {
   const [personas, setPersonas] = useState<DisciplinePersona[]>([])
 
   // UI state
-  const [activeTab, setActiveTab] = useState<'all' | 'personal' | 'portfolio' | 'featured'>('all')
+  const [activeTab, setActiveTab] = useState<'personal' | 'portfolio' | 'featured'>('portfolio')
   const [featuredIn, setFeaturedIn] = useState<PostFeature[]>([])
   const [gridView, setGridView] = useState(true)
   const [bioExpanded, setBioExpanded] = useState(false)
@@ -87,12 +87,18 @@ export default function ProfilePage() {
 
   // Portfolio: post_id → communities (groups) it belongs to
   const [postSubgroupMap, setPostSubgroupMap] = useState<Record<string, Array<{ id: string; name: string; slug: string; discipline: string }>>>({})
-  // Community editor: which post is being re-tagged
-  const [communityEditorPost, setCommunityEditorPost] = useState<{ id: string; discipline: string | null } | null>(null)
   // Featured In: pending tag requests (own profile only)
   const [pendingFeatures, setPendingFeatures] = useState<PostFeature[]>([])
   // Portfolio: which field pill is active (from header or tab filter)
   const [portfolioFieldFilter, setPortfolioFieldFilter] = useState<string | null>(null)
+
+  // Upload modal context
+  const [uploadDefaultDiscipline, setUploadDefaultDiscipline] = useState<string | null>(null)
+  const [uploadProLocked, setUploadProLocked] = useState(false)
+
+  // Add field flow
+  const [showAddFieldPicker, setShowAddFieldPicker] = useState(false)
+  const [addFieldTarget, setAddFieldTarget] = useState<string | null>(null)
 
   // Social state (visitor only)
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('none')
@@ -130,9 +136,9 @@ export default function ProfilePage() {
   const isOwnProfile = !username || profile?.id === myProfile?.id
   const isFriend = friendStatus === 'friends'
 
-  // Default to 'personal' for own profile, 'all' for everyone else
+  // Always land on portfolio tab
   useEffect(() => {
-    setActiveTab(isOwnProfile ? 'personal' : 'all')
+    setActiveTab('portfolio')
   }, [isOwnProfile])
 
   // ── Computed: Personal tab — non-pro posts, pinned first ──
@@ -144,81 +150,15 @@ export default function ProfilePage() {
     return [...pinnedOrdered, ...remaining]
   }, [posts, pinnedPins, pinnedPostIds])
 
-  // ── Computed: pro posts grouped by field (discipline) via post_subgroups ──
-  // Each group: { posts, communityForPost: { postId → {name, slug} | null } }
-  type PortfolioGroup = { posts: Post[]; communityForPost: Record<string, { name: string; slug: string } | null> }
-  const portfolioGroups = useMemo(() => {
-    const proPosts = posts.filter(p => p.is_pro_post || p.post_type === 'pro')
-    const groups: Record<string, PortfolioGroup> = {}
-    const seen: Record<string, Set<string>> = {} // discipline → Set<postId>
-
-    proPosts.forEach(p => {
-      const communities = postSubgroupMap[p.id] || []
-      if (communities.length === 0) {
-        // No community tag → Uncategorized
-        const key = '__uncategorized__'
-        if (!groups[key]) { groups[key] = { posts: [], communityForPost: {} }; seen[key] = new Set() }
-        if (!seen[key].has(p.id)) { groups[key].posts.push(p); seen[key].add(p.id); groups[key].communityForPost[p.id] = null }
-      } else {
-        // Dedupe disciplines for this post
-        const disciplines = [...new Set(communities.map(c => c.discipline))]
-        disciplines.forEach(disc => {
-          if (!groups[disc]) { groups[disc] = { posts: [], communityForPost: {} }; seen[disc] = new Set() }
-          if (!seen[disc].has(p.id)) {
-            groups[disc].posts.push(p)
-            seen[disc].add(p.id)
-          }
-          // First community in this discipline is the label
-          if (!groups[disc].communityForPost[p.id]) {
-            const comm = communities.find(c => c.discipline === disc) ?? null
-            groups[disc].communityForPost[p.id] = comm ? { name: comm.name, slug: comm.slug } : null
-          }
-        })
-      }
-    })
-
-    // Sort each group newest-first
-    Object.values(groups).forEach(g => {
-      g.posts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    })
-    return groups
-  }, [posts, postSubgroupMap])
-
-  // ── Derived: unique field keys that appear in Portfolio (excluding uncategorized) ──
+  // ── Derived: unique disciplines present in the user's portfolio ──
   const portfolioFieldKeys = useMemo(() =>
-    Object.keys(portfolioGroups).filter(k => k !== '__uncategorized__'),
-  [portfolioGroups])
-
-  // ── Computed: All tab — curated mix of pinned + recent + top Pro posts + Featured In ──
-  const allTabContent = useMemo(() => {
-    const proPosts = posts.filter(p => p.is_pro_post || p.post_type === 'pro')
-
-    // 1. Pinned Pro posts (up to 3)
-    const pinnedSorted = [...pinnedPins].sort((a, b) => a.pin_order - b.pin_order)
-    const pinnedSection = pinnedSorted
-      .map(pp => proPosts.find(p => p.id === pp.post_id))
-      .filter(Boolean)
-      .slice(0, 3) as Post[]
-    const pinnedIds = new Set(pinnedSection.map(p => p.id))
-
-    // 2. Recent Pro posts (latest 6, excluding pinned)
-    const recentPro = proPosts
-      .filter(p => !pinnedIds.has(p.id))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 6)
-    const shownIds = new Set([...pinnedIds, ...recentPro.map(p => p.id)])
-
-    // 3. Top performing (up to 6, excluding already shown)
-    const topPro = proPosts
-      .filter(p => !shownIds.has(p.id))
-      .sort((a, b) => (b.like_count + b.comment_count * 2) - (a.like_count + a.comment_count * 2))
-      .slice(0, 6)
-
-    // 4. Featured In (up to 4)
-    const featuredSection = featuredIn.slice(0, 4)
-
-    return { pinnedSection, recentPro, topPro, featuredSection }
-  }, [posts, pinnedPins, featuredIn])
+    [...new Set(
+      posts
+        .filter(p => p.is_pro_post || p.post_type === 'pro')
+        .map(p => p.persona_discipline)
+        .filter(Boolean) as string[]
+    )],
+  [posts])
 
   const canEndorse = false // endorsements remain available per-discipline via portfolio groups
 
@@ -698,16 +638,12 @@ export default function ProfilePage() {
     post,
     isPinned = false,
     showProIndicator = false,
-    communityLabel,
-    onCommunityClick,
-    onTagCommunity,
+    overlayLabel,
   }: {
     post: Post
     isPinned?: boolean
     showProIndicator?: boolean
-    communityLabel?: string
-    onCommunityClick?: () => void
-    onTagCommunity?: () => void
+    overlayLabel?: string
   }) {
     const [hovered, setHovered] = useState(false)
     const { ref: tileRef, isVisible: tileVisible } = useLazyLoad<HTMLDivElement>()
@@ -756,9 +692,18 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Pin indicator — top-left */}
+          {/* Field/community overlay pill — top-left */}
+          {overlayLabel && (
+            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+              <span style={{ display: 'inline-block', background: 'rgba(0,0,0,0.52)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#fff', fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 'var(--radius-full)' }}>
+                {overlayLabel}
+              </span>
+            </div>
+          )}
+
+          {/* Pin indicator — only when no overlay, or bottom-left */}
           {isPinned && (
-            <div className="absolute top-1.5 left-1.5 text-[13px] drop-shadow-md select-none">📌</div>
+            <div className="absolute top-1.5 right-8 text-[13px] drop-shadow-md select-none">📌</div>
           )}
 
           {/* Pro indicator — top-right, owner only */}
@@ -781,30 +726,6 @@ export default function ProfilePage() {
             </span>
           </div>
         </div>
-
-        {/* Community label (portfolio tab only) */}
-        {communityLabel && onCommunityClick ? (
-          <button
-            onClick={onCommunityClick}
-            className="text-[11px] text-center truncate px-1 mt-0.5"
-            style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
-          >
-            {communityLabel}
-          </button>
-        ) : onTagCommunity ? (
-          <button
-            onClick={onTagCommunity}
-            className="text-[11px] text-center px-1 mt-0.5 flex items-center justify-center gap-1"
-              style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
-          >
-            <span className="flex w-3 h-3"><Icon.Plus /></span>
-            Tag community
-          </button>
-        ) : null}
       </div>
     )
   }
@@ -996,25 +917,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Field pills */}
-        {portfolioFieldKeys.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', justifyContent: 'center', marginTop: 'var(--space-4)' }}>
-            {portfolioFieldKeys.map(disc => {
-              const meta = DISCIPLINE_MAP[disc]
-              const isActive = portfolioFieldFilter === disc && activeTab === 'portfolio'
-              return (
-                <button
-                  key={disc}
-                  onClick={() => { setActiveTab('portfolio'); setPortfolioFieldFilter(prev => prev === disc && activeTab === 'portfolio' ? null : disc) }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: isActive ? 'var(--brand)' : 'var(--surface-off)', border: `1px solid ${isActive ? 'var(--brand)' : 'var(--border)'}`, borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, color: isActive ? '#fff' : 'var(--text-muted)' }}
-                >
-                  {meta && <span className="flex w-3.5 h-3.5 shrink-0"><meta.IconComp /></span>}
-                  {meta?.label ?? disc}
-                </button>
-              )
-            })}
-          </div>
-        )}
       </section>
 
       {/* ── TABS ── */}
@@ -1022,11 +924,9 @@ export default function ProfilePage() {
         role="tablist"
         style={{ display: 'flex', background: 'var(--surface)', borderBottom: '1px solid var(--divider)', position: 'sticky', top: 56, zIndex: 50 }}
       >
-        {(isOwnProfile
+        {(isOwnProfile || isFriend
           ? (['personal', 'portfolio', 'featured'] as const)
-          : isFriend
-            ? (['all', 'personal', 'portfolio', 'featured'] as const)
-            : (['all', 'portfolio', 'featured'] as const)
+          : (['portfolio', 'featured'] as const)
         ).map(t => {
           const label = t === 'featured' ? 'Featured In' : t.charAt(0).toUpperCase() + t.slice(1)
           const active = activeTab === t
@@ -1072,7 +972,7 @@ export default function ProfilePage() {
               )
             })}
             {isOwnProfile && (
-              <button onClick={() => setShowUpload(true)}
+              <button onClick={() => setShowAddFieldPicker(true)}
                 style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', background: 'transparent', color: 'var(--text-faint)', border: '1px dashed var(--border)' }}
               >
                 <span className="flex w-3.5 h-3.5 shrink-0"><Icon.Plus /></span>
@@ -1090,7 +990,12 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-3) var(--space-4)', background: 'var(--bg)', borderBottom: '1px solid var(--divider)' }}>
           {isOwnProfile ? (
             <button
-              onClick={() => setShowUpload(true)}
+              onClick={() => {
+                const fieldLocked = activeTab === 'portfolio' && !!portfolioFieldFilter
+                setUploadDefaultDiscipline(fieldLocked ? portfolioFieldFilter : null)
+                setUploadProLocked(fieldLocked)
+                setShowUpload(true)
+              }}
               style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--brand)', color: '#fff', borderRadius: 'var(--radius-full)', boxShadow: '0 2px 8px rgba(78,11,22,0.25)' }}
               aria-label="Create new post"
             >
@@ -1122,119 +1027,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── ALL TAB: curated Pro posts + Featured In ── */}
-        {!isPrivate && activeTab === 'all' && (() => {
-          const { pinnedSection, recentPro, topPro, featuredSection } = allTabContent
-          const hasContent = pinnedSection.length + recentPro.length + topPro.length + featuredSection.length > 0
-          const GRID = 'grid grid-cols-2 gap-[2px]'
-
-          if (!hasContent) return (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Camera /></span>
-              <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>No posts yet</p>
-              {isOwnProfile && (
-                <button
-                  onClick={() => setShowUpload(true)}
-                  className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
-                  style={{ background: 'var(--brand)' }}
-                >
-                  Create your first post
-                </button>
-              )}
-            </div>
-          )
-
-          return (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              {/* Pinned Pro — top row */}
-              {pinnedSection.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-[13px]">📌</span>
-                    <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Pinned</span>
-                  </div>
-                  <div className={GRID}>
-                    {pinnedSection.map(p => (
-                      <PostTile
-                        key={p.id}
-                        post={p}
-                        isPinned
-                        showProIndicator={isOwnProfile}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recent Pro */}
-              {recentPro.length > 0 && (
-                <div>
-                  <span className="block text-[12px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>Recent</span>
-                  <div className={GRID}>
-                    {recentPro.map(p => (
-                      <PostTile
-                        key={p.id}
-                        post={p}
-                        isPinned={pinnedPostIds.has(p.id)}
-                        showProIndicator={isOwnProfile}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Top Performing */}
-              {topPro.length > 0 && (
-                <div>
-                  <span className="block text-[12px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>Top Performing</span>
-                  <div className={GRID}>
-                    {topPro.map(p => (
-                      <PostTile
-                        key={p.id}
-                        post={p}
-                        showProIndicator={isOwnProfile}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Featured In — up to 4 */}
-              {featuredSection.length > 0 && (
-                <div>
-                  <span className="block text-[12px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-faint)' }}>Featured In</span>
-                  <div className="space-y-0 max-w-[700px] mx-auto">
-                    {featuredSection.map(feat => {
-                      const post = feat.post as unknown as Post | undefined
-                      if (!post) return null
-                      const poster = post.profiles as any
-                      return (
-                        <div key={feat.post_id} className="relative">
-                          <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
-                            <span className="text-[11.5px]" style={{ color: 'var(--text-faint)' }}>by</span>
-                            <button
-                              onClick={() => navigate('/profile/' + poster?.username)}
-                              className="text-[11.5px] font-semibold hover:underline"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              @{poster?.username}
-                            </button>
-                          </div>
-                          <PostCard post={post} onUpdated={() => {}} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )
-        })()}
 
         {/* ── PERSONAL TAB: non-pro posts, pinned first, friends + owner only ── */}
         {!isPrivate && activeTab === 'personal' && (
@@ -1304,134 +1096,82 @@ export default function ProfilePage() {
           </>
         )}
 
-        {/* ── PORTFOLIO TAB: Pro posts grouped by field (auto from post_subgroups) ── */}
+        {/* ── PORTFOLIO TAB: Pro posts flat-filtered by field pill ── */}
         {!isPrivate && activeTab === 'portfolio' && (() => {
-          const totalProPosts = Object.values(portfolioGroups).reduce((n, g) => n + g.posts.length, 0)
-          // Determine which groups to render (all or just the filtered field)
-          const groupEntries = Object.entries(portfolioGroups).filter(([k]) => {
-            if (portfolioFieldFilter) return k === portfolioFieldFilter
-            return true
-          })
+          const filteredPosts = posts
+            .filter(p => p.is_pro_post || p.post_type === 'pro')
+            .filter(p => !portfolioFieldFilter || p.persona_discipline === portfolioFieldFilter)
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-          if (totalProPosts === 0) return (
+          if (filteredPosts.length === 0) return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <span className="flex w-10 h-10 mb-3" style={{ color: 'var(--text-faint)' }}><Icon.Star /></span>
-              <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>No Pro Posts yet</p>
+              <p className="font-semibold" style={{ color: 'var(--text-muted)' }}>
+                {portfolioFieldFilter
+                  ? `No ${DISCIPLINE_MAP[portfolioFieldFilter]?.label ?? portfolioFieldFilter} posts yet`
+                  : 'No Pro Posts yet'}
+              </p>
               {isOwnProfile && (
                 <button
-                  onClick={() => setShowUpload(true)}
-                  className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
+                  onClick={() => {
+                    setUploadDefaultDiscipline(portfolioFieldFilter ?? null)
+                    setUploadProLocked(!!portfolioFieldFilter)
+                    setShowUpload(true)
+                  }}
+                  className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold text-white"
                   style={{ background: 'var(--brand)' }}
                 >
-                  Create a Pro Post
+                  {portfolioFieldFilter ? `Create ${DISCIPLINE_MAP[portfolioFieldFilter]?.label ?? portfolioFieldFilter} Post` : 'Create a Pro Post'}
                 </button>
               )}
             </div>
           )
 
           return (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-8"
-            >
-              {groupEntries.map(([discipline, { posts: dPosts, communityForPost }]) => {
-                const disc = discipline === '__uncategorized__' ? null : DISCIPLINE_MAP[discipline]
-                const fieldLabel = disc?.label ?? (discipline === '__uncategorized__' ? 'Uncategorized' : discipline)
-                const persona = personas.find(per => per.discipline === discipline)
-                const tier = TIER_DISPLAY[(persona?.level as TierKey) ?? 'newcomer']
-
-                return (
-                  <div key={discipline}>
-                    {/* Field section header */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {disc && <span className="flex w-4 h-4" style={{ color: 'var(--text-muted)' }}><disc.IconComp /></span>}
-                      {discipline !== '__uncategorized__' ? (
-                        <button
-                          onClick={() => navigate('/f/' + discipline)}
-                          className="text-[15px] font-bold flex items-center gap-1"
-                          style={{ color: 'var(--text-primary)', transition: 'color var(--transition)' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
-                        >
-                          {fieldLabel}
-                          <span className="flex w-3.5 h-3.5" style={{ color: 'var(--text-faint)' }}><Icon.ChevronRight /></span>
-                        </button>
-                      ) : (
-                        <h3 className="text-[15px] font-bold" style={{ color: 'var(--text-faint)' }}>{fieldLabel}</h3>
-                      )}
-                      <span className="text-[12px] ml-0.5" style={{ color: 'var(--text-faint)' }}>{dPosts.length}</span>
-
-                      {/* "Add to community" prompt for uncategorized (owner only) */}
-                      {discipline === '__uncategorized__' && isOwnProfile && (
-                        <span className="ml-2 text-[11.5px] italic" style={{ color: 'var(--text-faint)' }}>
-                          Tap a post below to tag it
-                        </span>
-                      )}
-                    </div>
-
-                    {gridView ? (
-                      <div className="grid grid-cols-2 gap-[2px]">
-                        {dPosts.map(p => {
-                          const comm = communityForPost[p.id]
-                          const isUncategorized = discipline === '__uncategorized__'
-                          return (
-                            <PostTile
-                              key={p.id}
-                              post={p}
-                              communityLabel={comm?.name}
-                              onCommunityClick={comm ? () => navigate('/c/' + comm.slug) : undefined}
-                              onTagCommunity={isUncategorized && isOwnProfile ? () => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null }) : undefined}
-                            />
-                          )
-                        })}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              {gridView ? (
+                <div className="grid grid-cols-2 gap-[2px]">
+                  {filteredPosts.map(p => {
+                    const overlayLabel = !portfolioFieldFilter
+                      ? (DISCIPLINE_MAP[p.persona_discipline ?? '']?.label ?? undefined)
+                      : (postSubgroupMap[p.id]?.[0]?.name ?? undefined)
+                    return (
+                      <PostTile
+                        key={p.id}
+                        post={p}
+                        isPinned={pinnedPostIds.has(p.id)}
+                        showProIndicator={isOwnProfile}
+                        overlayLabel={overlayLabel}
+                      />
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="max-w-[700px] mx-auto">
+                  {filteredPosts.map(p => {
+                    const comm = postSubgroupMap[p.id]?.[0]
+                    return (
+                      <div key={p.id} className="relative">
+                        {comm && (
+                          <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
+                            <button
+                              onClick={() => navigate('/c/' + comm.slug)}
+                              className="text-[11.5px] font-medium hover:underline"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
+                              {comm.name}
+                            </button>
+                          </div>
+                        )}
+                        <PostCard
+                          post={p}
+                          onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
+                        />
                       </div>
-                    ) : (
-                      <div className="max-w-[700px] mx-auto">
-                        {dPosts.map(p => {
-                          const comm = communityForPost[p.id]
-                          const isUncategorized = discipline === '__uncategorized__'
-                          return (
-                            <div key={p.id} className="relative">
-                              {comm ? (
-                                <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
-                                  <button
-                                    onClick={() => navigate('/c/' + comm.slug)}
-                                    className="text-[11.5px] font-medium hover:underline"
-                                    style={{ color: 'var(--text-primary)', transition: 'color var(--transition)' }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
-                                  >
-                                    {comm.name}
-                                  </button>
-                                </div>
-                              ) : isUncategorized && isOwnProfile ? (
-                                <div className="flex items-center gap-1 pt-2 pb-1 px-1">
-                                  <button
-                                    onClick={() => setCommunityEditorPost({ id: p.id, discipline: p.persona_discipline ?? null })}
-                                    className="text-[11.5px] flex items-center gap-1"
-                                      style={{ color: 'var(--text-faint)', transition: 'color var(--transition)' }}
-                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)' }}
-                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)' }}
-                                  >
-                                    <span className="flex w-3 h-3"><Icon.Plus /></span>
-                                    Tag community
-                                  </button>
-                                </div>
-                              ) : null}
-                              <PostCard
-                                post={p}
-                                onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
-                              />
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              )}
             </motion.div>
           )
         })()}
@@ -1787,8 +1527,12 @@ export default function ProfilePage() {
 
       {showUpload && (
         <UploadModal
+          defaultDiscipline={uploadDefaultDiscipline ?? undefined}
+          proLocked={uploadProLocked}
           onClose={() => {
             setShowUpload(false)
+            setUploadDefaultDiscipline(null)
+            setUploadProLocked(false)
             if (myProfile) {
               supabase.from('posts')
                 .select('id, user_id, content_type, caption, poem_text, media_url, media_path, tags, like_count, comment_count, share_count, pro_upvote_count, is_pro_post, post_type, persona_discipline, visibility, group_id, group:group_id(id,name,slug), created_at')
@@ -1802,26 +1546,113 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* ── Community editor (portfolio re-tagging) ── */}
-      {communityEditorPost && (
-        <CommunityPickerModal
-          postId={communityEditorPost.id}
-          postDiscipline={communityEditorPost.discipline}
-          onClose={() => setCommunityEditorPost(null)}
-          onSaved={async () => {
-            // Refresh subgroup map for this post only
-            const { data: sgData } = await supabase
-              .from('post_subgroups')
-              .select('post_id, groups:subgroup_id(id, name, slug, discipline)')
-              .eq('post_id', communityEditorPost.id)
-            setPostSubgroupMap(prev => ({
-              ...prev,
-              [communityEditorPost.id]: (sgData || []).flatMap((r: any) => r.groups ? [r.groups] : []),
-            }))
-            setCommunityEditorPost(null)
-          }}
-        />
-      )}
+      {/* ── Add Field Picker ── */}
+      <AnimatePresence>
+        {showAddFieldPicker && (
+          <motion.div
+            className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowAddFieldPicker(false)}
+          >
+            <motion.div
+              className="w-full max-w-sm max-h-[70vh] overflow-hidden flex flex-col"
+              style={{ background: 'var(--surface)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', boxShadow: '0 -8px 40px rgba(0,0,0,0.18)' }}
+              onClick={e => e.stopPropagation()}
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            >
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0" style={{ borderBottom: '1px solid var(--divider)' }}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Add a field</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>Post in a field to add it to your profile</p>
+                </div>
+                <button
+                  onClick={() => setShowAddFieldPicker(false)}
+                  style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-full)', color: 'var(--text-muted)' }}
+                >
+                  <span className="flex w-4 h-4"><Icon.X /></span>
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-3 py-2">
+                {Object.entries(DISCIPLINE_MAP)
+                  .filter(([key]) => !portfolioFieldKeys.includes(key))
+                  .map(([key, meta]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setShowAddFieldPicker(false); setAddFieldTarget(key) }}
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-xl"
+                      style={{ transition: 'background var(--transition)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                    >
+                      <span className="flex w-5 h-5 shrink-0" style={{ color: 'var(--text-muted)' }}><meta.IconComp /></span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{meta.label}</span>
+                    </button>
+                  ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Add Field Confirm ── */}
+      <AnimatePresence>
+        {addFieldTarget && (
+          <motion.div
+            className="fixed inset-0 z-[1000] flex items-center justify-center px-4"
+            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setAddFieldTarget(null)}
+          >
+            <motion.div
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--surface)', borderRadius: 'var(--radius-md)', padding: '28px 24px', maxWidth: 340, width: '100%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}
+              initial={{ scale: 0.92, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+            >
+              <span className="flex w-10 h-10 mx-auto mb-4" style={{ color: 'var(--brand)' }}>
+                {(() => { const M = DISCIPLINE_MAP[addFieldTarget]; return M ? <M.IconComp /> : null })()}
+              </span>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+                Add {DISCIPLINE_MAP[addFieldTarget]?.label ?? addFieldTarget}
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.5 }}>
+                Create a Pro Post in this field. Once published, it will appear in your Portfolio under{' '}
+                <strong>{DISCIPLINE_MAP[addFieldTarget]?.label ?? addFieldTarget}</strong>.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setAddFieldTarget(null)}
+                  style={{ flex: 1, height: 40, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', background: 'transparent' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setAddFieldTarget(null)
+                    setUploadDefaultDiscipline(addFieldTarget)
+                    setUploadProLocked(true)
+                    setShowUpload(true)
+                  }}
+                  style={{ flex: 1, height: 40, borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 700, color: '#fff', background: 'var(--brand)' }}
+                >
+                  Create Post
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* ── Profile 3-dot bottom sheet ── */}
       <BottomSheet open={showProfile3Dot} onClose={() => setShowProfile3Dot(false)}>
