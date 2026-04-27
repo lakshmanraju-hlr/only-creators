@@ -16,50 +16,37 @@ import UploadModal from '@/components/UploadModal'
 import SearchModal from '@/components/SearchModal'
 import GroupPage from '@/pages/GroupPage'
 import CommunityPage from '@/pages/CommunityPage'
+import FieldLandingPage from '@/pages/FieldLandingPage'
 import OnboardingModal from '@/components/OnboardingModal'
 
 const DISC_COLORS: Record<string, string> = {
-  'photographer':  '#5BA4CF',
-  'singer':        '#F4A261',
-  'musician':      '#8B5CF6',
-  'poet':          '#F472B6',
-  'visual-artist': '#10B981',
-  'filmmaker':     '#B5936A',
-  'dancer':        '#6366F1',
-  'comedian':      '#F59E0B',
-  'culinary':      '#EF4444',
-  'fitness':       '#14B8A6',
-  'technology':    '#64748B',
-  'fashion':       '#EC4899',
-  'architecture':  '#78716C',
-  'medicine':      '#22C55E',
-  'education':     '#3B82F6',
-  'law':           '#6B7280',
-  'science':       '#06B6D4',
-  'business':      '#8B1A2C',
-  'wellness':      '#A78BFA',
+  'photography': '#5BA4CF',
+  'music':       '#8B5CF6',
+  'dance':       '#6366F1',
+  'art':         '#10B981',
+  'film':        '#B5936A',
+  'design':      '#F4A261',
+  'writing':     '#F472B6',
+  'fitness':     '#14B8A6',
+  'culinary':    '#EF4444',
+  'technology':  '#64748B',
+  'fashion':     '#EC4899',
+  'sports':      '#F59E0B',
 }
 
 const ALL_DISCIPLINES = [
-  { key: 'photographer',  icon: <Icon.Camera />,     label: 'Photography' },
-  { key: 'singer',        icon: <Icon.Mic />,        label: 'Vocals & Singing' },
-  { key: 'musician',      icon: <Icon.Music />,      label: 'Music' },
-  { key: 'poet',          icon: <Icon.PenLine />,    label: 'Poetry & Writing' },
-  { key: 'visual-artist', icon: <Icon.Paintbrush />, label: 'Visual Arts' },
-  { key: 'filmmaker',     icon: <Icon.Film />,       label: 'Film & Video' },
-  { key: 'dancer',        icon: <Icon.Music />,      label: 'Dance' },
-  { key: 'comedian',      icon: <Icon.Drama />,      label: 'Performance' },
-  { key: 'culinary',      icon: <Icon.Utensils />,   label: 'Culinary Arts' },
-  { key: 'fitness',       icon: <Icon.Activity />,   label: 'Fitness & Sports' },
-  { key: 'technology',    icon: <Icon.Code />,       label: 'Technology' },
-  { key: 'fashion',       icon: <Icon.Scissors />,   label: 'Fashion & Style' },
-  { key: 'architecture',  icon: <Icon.Building />,   label: 'Architecture' },
-  { key: 'medicine',      icon: <Icon.Heart2 />,     label: 'Medicine & Health' },
-  { key: 'education',     icon: <Icon.PenLine />,    label: 'Education' },
-  { key: 'law',           icon: <Icon.Shield />,     label: 'Law & Justice' },
-  { key: 'science',       icon: <Icon.Microscope />, label: 'Science & Research' },
-  { key: 'business',      icon: <Icon.Briefcase />,  label: 'Business' },
-  { key: 'wellness',      icon: <Icon.Heart2 />,     label: 'Wellness & Mind' },
+  { key: 'photography', icon: <Icon.Camera />,     label: 'Photography' },
+  { key: 'music',       icon: <Icon.Music />,      label: 'Music' },
+  { key: 'dance',       icon: <Icon.Drama />,      label: 'Dance' },
+  { key: 'art',         icon: <Icon.Paintbrush />, label: 'Art' },
+  { key: 'film',        icon: <Icon.Film />,       label: 'Film' },
+  { key: 'design',      icon: <Icon.Layers />,     label: 'Design' },
+  { key: 'writing',     icon: <Icon.PenLine />,    label: 'Writing' },
+  { key: 'fitness',     icon: <Icon.Activity />,   label: 'Fitness' },
+  { key: 'culinary',    icon: <Icon.Utensils />,   label: 'Culinary' },
+  { key: 'technology',  icon: <Icon.Code />,       label: 'Technology' },
+  { key: 'fashion',     icon: <Icon.Scissors />,   label: 'Fashion' },
+  { key: 'sports',      icon: <Icon.Medal />,      label: 'Sports' },
 ] as const
 
 export default function AppShell() {
@@ -402,6 +389,7 @@ export default function AppShell() {
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/groups/:slug"      element={<GroupPage />} />
           <Route path="/c/:slug"           element={<CommunityPage />} />
+          <Route path="/field/:discipline" element={<FieldLandingPage />} />
         </Routes>
       </main>
 

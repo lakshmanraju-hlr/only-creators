@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, Post, Profile, PROFESSIONS, getProfMeta, PersonaLevel } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -7,6 +7,22 @@ import PostCard from '@/components/PostCard'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 import { DUMMY_FEED_ITEMS } from '@/lib/dummyFeed'
+
+const FEED_FIELDS = [
+  { key: 'all',        label: 'All' },
+  { key: 'photography', label: 'Photography' },
+  { key: 'writing',    label: 'Writing' },
+  { key: 'design',     label: 'Design' },
+  { key: 'music',      label: 'Music' },
+  { key: 'culinary',   label: 'Culinary' },
+  { key: 'film',       label: 'Film' },
+  { key: 'art',        label: 'Art' },
+  { key: 'dance',      label: 'Dance' },
+  { key: 'fitness',    label: 'Fitness' },
+  { key: 'technology', label: 'Technology' },
+  { key: 'fashion',    label: 'Fashion' },
+  { key: 'sports',     label: 'Sports' },
+] as const
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -513,6 +529,8 @@ export default function FeedPage({ onPost }: Props) {
   const [friendIds,    setFriendIds]    = useState<string[]>([])
   const [myFieldSet,   setMyFieldSet]   = useState<Set<string>>(new Set())
   const [localFollowingSet, setLocalFollowingSet] = useState<Set<string>>(new Set())
+  const [activeField, setActiveField] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     if (!profile) return
@@ -849,20 +867,73 @@ export default function FeedPage({ onPost }: Props) {
     return name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
   }
 
+  const filteredFeedItems = useMemo(() => {
+    if (activeField === 'all' && !searchQuery.trim()) return feedItems
+    return feedItems.filter(item => {
+      if (item.type !== 'pro_post' && item.type !== 'general_post') {
+        return activeField === 'all'
+      }
+      const post = (item as { type: 'pro_post' | 'general_post'; post: Post }).post
+      const matchesField = activeField === 'all' || post.persona_discipline === activeField
+      const q = searchQuery.trim().toLowerCase()
+      const matchesSearch = !q || (post.caption?.toLowerCase().includes(q) ?? false) ||
+        (post.profiles?.full_name?.toLowerCase().includes(q) ?? false)
+      return matchesField && matchesSearch
+    })
+  }, [feedItems, activeField, searchQuery])
+
+  const filteredDummy = useMemo(() => {
+    if (activeField === 'all' && !searchQuery.trim()) return DUMMY_FEED_ITEMS
+    return DUMMY_FEED_ITEMS.filter(item => {
+      const matchesField = activeField === 'all' || item.post.persona_discipline === activeField
+      const q = searchQuery.trim().toLowerCase()
+      const matchesSearch = !q || (item.post.caption?.toLowerCase().includes(q) ?? false) ||
+        (item.post.profiles?.full_name?.toLowerCase().includes(q) ?? false)
+      return matchesField && matchesSearch
+    })
+  }, [activeField, searchQuery])
+
+  const pillBase = 'shrink-0 px-3 py-1 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors border'
+  const pillActive = `${pillBase} bg-accent border-accent text-white`
+  const pillInactive = `${pillBase} bg-transparent border-border text-text-secondary hover:border-border-strong hover:text-text-primary`
+
   return (
     <div className="max-w-[614px] mx-auto md:py-4">
 
-      {/* ── Activity chips (sticky) ── */}
-      {profile && (
-        <div className="sticky top-0 z-20 bg-background border-b border-border pt-3 pb-1">
-          <FeedHeaderStrip
-            profileId={profile.id}
-            myFields={myFields}
-            friendIds={friendIds}
-            followingIds={followingIds}
-          />
+      {/* ── Sticky header: search + field pills ── */}
+      <div className="sticky top-0 z-20 bg-surface border-b border-border">
+        {/* Search bar */}
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-2 bg-surface-elevated border border-border rounded-full px-3.5 py-2">
+            <span className="flex w-[15px] h-[15px] text-text-hint shrink-0"><Icon.Search /></span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search creators, posts, fields..."
+              className="flex-1 bg-transparent text-[13px] text-text-primary placeholder:text-text-hint outline-none"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="shrink-0 text-text-secondary hover:text-text-primary">
+                <span className="flex w-[14px] h-[14px]"><Icon.X /></span>
+              </button>
+            )}
+          </div>
         </div>
-      )}
+
+        {/* Field pill slider */}
+        <div className="flex gap-2 px-3 pb-2 overflow-x-auto scrollbar-hide">
+          {FEED_FIELDS.map(f => (
+            <button
+              key={f.key}
+              className={activeField === f.key ? pillActive : pillInactive}
+              onClick={() => setActiveField(f.key)}
+            >
+              {f.key !== 'all' && getProfMeta(f.key)?.icon + ' '}{f.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Composer ────────────────────────────────────────── */}
       <div
@@ -892,12 +963,18 @@ export default function FeedPage({ onPost }: Props) {
         </div>
       ) : postCount === 0 ? (
         <>
-          {DUMMY_FEED_ITEMS.map(item => (
+          {filteredDummy.map(item => (
             <PostCard key={item.post.id} post={item.post} onUpdated={() => {}} />
           ))}
+          {filteredDummy.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="font-bold text-text-primary text-[15px]">No posts in this field yet</p>
+              <p className="text-[13px] text-text-secondary mt-1">Try a different filter</p>
+            </div>
+          )}
         </>
       ) : (
-        feedItems.map((item, idx) => {
+        filteredFeedItems.map((item, idx) => {
           if (item.type === 'pro_post' || item.type === 'general_post')
             return <PostCard key={item.post.id} post={item.post} onUpdated={fetchHomeFeed} />
 

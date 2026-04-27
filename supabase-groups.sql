@@ -77,92 +77,100 @@ create trigger on_group_post_change
 -- =====================================================
 insert into public.groups (discipline, name, slug, description, is_seeded) values
 
--- PHOTOGRAPHER
-('photographer','Wildlife',         'wildlife-photography',     'Untamed moments — animals, birds, and fauna in their element',    true),
-('photographer','Portrait',         'portrait-photography',     'The human face and form — character, emotion, and identity',      true),
-('photographer','Street',           'street-photography',       'Life in public spaces — candid, raw, urban',                      true),
-('photographer','Landscape',        'landscape-photography',    'Vistas, skies, golden hours, and the great outdoors',             true),
-('photographer','Architecture',     'architecture-photography', 'Buildings, interiors, structure, and spatial design',             true),
-('photographer','Black & White',    'bw-photography',           'Monochrome and grayscale — shadow, contrast, and form',           true),
-('photographer','Macro',            'macro-photography',        'Extreme close-up and fine detail — the world made huge',          true),
-('photographer','Astrophotography', 'astrophotography',         'Stars, galaxies, the Milky Way, and the night sky',               true),
-('photographer','Documentary',      'documentary-photography',  'Storytelling, reportage, and photojournalism',                    true),
+-- PHOTOGRAPHY
+('photography','Portrait',           'portrait',              'The human face and form — character, emotion, and identity',         true),
+('photography','Wildlife',           'wildlife',              'Untamed moments — animals, birds, and fauna in their element',       true),
+('photography','Street Photography', 'street-photography',    'Life in public spaces — candid, raw, urban',                         true),
+('photography','Fine Art',           'fine-art',              'Photography as expressive, gallery-ready art',                       true),
+('photography','Travel',             'travel-photography',    'Landscapes, cultures, and moments from around the world',            true),
+('photography','Sports Photography', 'sports-photography',    'Action, athletes, and the peak moment in sport',                     true),
+('photography','Documentary',        'documentary-photography','Storytelling, reportage, and photojournalism',                      true),
 
--- SINGER
-('singer','Originals',        'singer-originals',       'Original songs and compositions',                                true),
-('singer','Covers',           'singer-covers',          'Covers, tributes, and reinterpretations',                        true),
-('singer','Acoustic Sessions','acoustic-sessions',       'Stripped-back, intimate acoustic performances',                  true),
-('singer','Songwriting',      'singer-songwriting',      'Lyrics, melodies, hooks — the craft of writing songs',           true),
-('singer','Live Performance', 'singer-live',             'Stage moments, concerts, and live show energy',                  true),
-('singer','Vocal Technique',  'vocal-technique',         'Runs, melisma, range, exercises, and vocal development',         true),
-('singer','Collaborations',   'singer-collabs',          'Duets, features, and multi-artist work',                         true),
-('singer','Studio Sessions',  'studio-sessions-singer',  'Behind-the-scenes recording and booth moments',                  true),
-('singer','A Cappella',       'a-cappella',              'Voice-only — harmonies, choirs, and no instrumentation',         true),
+-- MUSIC
+('music','Vocals',            'vocals',            'Singing, vocal technique, and the human voice as instrument',        true),
+('music','String Instruments','string-instruments','Guitar, violin, cello, bass, and all stringed instruments',          true),
+('music','Wind Instruments',  'wind-instruments',  'Flute, saxophone, trumpet, clarinet, and wind instruments',          true),
+('music','Music Production',  'music-production',  'Beats, DAW work, mixing, mastering, and production craft',           true),
+('music','Live Performance',  'live-performance',  'Stage moments, concerts, gigs, and live show energy',                true),
+('music','Music Theory',      'music-theory',      'Harmony, rhythm, composition, and the language of music',            true),
 
--- MUSICIAN
-('musician','Guitar',            'guitar',              'Acoustic, electric, and classical guitar — all styles',          true),
-('musician','Piano & Keys',      'piano-keys',          'Piano, keyboard, synth, and organ',                              true),
-('musician','Drums & Percussion','drums-percussion',     'Rhythm, grooves, fills, and percussion of all kinds',            true),
-('musician','Bass',              'bass',                'Bass guitar, upright bass, slap, and low-end groove',            true),
-('musician','Composition',       'musician-composition', 'Original compositions, scores, and arrangements',               true),
-('musician','Jazz',              'jazz',                'Jazz improvisation, standards, bebop, and swing',                true),
-('musician','Production',        'music-production',    'Beats, DAW work, mixing, mastering, and music production',       true),
-('musician','Classical',         'classical-music',     'Orchestra, chamber music, and classical repertoire',             true),
-('musician','Improvisation',     'improvisation',       'Free improvisation, experimental, and unscripted music',         true),
+-- DANCE
+('dance','Classical Dance',  'classical-dance',   'Ballet, bharatanatyam, and traditional classical forms',             true),
+('dance','Contemporary',     'contemporary-dance','Contemporary and modern dance — floor work, release, and form',       true),
+('dance','Street Dance',     'street-dance',      'Hip hop, breaking, popping, locking, krump, and street styles',      true),
+('dance','Ballet',           'ballet',            'Classical and neoclassical ballet technique and performance',         true),
+('dance','Folk Dance',       'folk-dance',        'Traditional and cultural dance forms from around the world',         true),
+('dance','Choreography',     'choreography',      'Original routines and choreographic compositions',                   true),
 
--- POET
-('poet','Spoken Word',    'spoken-word',       'Performed and spoken poetry — slam, open mic, and recital',       true),
-('poet','Love & Romance', 'love-poetry',       'Romance, longing, desire, and the heart in verse',               true),
-('poet','Haiku',          'haiku',             'Japanese short-form poetry — brevity, nature, and the moment',   true),
-('poet','Political',      'political-poetry',  'Social justice, protest, and political commentary in verse',     true),
-('poet','Nature',         'nature-poetry',     'The natural world — forests, rain, seasons, and the earth',      true),
-('poet','Experimental',   'experimental-poetry','Form-breaking and avant-garde verse',                           true),
-('poet','Prose Poetry',   'prose-poetry',      'The boundary between poetry and prose — lyric essays, vignettes',true),
-('poet','Grief & Healing','grief-healing',     'Loss, trauma, recovery, and hope expressed through verse',       true),
-('poet','Mythology',      'mythology-poetry',  'Folklore, myth, legend, and archetype in poetry',                true),
+-- ART
+('art','Illustration',  'illustration',  'Digital and traditional illustration — characters, narrative, detail',  true),
+('art','Oil Painting',  'oil-painting',  'Traditional oil on canvas — texture, colour, and technique',            true),
+('art','Digital Art',   'digital-art',   'Digital painting, concept art, and pixel work',                         true),
+('art','Sculpture',     'sculpture',     'Three-dimensional art — clay, stone, metal, and installation',           true),
+('art','Mixed Media',   'mixed-media',   'Cross-medium work combining materials, textures, and approaches',        true),
+('art','Street Art',    'street-art',    'Murals, graffiti, stencil, and public art',                              true),
 
--- VISUAL-ARTIST
-('visual-artist','Digital Art',      'digital-art',       'Digital illustration, concept art, and painting',              true),
-('visual-artist','Oil Painting',     'oil-painting',      'Traditional oil on canvas — texture, colour, and technique',   true),
-('visual-artist','Watercolor',       'watercolor',        'Fluid, transparent watercolor work',                           true),
-('visual-artist','Sketch & Drawing', 'sketch-drawing',    'Pencil, ink, charcoal, and line-based drawing',                true),
-('visual-artist','Sculpture',        'sculpture',         'Three-dimensional and tactile art — clay, stone, metal',       true),
-('visual-artist','Abstract',         'abstract-art',      'Non-representational visual expression',                       true),
-('visual-artist','Character Design', 'character-design',  'Characters, creatures, OCs, and concept art',                  true),
-('visual-artist','Printmaking',      'printmaking',       'Etching, lithograph, screen print, and linocut',               true),
-('visual-artist','Street Art',       'street-art',        'Murals, graffiti, stencil, and public art',                    true),
+-- FILM
+('film','Cinematography', 'cinematography', 'Lighting, framing, camera movement, and visual language',            true),
+('film','Film Editing',   'film-editing',   'Editing, color grading, VFX, and post-production craft',             true),
+('film','Direction',      'direction',      'Directing, vision, storytelling, and the director''s craft',          true),
+('film','Documentary',    'documentary',    'Non-fiction and documentary filmmaking',                               true),
+('film','Short Film',     'short-film',     'Narrative short films — story, character, and craft',                 true),
+('film','Animation',      'animation',      'Animated films, 2D, 3D, and motion graphics',                        true),
 
--- FILMMAKER
-('filmmaker','Short Film',       'short-film',         'Narrative short films — story, character, and craft',            true),
-('filmmaker','Documentary',      'documentary-film',   'Non-fiction and documentary filmmaking',                         true),
-('filmmaker','Cinematography',   'cinematography',     'Lighting, framing, camera movement, and visual language',        true),
-('filmmaker','Editing & Post',   'editing-post',       'Editing, color grading, VFX, and post-production',              true),
-('filmmaker','Animation',        'animation',          'Animated films, 2D, 3D, and motion graphics',                   true),
-('filmmaker','Music Video',      'music-video',        'Music video production and visual storytelling',                 true),
-('filmmaker','Experimental',     'experimental-film',  'Avant-garde and form-defying cinema',                           true),
-('filmmaker','Behind the Scenes','behind-scenes',      'Process, making-of, and production diary content',              true),
-('filmmaker','Screenwriting',    'screenwriting',      'Scripts, story structure, dialogue, and the written word',      true),
+-- DESIGN
+('design','Graphic Design',   'graphic-design',   'Visual communication, typography, and print/digital design',      true),
+('design','Motion Design',    'motion-design',    'Animation, motion graphics, and kinetic typography',              true),
+('design','UI Design',        'ui-design',        'Interface design, UX, and digital product design',               true),
+('design','Interior Design',  'interior-design',  'Spatial design, architecture of interiors, and decor',           true),
+('design','Fashion Design',   'fashion-design',   'Garment design, textiles, and fashion creation',                 true),
+('design','Brand Identity',   'brand-identity',   'Logos, brand systems, and visual identity design',               true),
 
--- DANCER
-('dancer','Contemporary',    'contemporary-dance',  'Contemporary and modern dance',                                  true),
-('dancer','Hip Hop',         'hip-hop-dance',       'Hip hop, breaking, popping, locking, and street styles',         true),
-('dancer','Ballet',          'ballet',              'Classical and neoclassical ballet',                              true),
-('dancer','Latin',           'latin-dance',         'Salsa, bachata, samba, and Latin partner dance',                 true),
-('dancer','Choreography',    'choreography',        'Original routines and choreographic compositions',               true),
-('dancer','Improvisation',   'dance-improvisation', 'Unscripted and improvisational movement',                        true),
-('dancer','Cultural Dance',  'cultural-dance',      'Traditional and cultural dance forms from around the world',     true),
-('dancer','Fusion',          'dance-fusion',        'Cross-genre and fusion dance styles',                           true),
-('dancer','Pointe & Classical','pointe-classical',  'Pointe work, variations, and classical technique',              true),
+-- WRITING
+('writing','Fiction',             'fiction',             'Novels, short stories, and narrative fiction',               true),
+('writing','Poetry',              'poetry',              'Verse, spoken word, and poetic forms',                       true),
+('writing','Journalism',          'journalism',          'Reporting, investigative writing, and news',                 true),
+('writing','Screenwriting',       'screenwriting',       'Scripts, story structure, dialogue, and the written word',  true),
+('writing','Creative Nonfiction', 'creative-nonfiction', 'Essays, memoirs, and narrative nonfiction',                 true),
+('writing','Technical Writing',   'technical-writing',   'Documentation, instructional writing, and clarity',         true),
 
--- COMEDIAN
-('comedian','Stand-Up',         'stand-up',           'Stand-up comedy sets and original bits',                       true),
-('comedian','Sketches',         'comedy-sketches',    'Written and performed sketch comedy',                          true),
-('comedian','Improv',           'improv-comedy',      'Improvised and unscripted comedy',                             true),
-('comedian','Satire',           'satire',             'Satirical takes on current events and society',                true),
-('comedian','Observational',    'observational-comedy','Everyday life, relatable humor, and slice-of-life comedy',    true),
-('comedian','Dark Humor',       'dark-humor',         'Edgy, dark, and taboo comedy',                                 true),
-('comedian','Character Comedy', 'character-comedy',   'Characters, impressions, and personas',                       true),
-('comedian','Written Jokes',    'written-jokes',      'Tweets, one-liners, puns, and written comedy',                true),
-('comedian','Physical Comedy',  'physical-comedy',    'Slapstick, mime, and physicality-based humor',                true)
+-- FITNESS
+('fitness','Strength Training', 'strength-training', 'Weightlifting, powerlifting, and resistance training',          true),
+('fitness','Yoga',              'yoga',              'Asana, breathwork, and the full spectrum of yoga practice',      true),
+('fitness','Martial Arts',      'martial-arts',      'Combat sports, self-defence, and martial disciplines',           true),
+('fitness','Cardio',            'cardio',            'Running, cycling, HIIT, and cardiovascular training',           true),
+('fitness','Sports Rehab',      'sports-rehab',      'Injury recovery, physiotherapy, and athletic rehabilitation',   true),
+('fitness','Nutrition',         'nutrition',         'Diet, fuelling, supplements, and sports nutrition',             true),
+
+-- CULINARY
+('culinary','Baking',          'baking',          'Bread, pastry, cakes, and the craft of baking',                   true),
+('culinary','Plating',         'plating',         'Presentation, garnish, and the art of the plate',                 true),
+('culinary','World Cuisine',   'world-cuisine',   'Global flavours, regional traditions, and cross-cultural cooking', true),
+('culinary','Fermentation',    'fermentation',    'Sourdough, kimchi, koji, and the craft of fermentation',           true),
+('culinary','Pastry',          'pastry',          'Fine pastry, confections, chocolate, and sugar work',              true),
+('culinary','Beverage Arts',   'beverage-arts',   'Coffee, cocktails, wine, tea, and the art of the drink',          true),
+
+-- TECHNOLOGY
+('technology','Web Development', 'web-development', 'Frontend, backend, and full-stack web development',              true),
+('technology','Mobile Dev',      'mobile-dev',      'iOS, Android, and cross-platform mobile development',            true),
+('technology','AI Research',     'ai-research',     'Machine learning, LLMs, and artificial intelligence research',   true),
+('technology','Open Source',     'open-source',     'Open source projects, contributions, and community',             true),
+('technology','Hardware',        'hardware',        'Electronics, embedded systems, and hardware hacking',             true),
+('technology','Cybersecurity',   'cybersecurity',   'Security research, ethical hacking, and digital defence',        true),
+
+-- FASHION
+('fashion','Personal Styling',    'personal-styling',    'Outfit curation, styling advice, and personal expression',  true),
+('fashion','Tailoring',           'tailoring',           'Bespoke garments, alterations, and the craft of tailoring',  true),
+('fashion','Accessories',         'accessories',         'Jewellery, bags, shoes, and accessory design',               true),
+('fashion','Streetwear',          'streetwear',          'Street style, hype culture, and urban fashion',               true),
+('fashion','Sustainable Fashion', 'sustainable-fashion', 'Ethical fashion, upcycling, and conscious style',            true),
+
+-- SPORTS
+('sports','Football',      'football',      'Football — tactics, skills, and the beautiful game',                    true),
+('sports','Basketball',    'basketball',    'Basketball — the court, the game, and the culture',                     true),
+('sports','Cricket',       'cricket',       'Cricket — batting, bowling, fielding, and the spirit of the game',      true),
+('sports','Athletics',     'athletics',     'Track, field, and competitive athletics',                               true),
+('sports','Swimming',      'swimming',      'Pool and open water swimming — technique, training, and competition',   true),
+('sports','Combat Sports', 'combat-sports', 'Boxing, MMA, wrestling, and all combat disciplines',                   true)
 
 on conflict (discipline, name) do nothing;

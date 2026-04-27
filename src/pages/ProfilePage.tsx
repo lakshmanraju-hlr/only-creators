@@ -22,25 +22,18 @@ import ReportSheet from '@/components/ReportSheet'
 
 // ── Discipline display map ───────────────────────────────────────────────────
 const DISCIPLINE_MAP: Record<string, { label: string; IconComp: () => JSX.Element }> = {
-  'photographer':  { label: 'Photography',        IconComp: Icon.Camera },
-  'singer':        { label: 'Vocals & Singing',   IconComp: Icon.Mic },
-  'musician':      { label: 'Music',              IconComp: Icon.Music },
-  'poet':          { label: 'Poetry & Writing',   IconComp: Icon.PenLine },
-  'visual-artist': { label: 'Visual Arts',        IconComp: Icon.Paintbrush },
-  'filmmaker':     { label: 'Film & Video',       IconComp: Icon.Film },
-  'dancer':        { label: 'Dance',              IconComp: Icon.Music },
-  'comedian':      { label: 'Performance',        IconComp: Icon.Drama },
-  'culinary':      { label: 'Culinary Arts',      IconComp: Icon.Utensils },
-  'fitness':       { label: 'Fitness & Sports',   IconComp: Icon.Activity },
-  'technology':    { label: 'Technology',         IconComp: Icon.Code },
-  'fashion':       { label: 'Fashion & Style',    IconComp: Icon.Scissors },
-  'architecture':  { label: 'Architecture',       IconComp: Icon.Building },
-  'medicine':      { label: 'Medicine & Health',  IconComp: Icon.Heart2 },
-  'education':     { label: 'Education',          IconComp: Icon.PenLine },
-  'law':           { label: 'Law & Justice',      IconComp: Icon.Shield },
-  'science':       { label: 'Science & Research', IconComp: Icon.Microscope },
-  'business':      { label: 'Business',           IconComp: Icon.Briefcase },
-  'wellness':      { label: 'Wellness & Mind',    IconComp: Icon.Heart2 },
+  'photography': { label: 'Photography', IconComp: Icon.Camera },
+  'music':       { label: 'Music',       IconComp: Icon.Music },
+  'dance':       { label: 'Dance',       IconComp: Icon.Drama },
+  'art':         { label: 'Art',         IconComp: Icon.Paintbrush },
+  'film':        { label: 'Film',        IconComp: Icon.Film },
+  'design':      { label: 'Design',      IconComp: Icon.Layers },
+  'writing':     { label: 'Writing',     IconComp: Icon.PenLine },
+  'fitness':     { label: 'Fitness',     IconComp: Icon.Activity },
+  'culinary':    { label: 'Culinary',    IconComp: Icon.Utensils },
+  'technology':  { label: 'Technology',  IconComp: Icon.Code },
+  'fashion':     { label: 'Fashion',     IconComp: Icon.Scissors },
+  'sports':      { label: 'Sports',      IconComp: Icon.Medal },
 }
 
 // ── Tier display ─────────────────────────────────────────────────────────────
@@ -759,16 +752,16 @@ export default function ProfilePage() {
   return (
     <div className="min-h-full">
 
-      {/* ── PROFILE HERO ── */}
-      <section style={{ background: 'var(--surface)', padding: 'var(--space-6) var(--space-5) var(--space-4)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      {/* ── PROFILE HERO — horizontal layout ── */}
+      <section style={{ background: 'var(--surface)', padding: '14px 14px 12px', borderBottom: '1px solid var(--divider)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
 
-        {/* Avatar */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+        {/* Left: Avatar + stats */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <div style={{ position: 'relative', width: 96, height: 96 }}>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             <button
               onClick={() => { if (isOwnProfile) avatarInputRef.current?.click(); else if (profile.avatar_url) setAvatarLightbox(true) }}
-              style={{ width: 96, height: 96, borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '3px solid var(--surface)', boxShadow: 'var(--shadow-md)', background: 'var(--surface-off)', display: 'block' }}
+              style={{ width: 96, height: 96, borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid var(--border)', background: 'var(--surface-off)', display: 'block' }}
             >
               {uploadingAvatar ? (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -777,7 +770,7 @@ export default function ProfilePage() {
               ) : profile.avatar_url ? (
                 <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" decoding="async" />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 700, color: 'var(--brand)' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: 'var(--brand)' }}>
                   {initials(profile.full_name)}
                 </div>
               )}
@@ -785,137 +778,128 @@ export default function ProfilePage() {
             {isOwnProfile && (
               <button
                 onClick={() => avatarInputRef.current?.click()}
-                style={{ position: 'absolute', bottom: 3, right: 3, width: 28, height: 28, background: 'var(--brand)', color: '#fff', borderRadius: 'var(--radius-full)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(78,11,22,0.35)', border: '2px solid var(--surface)' }}
+                style={{ position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, background: 'var(--brand)', color: '#fff', borderRadius: 'var(--radius-full)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--surface)' }}
                 aria-label="Change profile photo"
               >
-                <span className="flex w-3.5 h-3.5"><Icon.Camera /></span>
+                <span className="flex w-3 h-3"><Icon.Camera /></span>
               </button>
             )}
           </div>
-        </div>
-
-        {/* Name */}
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em', marginBottom: 2, color: 'var(--text-primary)' }}>
-          {profile.full_name}
-        </div>
-
-        {/* Title / Workplace */}
-        {(profile.role_title || (profile as any).workplace) && (
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 'var(--space-2)' }}>
-            {profile.role_title}{profile.role_title && (profile as any).workplace && ' at '}{(profile as any).workplace}
-          </div>
-        )}
-
-        {/* Bio */}
-        {profile.bio && (
-          <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 'var(--space-2)', maxWidth: 280 }}>
-            {bioTruncated}
-            {profile.bio.length > BIO_LIMIT && !bioExpanded && (
-              <>{' '}<button onClick={() => setBioExpanded(true)} style={{ color: 'var(--brand)', fontWeight: 600 }}>more</button></>
-            )}
-          </div>
-        )}
-
-        {/* Location */}
-        {profileLocation && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-faint)', marginBottom: 'var(--space-4)' }}>
-            <span className="flex w-3.5 h-3.5 shrink-0"><Icon.MapPin /></span>
-            {profileLocation}
-          </div>
-        )}
-
-        {/* Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', marginBottom: 'var(--space-4)' }}>
-          <button onClick={() => openListModal('friends')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{Number(profile.friend_count ?? 0).toLocaleString()}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Friends</span>
-          </button>
-          <button onClick={() => openListModal('followers')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{Number(profile.follower_count ?? 0).toLocaleString()}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Followers</span>
-          </button>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{posts.length}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Posts</span>
-          </div>
-        </div>
-
-        {/* Edit / social action buttons */}
-        {isOwnProfile ? (
-          <button
-            onClick={() => setShowEditModal(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(78,11,22,0.25)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-          >
-            Edit Profile
-          </button>
-        ) : socialLoading ? (
-          <div style={{ width: 120, height: 36, borderRadius: 'var(--radius-full)', background: 'var(--surface-off)' }} className="animate-pulse" />
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {friendStatus === 'none' && !isFollowing && (
-              <>
-                <button onClick={handleSendFriendRequest} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
-                  Add Friend
-                </button>
-                <button onClick={handleToggleFollow} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', opacity: socialActing ? 0.5 : 1 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-                >
-                  Follow
-                </button>
-              </>
-            )}
-            {friendStatus === 'pending_sent' && (
-              <button onClick={handleCancelFriendRequest} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', opacity: socialActing ? 0.5 : 1 }}>
-                Request Sent
-              </button>
-            )}
-            {friendStatus === 'pending_received' && (
-              <>
-                <button onClick={handleAcceptFriend} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: socialActing ? 0.5 : 1 }}>
-                  <span className="flex w-4 h-4"><Icon.Check /></span> Accept
-                </button>
-                <button onClick={handleDeclineFriendHeader} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: socialActing ? 0.5 : 1 }}>
-                  <span className="flex w-4 h-4"><Icon.X /></span> Decline
-                </button>
-              </>
-            )}
-            {friendStatus === 'friends' && (
-              <>
-                <button onClick={() => navigate('/messages?with=' + profile!.id)} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff' }}>
-                  Message
-                </button>
-                <button onClick={() => setShowFriendSheet(true)} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-                >
-                  Friends ✓
-                </button>
-              </>
-            )}
-            {friendStatus === 'none' && isFollowing && (
-              <>
-                <button onClick={handleSendFriendRequest} disabled={socialActing} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
-                  Add Friend
-                </button>
-                <button onClick={() => setShowUnfollowConfirm(true)} style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-                >
-                  Following ✓
-                </button>
-              </>
-            )}
-            <button onClick={() => setShowProfile3Dot(true)} style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-full)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-            >
-              <span className="flex w-5 h-5"><Icon.MoreHorizontal /></span>
+          {/* Stats below avatar */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 2 }}>
+            <button onClick={() => openListModal('followers')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{Number(profile.follower_count ?? 0).toLocaleString()}</span>
+              <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Followers</span>
             </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{posts.length}</span>
+              <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Posts</span>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Right: Name, title, location, bio, action buttons */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 1, lineHeight: 1.2 }}>
+            {profile.full_name}
+          </div>
+
+          {(profile.role_title || (profile as any).workplace) && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 2 }}>
+              {profile.role_title}{profile.role_title && (profile as any).workplace && ' at '}{(profile as any).workplace}
+            </div>
+          )}
+
+          {profileLocation && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--text-faint)', marginBottom: 4 }}>
+              <span className="flex w-3 h-3 shrink-0"><Icon.MapPin /></span>
+              {profileLocation}
+            </div>
+          )}
+
+          {profile.bio && (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 8 }}>
+              {bioTruncated}
+              {profile.bio.length > BIO_LIMIT && !bioExpanded && (
+                <>{' '}<button onClick={() => setBioExpanded(true)} style={{ color: 'var(--brand)', fontWeight: 600 }}>more</button></>
+              )}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          {isOwnProfile ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => setShowEditModal(true)}
+                style={{ padding: '4px 12px', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', background: 'transparent' }}
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => { const url = `${window.location.origin}/profile/${profile.username}`; navigator.clipboard.writeText(url); }}
+                style={{ padding: '4px 12px', background: 'var(--brand)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: '#fff' }}
+              >
+                Share
+              </button>
+            </div>
+          ) : socialLoading ? (
+            <div style={{ width: 120, height: 30, borderRadius: 6, background: 'var(--surface-off)' }} className="animate-pulse" />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {friendStatus === 'none' && !isFollowing && (
+                <>
+                  <button onClick={handleToggleFollow} disabled={socialActing} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
+                    Follow
+                  </button>
+                  <button onClick={handleSendFriendRequest} disabled={socialActing} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', opacity: socialActing ? 0.5 : 1 }}>
+                    + Friend
+                  </button>
+                  <button onClick={() => navigate('/messages?with=' + profile!.id)} style={{ height: 30, padding: '0 12px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-muted)' }}>
+                    Message
+                  </button>
+                </>
+              )}
+              {friendStatus === 'pending_sent' && (
+                <button onClick={handleCancelFriendRequest} disabled={socialActing} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', opacity: socialActing ? 0.5 : 1 }}>
+                  Request Sent
+                </button>
+              )}
+              {friendStatus === 'pending_received' && (
+                <>
+                  <button onClick={handleAcceptFriend} disabled={socialActing} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
+                    Accept
+                  </button>
+                  <button onClick={handleDeclineFriendHeader} disabled={socialActing} style={{ height: 30, padding: '0 12px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', opacity: socialActing ? 0.5 : 1 }}>
+                    Decline
+                  </button>
+                </>
+              )}
+              {friendStatus === 'friends' && (
+                <>
+                  <button onClick={() => navigate('/messages?with=' + profile!.id)} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, background: 'var(--brand)', color: '#fff' }}>
+                    Message
+                  </button>
+                  <button onClick={() => setShowFriendSheet(true)} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}>
+                    Friends ✓
+                  </button>
+                </>
+              )}
+              {friendStatus === 'none' && isFollowing && (
+                <>
+                  <button onClick={handleSendFriendRequest} disabled={socialActing} style={{ height: 30, padding: '0 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, background: 'var(--brand)', color: '#fff', opacity: socialActing ? 0.5 : 1 }}>
+                    + Friend
+                  </button>
+                  <button onClick={() => setShowUnfollowConfirm(true)} style={{ height: 30, padding: '0 12px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}>
+                    Following ✓
+                  </button>
+                </>
+              )}
+              <button onClick={() => setShowProfile3Dot(true)} style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: '1.5px solid var(--border)', color: 'var(--text-muted)', background: 'transparent' }}>
+                <span className="flex w-4 h-4"><Icon.MoreHorizontal /></span>
+              </button>
+            </div>
+          )}
+        </div>
 
       </section>
 
@@ -1048,21 +1032,74 @@ export default function ProfilePage() {
                 )}
               </div>
             ) : gridView ? (
-              <motion.div
-                className="grid grid-cols-2 gap-[2px]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {personalPosts.map(p => (
-                  <PostTile
-                    key={p.id}
-                    post={p}
-                    isPinned={pinnedPostIds.has(p.id)}
-                    showProIndicator={isOwnProfile && (p.is_pro_post || p.post_type === 'pro')}
-                  />
-                ))}
-              </motion.div>
+              (() => {
+                const pinnedPersonal = personalPosts.filter(p => pinnedPostIds.has(p.id))
+                const recentPersonal = personalPosts.filter(p => !pinnedPostIds.has(p.id))
+                const now = Date.now()
+
+                function hoursLeft(post: Post) {
+                  if (post.post_type !== 'general') return null
+                  const ms = 24 * 60 * 60 * 1000 - (now - new Date(post.created_at).getTime())
+                  if (ms <= 0) return null
+                  const h = Math.ceil(ms / 3_600_000)
+                  return h
+                }
+
+                return (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                    {/* Pinned section */}
+                    {pinnedPersonal.length > 0 && (
+                      <div className="border-b border-border">
+                        <p className="px-3 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                          📌 Pinned
+                        </p>
+                        <div className="grid grid-cols-3 gap-[2px]">
+                          {pinnedPersonal.map(p => (
+                            <PostTile key={p.id} post={p} isPinned />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recent section */}
+                    {recentPersonal.length > 0 && (
+                      <div>
+                        {pinnedPersonal.length > 0 && (
+                          <p className="px-3 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                            Recent
+                          </p>
+                        )}
+                        <div className="grid grid-cols-3 gap-[2px]">
+                          {recentPersonal.map(p => {
+                            const hl = hoursLeft(p)
+                            return (
+                              <div key={p.id} className="relative">
+                                <PostTile post={p} />
+                                {/* 24h countdown badge */}
+                                {hl !== null && (
+                                  <div
+                                    className="absolute bottom-1.5 left-1.5 pointer-events-none"
+                                    style={{
+                                      background: 'rgba(0,0,0,0.58)',
+                                      backdropFilter: 'blur(4px)',
+                                      borderRadius: 4,
+                                      padding: '2px 5px',
+                                    }}
+                                  >
+                                    <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', letterSpacing: '0.03em' }}>
+                                      {hl}h left
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              })()
             ) : (
               <motion.div
                 className="max-w-[700px] mx-auto"
@@ -1096,12 +1133,11 @@ export default function ProfilePage() {
           </>
         )}
 
-        {/* ── PORTFOLIO TAB: Pro posts flat-filtered by field pill ── */}
+        {/* ── PORTFOLIO TAB: Pro posts — ✦ Top + Recent sections ── */}
         {!isPrivate && activeTab === 'portfolio' && (() => {
           const filteredPosts = posts
             .filter(p => p.is_pro_post || p.post_type === 'pro')
             .filter(p => !portfolioFieldFilter || p.persona_discipline === portfolioFieldFilter)
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
           if (filteredPosts.length === 0) return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -1127,49 +1163,120 @@ export default function ProfilePage() {
             </div>
           )
 
+          // ✦ Top = posts with pro_upvote_count > 0 sorted by votes desc, up to 4
+          const topPosts = [...filteredPosts]
+            .filter(p => p.pro_upvote_count > 0)
+            .sort((a, b) => b.pro_upvote_count - a.pro_upvote_count)
+            .slice(0, 4)
+          // Recent = remaining posts sorted by date desc
+          const topIds = new Set(topPosts.map(p => p.id))
+          const recentPosts = [...filteredPosts]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .filter(p => !topIds.has(p.id))
+
           return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               {gridView ? (
-                <div className="grid grid-cols-2 gap-[2px]">
-                  {filteredPosts.map(p => {
-                    const overlayLabel = !portfolioFieldFilter
-                      ? (DISCIPLINE_MAP[p.persona_discipline ?? '']?.label ?? undefined)
-                      : (postSubgroupMap[p.id]?.[0]?.name ?? undefined)
-                    return (
-                      <PostTile
-                        key={p.id}
-                        post={p}
-                        isPinned={pinnedPostIds.has(p.id)}
-                        showProIndicator={isOwnProfile}
-                        overlayLabel={overlayLabel}
-                      />
-                    )
-                  })}
-                </div>
+                <>
+                  {/* ✦ Top section (2-col) */}
+                  {topPosts.length > 0 && (
+                    <div className="border-b border-border pb-2">
+                      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                          ✦ Top
+                        </p>
+                        <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>By Pro Votes</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-[2px]">
+                        {topPosts.map(p => {
+                          const overlayLabel = !portfolioFieldFilter
+                            ? (DISCIPLINE_MAP[p.persona_discipline ?? '']?.label ?? undefined)
+                            : (postSubgroupMap[p.id]?.[0]?.name ?? undefined)
+                          return (
+                            <div key={p.id} className="relative">
+                              <PostTile post={p} showProIndicator={isOwnProfile} overlayLabel={overlayLabel} />
+                              {/* Pro vote count badge */}
+                              <div className="absolute top-1.5 right-1.5 pointer-events-none" style={{ background: 'rgba(201,168,76,0.88)', borderRadius: 4, padding: '2px 6px' }}>
+                                <span style={{ fontSize: 9, fontWeight: 800, color: '#fff' }}>↑ {p.pro_upvote_count}</span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent section (2-col) */}
+                  {recentPosts.length > 0 && (
+                    <div>
+                      <p className="px-3 pt-3 pb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                        Recent
+                      </p>
+                      <div className="grid grid-cols-2 gap-[2px]">
+                        {recentPosts.map(p => {
+                          const overlayLabel = !portfolioFieldFilter
+                            ? (DISCIPLINE_MAP[p.persona_discipline ?? '']?.label ?? undefined)
+                            : (postSubgroupMap[p.id]?.[0]?.name ?? undefined)
+                          return (
+                            <PostTile
+                              key={p.id}
+                              post={p}
+                              isPinned={pinnedPostIds.has(p.id)}
+                              showProIndicator={isOwnProfile}
+                              overlayLabel={overlayLabel}
+                            />
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* If no top posts, show all as Recent */}
+                  {topPosts.length === 0 && recentPosts.length === 0 && (
+                    <div className="grid grid-cols-2 gap-[2px]">
+                      {filteredPosts.map(p => {
+                        const overlayLabel = !portfolioFieldFilter
+                          ? (DISCIPLINE_MAP[p.persona_discipline ?? '']?.label ?? undefined)
+                          : (postSubgroupMap[p.id]?.[0]?.name ?? undefined)
+                        return (
+                          <PostTile
+                            key={p.id}
+                            post={p}
+                            isPinned={pinnedPostIds.has(p.id)}
+                            showProIndicator={isOwnProfile}
+                            overlayLabel={overlayLabel}
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="max-w-[700px] mx-auto">
-                  {filteredPosts.map(p => {
-                    const comm = postSubgroupMap[p.id]?.[0]
-                    return (
-                      <div key={p.id} className="relative">
-                        {comm && (
-                          <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
-                            <button
-                              onClick={() => navigate('/c/' + comm.slug)}
-                              className="text-[11.5px] font-medium hover:underline"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              {comm.name}
-                            </button>
-                          </div>
-                        )}
-                        <PostCard
-                          post={p}
-                          onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
-                        />
-                      </div>
-                    )
-                  })}
+                  {filteredPosts
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .map(p => {
+                      const comm = postSubgroupMap[p.id]?.[0]
+                      return (
+                        <div key={p.id} className="relative">
+                          {comm && (
+                            <div className="flex items-center gap-1.5 pt-2 pb-1 px-1">
+                              <button
+                                onClick={() => navigate('/c/' + comm.slug)}
+                                className="text-[11.5px] font-medium hover:underline"
+                                style={{ color: 'var(--text-muted)' }}
+                              >
+                                {comm.name}
+                              </button>
+                            </div>
+                          )}
+                          <PostCard
+                            post={p}
+                            onUpdated={() => setPosts(prev => prev.filter(x => x.id !== p.id))}
+                          />
+                        </div>
+                      )
+                    })}
                 </div>
               )}
             </motion.div>

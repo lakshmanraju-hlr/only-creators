@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase'
 import { Icon } from '@/lib/icons'
 import toast from 'react-hot-toast'
 
-type AuthMode = 'login' | 'signup' | 'forgot'
+type AuthMode = 'welcome' | 'login' | 'signup' | 'forgot'
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>('login')
+  const [mode, setMode] = useState<AuthMode>('welcome')
 
   // ── Login ──────────────────────────────────────────────────────
   const [email, setEmail] = useState('')
@@ -33,10 +33,30 @@ export default function AuthPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setFieldErrors({})
-    if (!email) { setFieldErrors({ email: 'Email is required' }); return }
+    if (!email) { setFieldErrors({ email: 'Email or username is required' }); return }
     if (!password) { setFieldErrors({ password: 'Password is required' }); return }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    // Support username login: look up email from profile if input doesn't contain @domain
+    let loginEmail = email.trim()
+    const isUsername = !loginEmail.includes('@') || loginEmail.startsWith('@')
+    if (isUsername) {
+      const handle = loginEmail.replace(/^@/, '').toLowerCase()
+      const { data } = await supabase.from('profiles').select('id').eq('username', handle).single()
+      if (!data) {
+        toast.error('No account found with that username')
+        setFieldErrors({ email: 'Username not found' })
+        setLoading(false)
+        return
+      }
+      // Username auth requires going through email — look up via auth admin or prompt email
+      toast.error('Please use your email address to sign in')
+      setFieldErrors({ email: 'Enter your email address instead' })
+      setLoading(false)
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
     if (error) {
       toast.error(error.message)
       setFieldErrors({ password: error.message })
@@ -104,6 +124,45 @@ export default function AuthPage() {
     >
       <div className="w-full" style={{ maxWidth: 380 }}>
 
+        {/* ── Welcome splash ── */}
+        {mode === 'welcome' && (
+          <div className="flex flex-col items-center text-center gap-5">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center text-white text-[28px] font-bold"
+              style={{ background: 'var(--brand, #4E0B16)' }}
+            >
+              OC
+            </div>
+            <div>
+              <h1 className="text-[28px] font-bold tracking-tight" style={{ color: 'var(--brand, #4E0B16)' }}>
+                ONLY CREATORS
+              </h1>
+              <p className="text-[15px] text-[#6B7280] mt-2 leading-relaxed">
+                Your portfolio. Your community.<br />Post your work. Build your audience.
+              </p>
+            </div>
+            <div className="w-full flex flex-col gap-3 mt-4">
+              <button
+                className="w-full h-13 py-3.5 text-white font-bold text-[15px] rounded-[10px] transition-opacity hover:opacity-90"
+                style={{ background: 'var(--brand, #4E0B16)' }}
+                onClick={() => setMode('signup')}
+              >
+                Create Account
+              </button>
+              <button
+                className="w-full h-13 py-3.5 font-semibold text-[15px] rounded-[10px] border-[1.5px] border-[#1A1A1A] hover:bg-[#F0ECE4] transition-colors"
+                style={{ color: '#1A1A1A' }}
+                onClick={() => setMode('login')}
+              >
+                Sign In
+              </button>
+            </div>
+            <p className="text-[11px] text-[#9CA3AF] mt-2">
+              By continuing, you agree to our Terms &amp; Privacy Policy
+            </p>
+          </div>
+        )}
+
         {/* ── Forgot password ── */}
         {mode === 'forgot' && (
           <>
@@ -169,20 +228,19 @@ export default function AuthPage() {
         )}
 
         {/* ── Login / Sign up ── */}
-        {mode !== 'forgot' && (
+        {(mode === 'login' || mode === 'signup') && (
           <>
-            {/* Logo + tagline */}
-            <div className="text-center mb-10" style={{ marginTop: 64 }}>
-              <h1 className="text-[24px] font-bold text-[#1A1A1A] tracking-tight">
-                Only Creators
-              </h1>
-              <p className="text-[15px] text-[#6B7280] mt-1">
-                A home for every creative field.
-              </p>
-            </div>
+            {/* Back to welcome */}
+            <button
+              className="flex items-center gap-1.5 text-[13px] text-[#6B7280] hover:text-[#111111] mb-6 transition-colors"
+              onClick={() => { setMode('welcome'); setFieldErrors({}) }}
+            >
+              <span className="flex w-4 h-4"><Icon.ArrowLeft /></span>
+              Back
+            </button>
 
             {/* Social sign-in buttons */}
-            <div className="flex flex-col gap-3 mb-6">
+            <div className="flex flex-col gap-3 mb-5">
               <SocialButton
                 icon={<GoogleIcon />}
                 label="Continue with Google"
@@ -207,7 +265,7 @@ export default function AuthPage() {
             </div>
 
             {/* Divider */}
-            <div className="flex items-center gap-3 my-6">
+            <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px bg-[#E5E7EB]" />
               <span className="text-[13px] text-[#9CA3AF]">or</span>
               <div className="flex-1 h-px bg-[#E5E7EB]" />
@@ -217,10 +275,15 @@ export default function AuthPage() {
             {mode === 'login' && (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
+                  <p className="text-[22px] font-bold text-[#1A1A1A] mb-1">Welcome back</p>
+                  <p className="text-[14px] text-[#6B7280] mb-5">Sign in to your account.</p>
+                </div>
+                <div>
+                  <label className="text-[12px] text-[#6B7280] font-medium block mb-1.5">Email or username</label>
                   <input
                     className={inputClass('email')}
-                    type="email"
-                    placeholder="Email address"
+                    type="text"
+                    placeholder="you@example.com or @handle"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     autoFocus
@@ -253,74 +316,90 @@ export default function AuthPage() {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="text-[13px] text-[#2563EB] font-semibold"
-                  onClick={() => { setMode('forgot'); setFieldErrors({}) }}
-                >
-                  Forgot password?
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="text-[13px] font-semibold"
+                    style={{ color: 'var(--brand, #4E0B16)' }}
+                    onClick={() => { setMode('forgot'); setFieldErrors({}) }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
 
-                <button className={primaryBtn} type="submit" disabled={loading} style={{ marginTop: 16 }}>
+                <button className={primaryBtn} type="submit" disabled={loading} style={{ marginTop: 8 }}>
                   {loading
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : 'Sign in'
+                    : 'Sign In'
                   }
                 </button>
 
-                <button
-                  type="button"
-                  className={secondaryBtn}
-                  onClick={() => { setMode('signup'); setFieldErrors({}) }}
-                >
-                  Don't have an account? Sign up
-                </button>
+                <p className="text-[13px] text-[#9CA3AF] text-center">
+                  New here?{' '}
+                  <button type="button" className="font-semibold" style={{ color: 'var(--brand, #4E0B16)' }} onClick={() => { setMode('signup'); setFieldErrors({}) }}>
+                    Create account
+                  </button>
+                </p>
               </form>
             )}
 
             {/* Sign up form */}
             {mode === 'signup' && (
               <form onSubmit={handleSignup} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <input
-                      className={inputClass('firstName')}
-                      placeholder="First name"
-                      value={firstName}
-                      onChange={e => setFirstName(e.target.value)}
-                      autoFocus
-                    />
-                    {fieldErrors.firstName && (
-                      <p className="text-[12px] text-[#EF4444] mt-1">{fieldErrors.firstName}</p>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      className={inputClass()}
-                      placeholder="Last name"
-                      value={lastName}
-                      onChange={e => setLastName(e.target.value)}
-                    />
+                <div>
+                  <p className="text-[22px] font-bold text-[#1A1A1A] mb-1">Create account</p>
+                  <p className="text-[14px] text-[#6B7280] mb-5">Join the community of creators.</p>
+                </div>
+
+                <div>
+                  <label className="text-[12px] text-[#6B7280] font-medium block mb-1.5">Full name</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <input
+                        className={inputClass('firstName')}
+                        placeholder="First name"
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                        autoFocus
+                      />
+                      {fieldErrors.firstName && (
+                        <p className="text-[12px] text-[#EF4444] mt-1">{fieldErrors.firstName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        className={inputClass()}
+                        placeholder="Last name"
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <input
-                    className={inputClass('username')}
-                    placeholder="Username"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                  />
+                  <label className="text-[12px] text-[#6B7280] font-medium block mb-1.5">Username</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] text-[15px]">@</span>
+                    <input
+                      className={`${inputClass('username')} pl-7`}
+                      placeholder="yourhandle"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                    />
+                  </div>
+                  <p className="text-[11px] text-[#9CA3AF] mt-1">This is how others find you</p>
                   {fieldErrors.username && (
                     <p className="text-[12px] text-[#EF4444] mt-1">{fieldErrors.username}</p>
                   )}
                 </div>
 
                 <div>
+                  <label className="text-[12px] text-[#6B7280] font-medium block mb-1.5">Email</label>
                   <input
                     className={inputClass('signupEmail')}
                     type="email"
-                    placeholder="Email address"
+                    placeholder="you@example.com"
                     value={signupEmail}
                     onChange={e => setSignupEmail(e.target.value)}
                   />
@@ -330,11 +409,12 @@ export default function AuthPage() {
                 </div>
 
                 <div>
+                  <label className="text-[12px] text-[#6B7280] font-medium block mb-1.5">Password</label>
                   <div className="relative">
                     <input
                       className={inputClass('signupPass')}
                       type={showSignupPass ? 'text' : 'password'}
-                      placeholder="Password"
+                      placeholder="Min. 8 characters"
                       value={signupPass}
                       onChange={e => setSignupPass(e.target.value)}
                       style={{ paddingRight: 44 }}
@@ -355,17 +435,16 @@ export default function AuthPage() {
                 <button className={primaryBtn} type="submit" disabled={loading} style={{ marginTop: 16 }}>
                   {loading
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : 'Create account'
+                    : 'Continue →'
                   }
                 </button>
 
-                <button
-                  type="button"
-                  className={secondaryBtn}
-                  onClick={() => { setMode('login'); setFieldErrors({}) }}
-                >
-                  Already have an account? Sign in
-                </button>
+                <p className="text-[13px] text-[#9CA3AF] text-center">
+                  Already have an account?{' '}
+                  <button type="button" className="font-semibold" style={{ color: 'var(--brand, #4E0B16)' }} onClick={() => { setMode('login'); setFieldErrors({}) }}>
+                    Sign in
+                  </button>
+                </p>
               </form>
             )}
 

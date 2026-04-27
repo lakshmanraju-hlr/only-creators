@@ -10,10 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type Profession =
-  | 'singer' | 'musician' | 'photographer' | 'poet'
-  | 'visual-artist' | 'filmmaker' | 'dancer' | 'comedian'
-  | 'culinary' | 'fitness' | 'technology' | 'fashion' | 'architecture'
-  | 'medicine' | 'education' | 'law' | 'science' | 'business' | 'wellness'
+  | 'photography' | 'music' | 'dance' | 'art' | 'film' | 'design' | 'writing'
+  | 'fitness' | 'culinary' | 'technology' | 'fashion' | 'sports'
 
 export type ContentType = 'text' | 'photo' | 'audio' | 'video' | 'poem' | 'document'
 
@@ -168,30 +166,50 @@ export interface Notification {
 }
 
 export const PROFESSIONS: Record<Profession, { label: string; icon: string; pillClass: string }> = {
-  singer:          { label: 'Vocals & Singing',   icon: '🎤', pillClass: 'pill-singer' },
-  musician:        { label: 'Music',               icon: '🎸', pillClass: 'pill-musician' },
-  photographer:    { label: 'Photography',         icon: '📸', pillClass: 'pill-photographer' },
-  poet:            { label: 'Poetry & Writing',    icon: '✍️', pillClass: 'pill-poet' },
-  'visual-artist': { label: 'Visual Arts',         icon: '🎨', pillClass: 'pill-artist' },
-  filmmaker:       { label: 'Film & Video',        icon: '🎬', pillClass: 'pill-filmmaker' },
-  dancer:          { label: 'Dance',               icon: '💃', pillClass: 'pill-dancer' },
-  comedian:        { label: 'Performance',         icon: '🎭', pillClass: 'pill-comedian' },
-  culinary:        { label: 'Culinary Arts',       icon: '🍽️', pillClass: 'pill-culinary' },
-  fitness:         { label: 'Fitness & Sports',    icon: '🏋️', pillClass: 'pill-fitness' },
-  technology:      { label: 'Technology',          icon: '💻', pillClass: 'pill-technology' },
-  fashion:         { label: 'Fashion & Style',     icon: '👗', pillClass: 'pill-fashion' },
-  architecture:    { label: 'Architecture',        icon: '🏛️', pillClass: 'pill-architecture' },
-  medicine:        { label: 'Medicine & Health',   icon: '🩺', pillClass: 'pill-medicine' },
-  education:       { label: 'Education',           icon: '📚', pillClass: 'pill-education' },
-  law:             { label: 'Law & Justice',       icon: '⚖️', pillClass: 'pill-law' },
-  science:         { label: 'Science & Research',  icon: '🔬', pillClass: 'pill-science' },
-  business:        { label: 'Business',            icon: '💼', pillClass: 'pill-business' },
-  wellness:        { label: 'Wellness & Mind',     icon: '🧘', pillClass: 'pill-wellness' },
+  photography: { label: 'Photography', icon: '📸', pillClass: 'pill-photography' },
+  music:       { label: 'Music',       icon: '🎵', pillClass: 'pill-music' },
+  dance:       { label: 'Dance',       icon: '💃', pillClass: 'pill-dance' },
+  art:         { label: 'Art',         icon: '🎨', pillClass: 'pill-art' },
+  film:        { label: 'Film',        icon: '🎬', pillClass: 'pill-film' },
+  design:      { label: 'Design',      icon: '✏️', pillClass: 'pill-design' },
+  writing:     { label: 'Writing',     icon: '✍️', pillClass: 'pill-writing' },
+  fitness:     { label: 'Fitness',     icon: '🏋️', pillClass: 'pill-fitness' },
+  culinary:    { label: 'Culinary',    icon: '🍽️', pillClass: 'pill-culinary' },
+  technology:  { label: 'Technology',  icon: '💻', pillClass: 'pill-technology' },
+  fashion:     { label: 'Fashion',     icon: '👗', pillClass: 'pill-fashion' },
+  sports:      { label: 'Sports',      icon: '⚽', pillClass: 'pill-sports' },
 }
 
 // Maps variant profession strings → canonical discipline key in PROFESSIONS
 // Used to group related roles under one discipline for Pro Upvotes and Explore
 export const DISCIPLINE_ALIASES: Record<string, string> = {
+  // Photography
+  'photographer': 'photography',
+  // Music
+  'singer': 'music', 'musician': 'music', 'vocalist': 'music',
+  'guitarist': 'music', 'pianist': 'music', 'drummer': 'music',
+  'bassist': 'music', 'composer': 'music', 'producer': 'music',
+  // Dance
+  'dancer': 'dance', 'choreographer': 'dance', 'ballerina': 'dance',
+  // Art
+  'visual-artist': 'art', 'artist': 'art', 'illustrator': 'art',
+  'painter': 'art', 'sculptor': 'art',
+  // Film
+  'filmmaker': 'film', 'director': 'film', 'cinematographer': 'film',
+  'editor': 'film', 'animator': 'film',
+  // Design
+  'designer': 'design', 'graphic designer': 'design', 'graphic-designer': 'design',
+  'ui designer': 'design', 'ux designer': 'design', 'product designer': 'design',
+  'interior designer': 'design', 'interior-designer': 'design',
+  // Writing
+  'poet': 'writing', 'writer': 'writing', 'author': 'writing',
+  'journalist': 'writing', 'screenwriter': 'writing',
+  // Fitness
+  'athlete': 'fitness', 'trainer': 'fitness',
+  'personal trainer': 'fitness', 'personal-trainer': 'fitness',
+  'yogi': 'fitness', 'yoga instructor': 'fitness',
+  'gymnast': 'fitness', 'martial artist': 'fitness',
+  'weightlifter': 'fitness', 'runner': 'fitness',
   // Culinary
   'chef': 'culinary', 'cook': 'culinary', 'baker': 'culinary',
   'pastry chef': 'culinary', 'pastry-chef': 'culinary',
@@ -200,64 +218,19 @@ export const DISCIPLINE_ALIASES: Record<string, string> = {
   'confectioner': 'culinary', 'chocolatier': 'culinary',
   'line cook': 'culinary', 'line-cook': 'culinary',
   'butcher': 'culinary', 'patissier': 'culinary',
-  // Fitness
-  'athlete': 'fitness', 'trainer': 'fitness',
-  'personal trainer': 'fitness', 'personal-trainer': 'fitness',
-  'yogi': 'fitness', 'yoga instructor': 'fitness',
-  'gymnast': 'fitness', 'martial artist': 'fitness',
-  'weightlifter': 'fitness', 'crossfit': 'fitness', 'runner': 'fitness',
   // Technology
   'developer': 'technology', 'programmer': 'technology',
   'software engineer': 'technology', 'coder': 'technology',
-  'ux designer': 'technology', 'product designer': 'technology',
   'web developer': 'technology', 'frontend developer': 'technology',
   'data scientist': 'technology', 'engineer': 'technology',
   // Fashion
   'model': 'fashion', 'stylist': 'fashion',
   'tailor': 'fashion', 'seamstress': 'fashion',
   'costume designer': 'fashion', 'fashion designer': 'fashion',
-  // Architecture
-  'architect': 'architecture', 'interior designer': 'architecture',
-  'interior-designer': 'architecture', 'urban planner': 'architecture',
-  // Medicine
-  'doctor': 'medicine', 'physician': 'medicine', 'nurse': 'medicine',
-  'surgeon': 'medicine', 'dentist': 'medicine', 'pharmacist': 'medicine',
-  'therapist': 'medicine', 'psychiatrist': 'medicine',
-  'medical student': 'medicine', 'paramedic': 'medicine',
-  'veterinarian': 'medicine', 'vet': 'medicine',
-  'physiotherapist': 'medicine', 'occupational therapist': 'medicine',
-  'radiologist': 'medicine', 'cardiologist': 'medicine',
-  'pediatrician': 'medicine', 'dermatologist': 'medicine',
-  'neurologist': 'medicine', 'oncologist': 'medicine',
-  // Education
-  'teacher': 'education', 'professor': 'education',
-  'lecturer': 'education', 'tutor': 'education',
-  'educator': 'education', 'instructor': 'education',
-  'principal': 'education', 'dean': 'education',
-  'school counselor': 'education', 'teaching assistant': 'education',
-  // Law
-  'lawyer': 'law', 'attorney': 'law', 'solicitor': 'law',
-  'barrister': 'law', 'judge': 'law', 'paralegal': 'law',
-  'legal consultant': 'law', 'advocate': 'law',
-  'public defender': 'law', 'prosecutor': 'law',
-  // Science
-  'scientist': 'science', 'researcher': 'science',
-  'biologist': 'science', 'chemist': 'science',
-  'physicist': 'science', 'geologist': 'science',
-  'astronomer': 'science', 'ecologist': 'science',
-  'lab technician': 'science', 'marine biologist': 'science',
-  // Business
-  'entrepreneur': 'business', 'consultant': 'business',
-  'manager': 'business', 'ceo': 'business',
-  'founder': 'business', 'executive': 'business',
-  'analyst': 'business', 'accountant': 'business',
-  'marketer': 'business', 'product manager': 'business',
-  // Wellness
-  'life coach': 'wellness', 'counselor': 'wellness',
-  'meditation teacher': 'wellness', 'nutritionist': 'wellness',
-  'dietitian': 'wellness', 'mindfulness coach': 'wellness',
-  'psychologist': 'wellness', 'mental health': 'wellness',
-  'holistic healer': 'wellness', 'reiki': 'wellness',
+  // Sports
+  'footballer': 'sports', 'basketball player': 'sports',
+  'cricketer': 'sports', 'swimmer': 'sports', 'boxer': 'sports',
+  'sprinter': 'sports', 'tennis player': 'sports',
 }
 
 // Returns the canonical discipline key for any profession string
@@ -305,25 +278,18 @@ export const FIELD_CONTENT_PROFILES: Record<string, {
   primary: string[]     // preferred content types for this field
   hint: string          // soft prompt shown when off-profile
 }> = {
-  photographer:    { primary: ['photo'],            hint: 'Photography posts perform best with at least one photo. Add a photo?' },
-  singer:          { primary: ['audio', 'video'],   hint: 'Vocal posts perform best with audio or video. Add a recording?' },
-  musician:        { primary: ['audio', 'video'],   hint: 'Music posts perform best with audio or video. Add a track?' },
-  poet:            { primary: ['poem', 'text'],     hint: 'Poetry posts perform best as a poem or written text. Use the poem editor?' },
-  'visual-artist': { primary: ['photo'],            hint: 'Visual art posts perform best with an image. Add a photo?' },
-  filmmaker:       { primary: ['video'],            hint: 'Film posts perform best with video. Add a clip?' },
-  dancer:          { primary: ['video'],            hint: 'Dance posts perform best with video. Add a clip?' },
-  comedian:        { primary: ['video', 'text'],    hint: 'Performance posts perform best with video. Add a clip?' },
-  culinary:        { primary: ['photo', 'video'],   hint: 'Culinary posts perform best with photos or video. Add media?' },
-  fitness:         { primary: ['video', 'photo'],   hint: 'Fitness posts perform best with video or photos. Add media?' },
-  technology:      { primary: ['text', 'document'], hint: 'Tech posts perform best as detailed write-ups. Consider writing more?' },
-  fashion:         { primary: ['photo'],            hint: 'Fashion posts perform best with photos. Add a photo?' },
-  architecture:    { primary: ['photo'],            hint: 'Architecture posts perform best with photos. Add a photo?' },
-  medicine:        { primary: ['text', 'document'], hint: 'Medical posts perform best as detailed text. Consider adding more context?' },
-  education:       { primary: ['text', 'document'], hint: 'Education posts perform best as text or documents. Use the text editor?' },
-  law:             { primary: ['text', 'document'], hint: 'Law posts perform best as detailed text. Consider a written post?' },
-  science:         { primary: ['text', 'document'], hint: 'Science posts perform best as text or documents. Add your findings in writing?' },
-  business:        { primary: ['text'],             hint: 'Business posts perform best as written insights. Consider adding more context?' },
-  wellness:        { primary: ['text', 'video'],    hint: 'Wellness posts perform best as text or video. Add some depth?' },
+  photography: { primary: ['photo'],            hint: 'Photography posts perform best with at least one photo. Add a photo?' },
+  music:       { primary: ['audio', 'video'],   hint: 'Music posts perform best with audio or video. Add a recording?' },
+  dance:       { primary: ['video'],            hint: 'Dance posts perform best with video. Add a clip?' },
+  art:         { primary: ['photo'],            hint: 'Art posts perform best with an image. Add a photo?' },
+  film:        { primary: ['video'],            hint: 'Film posts perform best with video. Add a clip?' },
+  design:      { primary: ['photo'],            hint: 'Design posts perform best with an image. Add a photo?' },
+  writing:     { primary: ['text'],             hint: 'Writing posts perform best as text. Use the text editor?' },
+  fitness:     { primary: ['video', 'photo'],   hint: 'Fitness posts perform best with video or photos. Add media?' },
+  culinary:    { primary: ['photo', 'video'],   hint: 'Culinary posts perform best with photos or video. Add media?' },
+  technology:  { primary: ['text', 'document'], hint: 'Tech posts perform best as detailed write-ups. Consider writing more?' },
+  fashion:     { primary: ['photo'],            hint: 'Fashion posts perform best with photos. Add a photo?' },
+  sports:      { primary: ['video', 'photo'],   hint: 'Sports posts perform best with video or photos. Add media?' },
 }
 
 export interface Message {

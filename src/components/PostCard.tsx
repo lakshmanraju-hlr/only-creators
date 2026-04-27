@@ -356,7 +356,7 @@ export default function PostCard({ post, onUpdated }: Props) {
           }
         </button>
 
-        {/* Name + location */}
+        {/* Name + field breadcrumb */}
         <div className="flex-1 min-w-0">
           <button
             onClick={goToAuthor}
@@ -364,12 +364,23 @@ export default function PostCard({ post, onUpdated }: Props) {
           >
             {author?.full_name}
           </button>
-          {(author as any)?.location && (
-            <div className="flex items-center gap-0.5 mt-0.5 text-[12px] text-text-secondary leading-none">
-              <span className="flex w-3 h-3 shrink-0"><Icon.MapPin /></span>
-              <span className="truncate">{(author as any).location}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {fieldMeta ? (
+              <>
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[5px] text-[11px] font-semibold leading-none"
+                  style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+                >
+                  {fieldMeta.icon} {fieldMeta.label}
+                </span>
+                {post.post_type === 'general' && (
+                  <span className="text-[11px] text-text-hint leading-none">Personal</span>
+                )}
+              </>
+            ) : (
+              <span className="text-[11px] text-text-hint leading-none">Personal</span>
+            )}
+          </div>
         </div>
 
         {/* Bookmark — left of ··· */}
@@ -710,6 +721,17 @@ export default function PostCard({ post, onUpdated }: Props) {
               ? <span key={i} className="font-semibold cursor-pointer hover:underline" onClick={() => navigate('/profile/' + word.slice(1))}>{word} </span>
               : <span key={i}>{word} </span>
           )}
+        </div>
+      )}
+
+      {/* ── Tags ────────────────────────────────────────────── */}
+      {(post.tags?.length ?? 0) > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-4 pb-1.5">
+          {post.tags.map((tag, i) => (
+            <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-badge bg-accent-subtle text-text-primary">
+              #{tag}
+            </span>
+          ))}
         </div>
       )}
 

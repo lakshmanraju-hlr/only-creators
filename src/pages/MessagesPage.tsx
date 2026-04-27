@@ -330,262 +330,260 @@ export default function MessagesPage() {
   const activeIsOnline = activeFriend ? onlineIds.has(activeFriend.id) : false
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ display: 'flex', height: 'calc(100dvh - 56px)', overflow: 'hidden', background: 'var(--surface)' }}>
+  // On mobile: show list OR chat (full-screen toggle)
+  // On desktop (md+): side-by-side split pane
+  const showList = !activeFriend
+  const showChat = !!activeFriend
 
-      {/* ── LEFT: Conversation list ── */}
-      <div style={{ width: 320, flexShrink: 0, borderRight: '1px solid var(--divider)', display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
+  // Conversation list panel
+  const ConvList = (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface)' }}>
+      {/* List header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, borderBottom: '1px solid var(--divider)', flexShrink: 0 }}>
+        <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Messages</span>
+        <button
+          style={{ display: 'flex', width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'transparent' }}
+        >
+          <span style={{ display: 'flex', width: 20, height: 20 }}><Icon.PenLine /></span>
+        </button>
+      </div>
 
-        {/* List header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 56, borderBottom: '1px solid var(--divider)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ display: 'flex', width: 22, height: 22, color: 'var(--brand)' }}><Icon.OC /></span>
-            <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--brand)', letterSpacing: '-0.01em' }}>Messages</span>
-          </div>
-          <button
-            onClick={() => {/* TODO: new conversation */}}
-            style={{ display: 'flex', width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'transparent', transition: 'background var(--transition)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-          >
-            <span style={{ display: 'flex', width: 20, height: 20 }}><Icon.PenLine /></span>
-          </button>
-        </div>
-
-        {/* Search */}
-        <div style={{ padding: '10px 12px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--surface-off)', borderRadius: 'var(--radius-full)', border: '1px solid var(--border)' }}>
-            <span style={{ display: 'flex', width: 15, height: 15, color: 'var(--text-faint)', flexShrink: 0 }}><Icon.Search /></span>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search messages..."
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13.5, color: 'var(--text-primary)', fontFamily: 'var(--font)' }}
-            />
-          </div>
-        </div>
-
-        {/* Conversation rows */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {convsLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
-              <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
-            </div>
-          ) : filteredConvs.length === 0 ? (
-            <p style={{ textAlign: 'center', padding: '40px 16px', fontSize: 13, color: 'var(--text-faint)' }}>
-              {search ? 'No conversations found' : 'No conversations yet'}
-            </p>
-          ) : filteredConvs.map(c => {
-            const isActive = activeFriend?.id === c.other.id
-            const isOnline = onlineIds.has(c.other.id)
-            const preview = previewText(c)
-            const isSharedPost = c.lastMsg?.post_id != null && !c.lastMsg?.body
-
-            return (
-              <button
-                key={c.id}
-                onClick={() => openConversation(c.other)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderBottom: '1px solid var(--divider)',
-                  background: isActive ? 'rgba(78,11,22,0.04)' : 'transparent',
-                  textAlign: 'left',
-                  transition: 'background var(--transition)',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-              >
-                <Avatar user={c.other} size={46} online={isOnline} />
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {c.other.username}
-                    </span>
-                    {c.lastMsg && (
-                      <span style={{ fontSize: 11.5, color: 'var(--text-faint)', flexShrink: 0, marginLeft: 8 }}>
-                        {tsLabel(c.lastMsg.created_at)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {/* Shared post thumbnail in preview */}
-                    {isSharedPost && (
-                      <div style={{ width: 20, height: 20, borderRadius: 4, overflow: 'hidden', background: 'var(--surface-off)', flexShrink: 0, border: '1px solid var(--border)' }}>
-                        {(c.lastMsg?.post as any)?.thumb_url && (
-                          <img src={(c.lastMsg?.post as any).thumb_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        )}
-                      </div>
-                    )}
-                    <span style={{ fontSize: 13, color: c.unread > 0 ? 'var(--text-primary)' : 'var(--text-faint)', fontWeight: c.unread > 0 ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                      {preview}
-                    </span>
-                    {c.unread > 0 && (
-                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, padding: '0 4px', borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                        {c.unread > 9 ? '9+' : c.unread}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
+      {/* Search */}
+      <div style={{ padding: '10px 12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--surface-off)', borderRadius: 'var(--radius-full)', border: '1px solid var(--border)' }}>
+          <span style={{ display: 'flex', width: 15, height: 15, color: 'var(--text-faint)', flexShrink: 0 }}><Icon.Search /></span>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search messages..."
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13.5, color: 'var(--text-primary)', fontFamily: 'var(--font)' }}
+          />
         </div>
       </div>
 
-      {/* ── RIGHT: Chat pane ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--surface)' }}>
-        {!activeFriend ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10 }}>
-            <span style={{ display: 'flex', width: 44, height: 44, color: 'var(--text-faint)' }}><Icon.MessageCircle /></span>
-            <p style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 15 }}>Your messages</p>
-            <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>Select a conversation to start chatting</p>
+      {/* Conversation rows */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {convsLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+            <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
           </div>
-        ) : (
-          <>
-            {/* Chat header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 56, borderBottom: '1px solid var(--divider)', flexShrink: 0, background: 'var(--surface)' }}>
-              <button onClick={() => { setActiveFriend(null); setConvId(null) }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'transparent', transition: 'background var(--transition)' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-              >
-                <span style={{ display: 'flex', width: 18, height: 18 }}><Icon.ArrowLeft /></span>
-              </button>
+        ) : filteredConvs.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', gap: 8 }}>
+            <span style={{ display: 'flex', width: 36, height: 36, color: 'var(--text-faint)' }}><Icon.MessageCircle /></span>
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-faint)' }}>
+              {search ? 'No conversations found' : 'No conversations yet'}
+            </p>
+          </div>
+        ) : filteredConvs.map(c => {
+          const isActive = activeFriend?.id === c.other.id
+          const isOnline = onlineIds.has(c.other.id)
+          const preview = previewText(c)
+          const isSharedPost = c.lastMsg?.post_id != null && !c.lastMsg?.body
 
-              <button onClick={() => navigate('/profile/' + activeFriend.username)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'transparent' }}>
-                <Avatar user={activeFriend} size={36} online={activeIsOnline} />
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{activeFriend.username}</p>
-                  {activeIsOnline && (
-                    <p style={{ fontSize: 11.5, color: '#22C55E', fontWeight: 500 }}>Online</p>
+          return (
+            <button
+              key={c.id}
+              onClick={() => openConversation(c.other)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                padding: '12px 16px', borderBottom: '1px solid var(--divider)',
+                background: isActive ? 'rgba(78,11,22,0.04)' : 'transparent',
+                textAlign: 'left', transition: 'background var(--transition)', cursor: 'pointer',
+              }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-off)' }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            >
+              <Avatar user={c.other} size={46} online={isOnline} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.other.full_name || c.other.username}
+                  </span>
+                  {c.lastMsg && (
+                    <span style={{ fontSize: 11.5, color: 'var(--text-faint)', flexShrink: 0, marginLeft: 8 }}>
+                      {tsLabel(c.lastMsg.created_at)}
+                    </span>
                   )}
                 </div>
-              </button>
-            </div>
-
-            {/* Messages body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }} className="scrollbar-hide">
-              {msgsLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
-                  <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {isSharedPost && (
+                    <div style={{ width: 20, height: 20, borderRadius: 4, overflow: 'hidden', background: 'var(--surface-off)', flexShrink: 0, border: '1px solid var(--border)' }}>
+                      {(c.lastMsg?.post as any)?.thumb_url && (
+                        <img src={(c.lastMsg?.post as any).thumb_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      )}
+                    </div>
+                  )}
+                  <span style={{ fontSize: 13, color: c.unread > 0 ? 'var(--text-primary)' : 'var(--text-faint)', fontWeight: c.unread > 0 ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {preview}
+                  </span>
+                  {c.unread > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, padding: '0 4px', borderRadius: 'var(--radius-full)', background: 'var(--brand)', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                      {c.unread > 9 ? '9+' : c.unread}
+                    </span>
+                  )}
                 </div>
-              ) : messages.length === 0 ? (
-                <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-faint)', paddingTop: 40 }}>
-                  Send your first message to {activeFriend.username}
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {messages.map((m, i) => {
-                    const isMine = m.sender_id === profile?.id
-                    const post = m.post as any
-                    const prevMsg = messages[i - 1]
-                    const showTime = !prevMsg || new Date(m.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 
-                    return (
-                      <div key={m.id}>
-                        {/* Time divider */}
-                        {showTime && (
-                          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-faint)', margin: '12px 0 6px', fontWeight: 500 }}>
-                            {msgTimeLabel(m.created_at)}
-                          </p>
-                        )}
-                        <div style={{ display: 'flex', flexDirection: isMine ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginBottom: 2 }}>
-                          {/* Avatar for other */}
-                          {!isMine && (
-                            <button onClick={() => navigate('/profile/' + activeFriend.username)} style={{ flexShrink: 0, marginBottom: 2 }}>
-                              <Avatar user={activeFriend} size={28} online={false} />
-                            </button>
-                          )}
+  // Chat pane
+  const ChatPane = activeFriend ? (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface)' }}>
+      {/* Chat header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 0 4px', height: 56, borderBottom: '1px solid var(--divider)', flexShrink: 0 }}>
+        <button
+          onClick={() => { setActiveFriend(null); setConvId(null) }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', background: 'transparent', flexShrink: 0 }}
+        >
+          <span style={{ display: 'flex', width: 18, height: 18 }}><Icon.ArrowLeft /></span>
+        </button>
+        <button onClick={() => navigate('/profile/' + activeFriend.username)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', flex: 1, minWidth: 0 }}>
+          <Avatar user={activeFriend} size={36} online={activeIsOnline} />
+          <div style={{ textAlign: 'left', minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeFriend.full_name || activeFriend.username}
+            </p>
+            <p style={{ fontSize: 12, color: activeIsOnline ? '#22C55E' : 'var(--text-faint)', fontWeight: 500 }}>
+              {activeIsOnline ? 'Online' : '@' + activeFriend.username}
+            </p>
+          </div>
+        </button>
+      </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '68%', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
-                            {/* Shared post card */}
-                            {m.post_id && post && (
-                              <SharedPostCard
-                                post={post}
-                                onClick={() => {
-                                  const posterUsername = post.profiles?.username
-                                  if (posterUsername) navigate('/profile/' + posterUsername + '#post-' + post.id)
-                                }}
-                              />
-                            )}
+      {/* Messages body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 8px' }} className="scrollbar-hide">
+        {msgsLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+            <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--divider)', borderTopColor: 'var(--brand)' }} />
+          </div>
+        ) : messages.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 40, gap: 6 }}>
+            <Avatar user={activeFriend} size={52} />
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{activeFriend.full_name || activeFriend.username}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>@{activeFriend.username}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>Send a message to start chatting</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {messages.map((m, i) => {
+              const isMine = m.sender_id === profile?.id
+              const post = m.post as any
+              const prevMsg = messages[i - 1]
+              const showTime = !prevMsg || new Date(m.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000
 
-                            {/* Text bubble */}
-                            {m.body && (
-                              <div style={{
-                                padding: '10px 14px',
-                                borderRadius: 18,
-                                borderBottomRightRadius: isMine ? 4 : 18,
-                                borderBottomLeftRadius: isMine ? 18 : 4,
-                                background: isMine ? 'var(--brand)' : 'var(--surface-off)',
-                                color: isMine ? '#fff' : 'var(--text-primary)',
-                                fontSize: 14,
-                                lineHeight: 1.45,
-                                wordBreak: 'break-word',
-                              }}>
-                                {m.body}
-                              </div>
-                            )}
-                          </div>
+              return (
+                <div key={m.id}>
+                  {showTime && (
+                    <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-faint)', margin: '12px 0 6px', fontWeight: 500 }}>
+                      {msgTimeLabel(m.created_at)}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: isMine ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginBottom: 2 }}>
+                    {!isMine && (
+                      <button onClick={() => navigate('/profile/' + activeFriend.username)} style={{ flexShrink: 0, marginBottom: 2 }}>
+                        <Avatar user={activeFriend} size={28} online={false} />
+                      </button>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '72%', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                      {m.post_id && post && (
+                        <SharedPostCard
+                          post={post}
+                          onClick={() => {
+                            const posterUsername = post.profiles?.username
+                            if (posterUsername) navigate('/profile/' + posterUsername + '#post-' + post.id)
+                          }}
+                        />
+                      )}
+                      {m.body && (
+                        <div style={{
+                          padding: '10px 14px',
+                          borderRadius: 18,
+                          borderBottomRightRadius: isMine ? 4 : 18,
+                          borderBottomLeftRadius: isMine ? 18 : 4,
+                          background: isMine ? 'var(--brand)' : 'var(--surface-off)',
+                          color: isMine ? '#fff' : 'var(--text-primary)',
+                          fontSize: 14,
+                          lineHeight: 1.45,
+                          wordBreak: 'break-word',
+                        }}>
+                          {m.body}
                         </div>
-                      </div>
-                    )
-                  })}
-                  <div ref={bottomRef} />
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* Input bar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 14px', borderTop: '1px solid var(--divider)', background: 'var(--surface)', flexShrink: 0 }}>
-              <input
-                ref={inputRef}
-                value={text}
-                onChange={e => setText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                placeholder="Message..."
-                style={{
-                  flex: 1,
-                  height: 42,
-                  padding: '0 18px',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'var(--surface-off)',
-                  border: '1px solid var(--border)',
-                  fontSize: 14,
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font)',
-                  outline: 'none',
-                  transition: 'border-color var(--transition)',
-                }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'rgba(78,11,22,0.25)' }}
-                onBlur={e => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)' }}
-              />
-              <button
-                onClick={send}
-                disabled={sending || !text.trim()}
-                style={{
-                  width: 42, height: 42, borderRadius: 'var(--radius-full)',
-                  background: text.trim() ? 'var(--brand)' : 'var(--surface-off)',
-                  color: text.trim() ? '#fff' : 'var(--text-faint)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'background var(--transition), color var(--transition)',
-                  opacity: sending ? 0.6 : 1,
-                }}
-              >
-                {sending
-                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  : <span style={{ display: 'flex', width: 17, height: 17 }}><Icon.Send /></span>
-                }
-              </button>
-            </div>
-          </>
+              )
+            })}
+            <div ref={bottomRef} />
+          </div>
         )}
+      </div>
+
+      {/* Input bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderTop: '1px solid var(--divider)', background: 'var(--surface)', flexShrink: 0, paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))' }}>
+        <input
+          ref={inputRef}
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+          placeholder="Message..."
+          style={{
+            flex: 1, height: 42, padding: '0 16px',
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--surface-off)', border: '1px solid var(--border)',
+            fontSize: 14, color: 'var(--text-primary)',
+            fontFamily: 'var(--font)', outline: 'none',
+            transition: 'border-color var(--transition)',
+          }}
+          onFocus={e => { (e.target as HTMLInputElement).style.borderColor = 'rgba(78,11,22,0.25)' }}
+          onBlur={e => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)' }}
+        />
+        <button
+          onClick={send}
+          disabled={sending || !text.trim()}
+          style={{
+            width: 42, height: 42, borderRadius: 'var(--radius-full)',
+            background: text.trim() ? 'var(--brand)' : 'var(--surface-off)',
+            color: text.trim() ? '#fff' : 'var(--text-faint)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'background var(--transition), color var(--transition)',
+            opacity: sending ? 0.6 : 1,
+          }}
+        >
+          {sending
+            ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            : <span style={{ display: 'flex', width: 17, height: 17 }}><Icon.Send /></span>
+          }
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10 }}>
+      <span style={{ display: 'flex', width: 44, height: 44, color: 'var(--text-faint)' }}><Icon.MessageCircle /></span>
+      <p style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 15 }}>Your messages</p>
+      <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>Select a conversation to start chatting</p>
+    </div>
+  )
+
+  return (
+    <div style={{ height: 'calc(100dvh - 56px)', overflow: 'hidden', background: 'var(--surface)' }}>
+      {/* Mobile: full-screen list OR full-screen chat */}
+      <div className="md:hidden" style={{ height: '100%' }}>
+        {showList ? ConvList : ChatPane}
+      </div>
+
+      {/* Desktop: split pane */}
+      <div className="hidden md:flex" style={{ height: '100%' }}>
+        <div style={{ width: 320, flexShrink: 0, borderRight: '1px solid var(--divider)', height: '100%' }}>
+          {ConvList}
+        </div>
+        <div style={{ flex: 1, minWidth: 0, height: '100%' }}>
+          {ChatPane}
+        </div>
       </div>
     </div>
   )
